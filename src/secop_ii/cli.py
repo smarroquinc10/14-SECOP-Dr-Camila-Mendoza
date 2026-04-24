@@ -27,6 +27,7 @@ from secop_ii.config import (
 )
 from secop_ii.extractors import ModificatoriosExtractor
 from secop_ii.extractors.base import ProcessContext
+from secop_ii.orchestrator import process_workbook
 from secop_ii.secop_client import SecopClient
 from secop_ii.url_parser import InvalidSecopUrlError, parse_secop_url
 
@@ -216,6 +217,68 @@ def _load_json(path: str | None):
         return None
     with open(path, "r", encoding="utf-8") as fh:
         return json.load(fh)
+
+
+@app.command("update-excel")
+def update_excel_cmd(
+    input_file: Annotated[str, typer.Argument(help="Ruta al archivo .xlsx a actualizar.")],
+    url_column: Annotated[
+        str | None,
+        typer.Option(
+            "--url-column",
+            help="Encabezado exacto de la columna con las URLs (autodetecta si no se pasa).",
+        ),
+    ] = None,
+    sheet: Annotated[
+        str | None,
+        typer.Option("--sheet", help="Nombre de la hoja (por defecto la activa)."),
+    ] = None,
+    header_row: Annotated[
+        int, typer.Option("--header-row", help="Fila del encabezado (1-based).")
+    ] = 1,
+    app_token: Annotated[
+        str | None,
+        typer.Option(
+            "--app-token",
+            envvar="SOCRATA_APP_TOKEN",
+            help="Token opcional de datos.gov.co.",
+        ),
+    ] = None,
+    no_backup: Annotated[
+        bool, typer.Option("--no-backup", help="Saltar la creación del backup.")
+    ] = False,
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="No escribe cambios al archivo."),
+    ] = False,
+    verbose: Annotated[bool, typer.Option("-v", "--verbose")] = False,
+) -> None:
+    """Actualiza un Excel con datos del SECOP II."""
+    _configure_logging(verbose)
+
+    def _progress(done: int, total: int, row) -> None:
+        mark = "✓" if row.ok else "✗"
+        console.print(
+            f"[dim]{done:>3}/{total}[/] {mark} fila {row.row}: "
+            f"{row.process_id or row.url[:60]} → {row.status}"
+        )
+
+    report = process_workbook(
+        input_file,
+        url_column=url_column,
+        sheet_name=sheet,
+        header_row=header_row,
+        app_token=app_token,
+        do_backup=not no_backup,
+        progress=_progress,
+        dry_run=dry_run,
+    )
+
+    console.print("\n[bold]Resumen:[/]")
+    summary = report.as_dict()
+    for key, value in summary.items():
+        console.print(f"  [cyan]{key}:[/] {value}")
+    if report.errors:
+        raise typer.Exit(code=1)
 
 
 if __name__ == "__main__":  # pragma: no cover
