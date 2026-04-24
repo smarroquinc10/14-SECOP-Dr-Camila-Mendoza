@@ -85,6 +85,12 @@ class _FakeClient:
     def get_adiciones(self, id_contrato):
         return self._adiciones.get(id_contrato, [])
 
+    def build_query_url(self, dataset_id, *, where=None, limit=10):
+        return (
+            f"https://www.datos.gov.co/resource/{dataset_id}.json?"
+            f"$limit={limit}&$where={where or ''}"
+        )
+
 
 @pytest.fixture
 def sample_workbook(tmp_path: Path) -> Path:
@@ -127,10 +133,17 @@ class TestProcessWorkbook:
 
         wb = _load(sample_workbook)
         headers = read_headers(wb.active)
+        # Modificatorios columns
         assert "¿Hubo modificatorio?" in headers
         assert "# modificatorios" in headers
+        # Orchestrator columns
         assert "Estado actualización" in headers
         assert "Última actualización" in headers
+        # Auditoría / verificación columns
+        assert "ID identificado" in headers
+        assert "Fase en SECOP" in headers
+        assert "Entidad en SECOP" in headers
+        assert "Link verificación API" in headers
 
         # Row 2 -> PPI.46305103 -> "No" modificatorios
         assert _cell(wb.active, 2, headers["¿Hubo modificatorio?"]) == "No"
@@ -138,6 +151,9 @@ class TestProcessWorkbook:
         assert _cell(wb.active, 3, headers["¿Hubo modificatorio?"]) == "Sí"
         # Row 5 -> invalid URL -> status url_invalida
         assert _cell(wb.active, 5, headers["Estado actualización"]) == "url_invalida"
+        # Audit link must be a datos.gov.co URL on OK rows
+        link_cell = _cell(wb.active, 2, headers["Link verificación API"])
+        assert link_cell and "datos.gov.co" in link_cell
 
     def test_backup_is_created_next_to_original(self, sample_workbook: Path):
         with patch.object(orch_module, "SecopClient", _FakeClient):

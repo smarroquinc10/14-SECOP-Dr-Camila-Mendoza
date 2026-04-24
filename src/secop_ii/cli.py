@@ -25,11 +25,31 @@ from secop_ii.config import (
     FIELD_CONTRATO_PROCESO,
     FIELD_PROCESO_ID,
 )
-from secop_ii.extractors import ModificatoriosExtractor
+from secop_ii.extractors import REGISTRY, get_extractor
 from secop_ii.extractors.base import ProcessContext
 from secop_ii.orchestrator import process_workbook
 from secop_ii.secop_client import SecopClient
 from secop_ii.url_parser import InvalidSecopUrlError, parse_secop_url
+
+
+def _run_all_extractors(ctx: ProcessContext) -> dict:
+    """Execute every registered extractor and merge their outputs."""
+    combined: dict = {}
+    errors: list[str] = []
+    all_ok = True
+    for name in REGISTRY:
+        try:
+            result = get_extractor(name).extract(ctx)
+        except Exception as exc:  # pragma: no cover
+            errors.append(f"{name}: {exc}")
+            all_ok = False
+            continue
+        combined.update(result.values)
+        if not result.ok:
+            all_ok = False
+            if result.error:
+                errors.append(f"{name}: {result.error}")
+    return {"ok": all_ok, "error": "; ".join(errors) or None, "values": combined}
 
 app = typer.Typer(
     help="Herramientas CLI para consultar procesos del SECOP II.",
@@ -133,14 +153,14 @@ def check_url_cmd(
 
     client = SecopClient(app_token=app_token)
     ctx = ProcessContext(ref=ref, client=client)
-    result = ModificatoriosExtractor().extract(ctx)
+    outcome = _run_all_extractors(ctx)
 
     payload = {
         "id": ref.process_id,
         "kind": ref.kind,
-        "ok": result.ok,
-        "error": result.error,
-        "values": result.values,
+        "ok": outcome["ok"],
+        "error": outcome["error"],
+        "values": outcome["values"],
     }
 
     if as_json:
@@ -148,9 +168,9 @@ def check_url_cmd(
         return
 
     console.print(f"\n[bold]Proceso:[/] {ref.process_id}  ({ref.kind})")
-    if not result.ok:
-        console.print(f"[yellow]{result.error}[/]")
-    for col, val in result.values.items():
+    if not outcome["ok"] and outcome["error"]:
+        console.print(f"[yellow]{outcome['error']}[/]")
+    for col, val in outcome["values"].items():
         console.print(f"  [cyan]{col}:[/] {val}")
 
 
@@ -203,12 +223,12 @@ def check_json_cmd(
             ]
 
     ctx = _OfflineContext(ref=ref, client=SecopClient())
-    result = ModificatoriosExtractor().extract(ctx)
+    outcome = _run_all_extractors(ctx)
 
     console.print(f"\n[bold]Proceso:[/] {ref.process_id} ({ref.kind})  [offline demo]")
-    if not result.ok:
-        console.print(f"[yellow]{result.error}[/]")
-    for col, val in result.values.items():
+    if not outcome["ok"] and outcome["error"]:
+        console.print(f"[yellow]{outcome['error']}[/]")
+    for col, val in outcome["values"].items():
         console.print(f"  [cyan]{col}:[/] {val}")
 
 

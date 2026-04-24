@@ -24,11 +24,23 @@ programa:
      `dias_adicionados`).
    - `cb9c-h8sn` — adiciones / modificaciones a contrato (incluye tipo:
      Adición, Prórroga, Otrosí, Suspensión, Cesión).
-3. **Reporta** por proceso: ¿hubo modificatorio?, cantidad, tipos, detalle,
-   fecha del último y fuente (adenda al pliego vs. modificación al contrato).
+3. **Espeja en el Excel**, por cada fila, dos bloques de información:
+   - **Auditoría** (para verificar contra el portal): `ID identificado`,
+     `Fase en SECOP`, `Entidad en SECOP`, `NIT entidad`, `Objeto en SECOP`,
+     `Valor estimado` y `Link verificación API` — este último abre el JSON
+     crudo de `datos.gov.co` usado como fuente, por si se necesita
+     pruebas irrefutables.
+   - **Modificatorios**: `¿Hubo modificatorio?`, `# modificatorios`,
+     `Tipos de modificatorio`, `Detalle modificatorios`,
+     `Fecha último modificatorio`, `Fuente modificatorio` (adenda al pliego
+     vs. modificación al contrato).
 
 No usa scraping del portal porque la web pública tiene reCAPTCHA de Google
 que bloquearía cualquier bot. La API de datos abiertos no tiene esa barrera.
+
+**Latencia conocida:** `datos.gov.co` refleja SECOP II con retraso típico de
+horas a ~1 día. La columna `Última actualización` y el `Link verificación API`
+permiten auditar siempre qué versión de los datos usó cada corrida.
 
 ---
 

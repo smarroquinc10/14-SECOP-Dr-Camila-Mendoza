@@ -73,14 +73,38 @@ En la sección "**2. Vista previa**" puedes:
 
 **Tu Excel se actualiza directamente**. Las columnas que agrega o actualiza:
 
-- `¿Hubo modificatorio?` — "Sí" o "No".
+**Columnas de control (para saber qué pasó):**
+
+- `Estado actualización` — `ok` / `no_encontrado` / `url_invalida` / `error`.
+- `Última actualización` — fecha y hora exactas de la consulta.
+
+**Columnas de auditoría (para verificar contra el portal):**
+
+- `ID identificado` — el código que el programa leyó de la URL (p. ej.
+  `CO1.PPI.46305103`). Si alguna fila se ve rara, esto te dice primero si
+  fue por mala lectura del link.
+- `Fase en SECOP` — `Presentación de oferta` / `Adjudicado` / `Celebrado` /
+  etc. Es lo que dice SECOP, no lo que tú anotaste.
+- `Entidad en SECOP` — nombre oficial de la entidad contratante. **Compáralo
+  con lo que tienes anotado**; si no coincide, pudo haberse pegado una URL
+  de otro proceso por error.
+- `NIT entidad` — NIT de la entidad oficial.
+- `Objeto en SECOP` — objeto del procedimiento según SECOP.
+- `Valor estimado` — precio base publicado.
+- `Link verificación API` — **enlace que abre el JSON crudo** que el programa
+  usó como fuente. Cópialo al navegador y verás exactamente el mismo dato
+  que la herramienta leyó. Es tu "prueba irrefutable".
+
+**Columnas de modificatorios (lo que pediste):**
+
+- `¿Hubo modificatorio?` — `Sí` o `No`.
 - `# modificatorios` — cuántos en total.
-- `Tipos de modificatorio` — "Adición", "Prórroga", "Otrosí", "Adenda"…
-- `Detalle modificatorios` — descripción resumida.
+- `Tipos de modificatorio` — `Adición`, `Prórroga`, `Otrosí`, `Adenda`…
+- `Detalle modificatorios` — transcripción resumida (no interpretación) de
+  cada modificatorio.
 - `Fecha último modificatorio`.
-- `Fuente modificatorio` — si vino del pliego (adenda) o del contrato.
-- `Estado actualización` — "ok" / "no_encontrado" / "url_invalida".
-- `Última actualización` — fecha y hora de la última corrida.
+- `Fuente modificatorio` — `pliego(N)` (adendas al pliego) + `contrato(M)`
+  (adiciones al contrato firmado).
 
 ### Paso 5 — Seguridad: backups automáticos
 
@@ -92,6 +116,55 @@ TuArchivo.backup_2026-04-24_1530.xlsx
 ```
 
 Si algo sale mal, simplemente abre el backup.
+
+---
+
+## ⚠️ Muy importante — Verificar que los datos coinciden con el portal
+
+La herramienta **no reemplaza** revisar el portal; lo que hace es
+**acelerar** la revisión. Antes de confiar a ciegas, te recomiendo hacer
+esta validación la primera vez:
+
+### Rutina de verificación recomendada
+
+1. **Toma 5 procesos** de tu Excel que conozcas bien (algunos con
+   modificatorio y algunos sin).
+2. Para cada uno, **abre el link del portal** (columna `URL del proceso`)
+   y anota lo que ves: fase, entidad, si hay modificatorios en la pestaña
+   "Modificaciones" o adendas en la pestaña de documentos.
+3. **Corre la herramienta**.
+4. **Compara columna por columna**:
+   - ¿La `Entidad en SECOP` coincide con la del portal? ✅
+   - ¿La `Fase en SECOP` coincide con la fase que ves? ✅
+   - ¿La marca `¿Hubo modificatorio?` coincide con lo que ves en la
+     pestaña de Modificaciones/Adendas del portal? ✅
+5. Si alguna fila **no coincide**: abre el `Link verificación API` de esa
+   fila. Verás el JSON exacto que el programa leyó. Eso te dice si el
+   problema es:
+   - **Latencia** (ver siguiente sección), o
+   - **URL del Excel apunta a un proceso distinto** (revisa tu Excel), o
+   - **Problema real** (avísale al desarrollador con el link API y la URL).
+
+### ⏱️ Latencia: `datos.gov.co` va con retraso vs. el portal
+
+Los datos que usa la herramienta vienen de **`datos.gov.co`** (datos abiertos
+oficiales de Colombia Compra Eficiente), que replica la información del
+portal SECOP II **cada cierto tiempo** — típicamente entre **algunas horas
+y ~1 día** después de que se publica.
+
+Eso significa:
+
+- ✅ Si el modificatorio se publicó hace **varios días**, la herramienta lo
+  ve sin problema.
+- ⚠️ Si el modificatorio se publicó **hoy o ayer**, puede que todavía no
+  aparezca en la herramienta aunque sí esté en el portal. Vuelve a correr al
+  día siguiente.
+- La columna `Última actualización` te dice cuándo fue tu última consulta
+  — útil para decidir si vale la pena volver a correr.
+
+**Por eso `Link verificación API` es importante:** si alguna vez dudas,
+ese link te muestra exactamente la versión de los datos con la que el
+programa está trabajando, sin intermediarios.
 
 ---
 
