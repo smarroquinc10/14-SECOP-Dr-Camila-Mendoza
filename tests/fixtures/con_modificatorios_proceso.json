@@ -1,0 +1,12 @@
+[
+  {
+    "id_del_proceso": "CO1.NTC.9999001",
+    "urlproceso": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/Index?noticeUID=CO1.NTC.9999001",
+    "nombre_entidad": "Alcaldía de Ejemplo",
+    "nit_entidad": "800000000",
+    "descripci_n_del_procedimiento": "Suministro de papelería 2026",
+    "fase": "Adjudicado",
+    "adendas": "Adenda 1; Adenda 2",
+    "precio_base": "50000000"
+  }
+]
