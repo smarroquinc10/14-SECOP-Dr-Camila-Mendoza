@@ -1,0 +1,16 @@
+[
+  {
+    "id_contrato": "CO1.PCCNTR.5551234",
+    "tipo_modificacion": "Adición",
+    "descripci_n": "Adición por mayores cantidades de papel",
+    "fecha_registro": "2026-02-10T00:00:00.000",
+    "valor_adicion": "8000000"
+  },
+  {
+    "id_contrato": "CO1.PCCNTR.5551234",
+    "tipo_modificacion": "Prórroga",
+    "descripci_n": "Prórroga de 30 días por demora en entrega",
+    "fecha_registro": "2026-03-05T00:00:00.000",
+    "valor_adicion": "0"
+  }
+]

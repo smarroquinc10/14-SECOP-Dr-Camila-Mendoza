@@ -1,0 +1,93 @@
+name: Build Windows .exe
+
+on:
+  push:
+    branches:
+      - main
+      - claude/secop-ii-integration-ee0Lr
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Run tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-mock
+
+      - name: Run pytest
+        env:
+          PYTHONPATH: src
+        run: pytest tests/ -v
+
+  build:
+    name: Build Windows .exe
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Run PyInstaller
+        shell: pwsh
+        run: .\build\build_exe.ps1
+
+      - name: Stage release folder
+        shell: pwsh
+        run: |
+          $appName = "CRM SECOP II"
+          $releaseDir = "release\$appName"
+          New-Item -ItemType Directory -Force -Path $releaseDir | Out-Null
+          Copy-Item -Recurse -Force "dist\$appName\*" $releaseDir
+          Copy-Item -Force "INSTRUCCIONES.md" $releaseDir
+          Copy-Item -Force "README.md" $releaseDir
+          if (Test-Path "tests\fixtures\ejemplo.xlsx") {
+              Copy-Item -Force "tests\fixtures\ejemplo.xlsx" $releaseDir
+          }
+
+      - name: Zip release
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "release\CRM SECOP II" -DestinationPath "CRM-SECOP-II.zip" -Force
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CRM-SECOP-II-windows
+          path: CRM-SECOP-II.zip
+          retention-days: 30
+
+      - name: Summary
+        shell: pwsh
+        run: |
+          $zip = Get-Item CRM-SECOP-II.zip
+          $sizeMB = [math]::Round($zip.Length / 1MB, 1)
+          "### CRM SECOP II build" | Out-File $env:GITHUB_STEP_SUMMARY -Append
+          "- Archivo: **$($zip.Name)**" | Out-File $env:GITHUB_STEP_SUMMARY -Append
+          "- Tamaño: **$sizeMB MB**" | Out-File $env:GITHUB_STEP_SUMMARY -Append
+          "- Descárgalo de la sección 'Artifacts' de esta ejecución." | Out-File $env:GITHUB_STEP_SUMMARY -Append

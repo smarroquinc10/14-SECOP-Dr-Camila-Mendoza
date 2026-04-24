@@ -1,0 +1,10 @@
+[
+  {
+    "id_contrato": "CO1.PCCNTR.5551234",
+    "proceso_de_compra": "CO1.NTC.9999001",
+    "urlproceso": "https://community.secop.gov.co/Public/Tendering/ContractNoticeView/Index?PPI=CO1.PCCNTR.5551234",
+    "valor_del_contrato": "45000000",
+    "valor_pagado_adiciones": "8000000",
+    "dias_adicionados": "30"
+  }
+]

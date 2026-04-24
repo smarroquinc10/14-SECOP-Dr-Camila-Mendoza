@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "secop-ii-crm"
+version = "0.1.0"
+description = "CRM local para procesos del SECOP II con actualización del Excel"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Secop-II CRM" }]
+dependencies = [
+    "requests>=2.32",
+    "tenacity>=9.0",
+    "openpyxl>=3.1",
+    "pandas>=2.2",
+    "pydantic>=2.7",
+    "python-dateutil>=2.9",
+    "streamlit>=1.36",
+    "python-dotenv>=1.0",
+    "typer>=0.12",
+    "rich>=13",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pytest-mock>=3",
+    "responses>=0.25",
+    "pyinstaller>=6.10",
+]
+
+[project.scripts]
+secop-ii = "secop_ii.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
