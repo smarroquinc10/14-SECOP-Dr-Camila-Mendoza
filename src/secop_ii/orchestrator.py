@@ -87,6 +87,7 @@ def process_workbook(
     do_backup: bool = True,
     progress: ProgressCallback | None = None,
     dry_run: bool = False,
+    mirror_portal: bool = False,
 ) -> RunReport:
     """Update ``path`` in place with SECOP II data.
 
@@ -118,6 +119,19 @@ def process_workbook(
     obs_col = detect_observaciones_column(ws, header_row=header_row)
 
     extractors = _resolve_extractors(fields)
+
+    # ``--mirror-portal`` opens visible Chrome and scrapes each
+    # OpportunityDetail directly. The PortalScraper has its own session
+    # lifetime so we manage it as a context manager around the row loop.
+    portal_scraper_cm = None
+    if mirror_portal:
+        from secop_ii.extractors.portal import PortalExtractor
+        from secop_ii.portal_scraper import PortalScraper
+        portal_scraper_cm = PortalScraper()
+        portal_scraper_cm.__enter__()
+        portal_ext = PortalExtractor(scraper=portal_scraper_cm)
+        extractors.append(portal_ext)
+
     output_columns: list[str] = [STATUS_COLUMN, LAST_UPDATE_COLUMN]
     for ext in extractors:
         output_columns.extend(ext.output_columns)
@@ -163,6 +177,12 @@ def process_workbook(
 
     if not dry_run:
         save_workbook(wb, path)
+
+    if portal_scraper_cm is not None:
+        try:
+            portal_scraper_cm.__exit__(None, None, None)
+        except Exception:  # pragma: no cover - cleanup is best-effort
+            pass
 
     return report
 

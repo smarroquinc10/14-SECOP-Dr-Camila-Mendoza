@@ -270,6 +270,18 @@ def update_excel_cmd(
     dry_run: Annotated[
         bool, typer.Option("--dry-run", help="No escribe cambios al archivo."),
     ] = False,
+    no_portal: Annotated[
+        bool,
+        typer.Option(
+            "--no-portal",
+            help=(
+                "Saltar el espejo profundo del portal SECOP II. Por defecto "
+                "el programa abre Chrome visible y scrapea cada "
+                "OpportunityDetail (pide 1 clic al captcha por sesión). "
+                "Usa este flag si solo quieres datos del API datos.gov.co."
+            ),
+        ),
+    ] = False,
     verbose: Annotated[bool, typer.Option("-v", "--verbose")] = False,
 ) -> None:
     """Actualiza un Excel con datos del SECOP II."""
@@ -291,6 +303,7 @@ def update_excel_cmd(
         do_backup=not no_backup,
         progress=_progress,
         dry_run=dry_run,
+        mirror_portal=not no_portal,
     )
 
     console.print("\n[bold]Resumen:[/]")
