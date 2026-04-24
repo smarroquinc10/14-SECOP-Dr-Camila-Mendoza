@@ -76,6 +76,11 @@ Write-Step "Actualizando pip dentro del entorno"
 Write-Step "Instalando dependencias (1-2 min la primera vez)"
 & $venvPython -m pip install -r requirements.txt
 
+Write-Step "Registrando el paquete secop_ii dentro del entorno (pip install -e .)"
+# Without this the user has to keep exporting PYTHONPATH=src before every
+# invocation. Installing editable means `python -m secop_ii ...` just works.
+& $venvPython -m pip install -e . --quiet
+
 Write-Step "Instalando pytest para el smoke test (opcional)"
 $pytestInstalled = $false
 try {
