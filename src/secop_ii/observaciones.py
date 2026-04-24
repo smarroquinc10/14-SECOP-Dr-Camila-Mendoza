@@ -53,7 +53,7 @@ COL_MENCIONES_OBS = "Menciones en OBS"
 
 OUTPUT_COLUMNS = (COL_MOD_EN_OBS, COL_NO_LEG, COL_MENCIONES_OBS)
 
-OBS_HEADER_HINTS = ("observaciones", "observacion")
+OBS_HEADER_HINTS = ("OBSERVACIONES", "OBSERVACION")
 
 
 def detect_observaciones_column(ws, header_row: int = 1) -> int | None:
