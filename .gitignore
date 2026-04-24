@@ -24,3 +24,16 @@ htmlcov/
 
 config.local.json
 appdata/
+
+# Diagnostic / probe scripts (kept locally during development)
+_probe_*.py
+_test_portal*.py
+_*.txt
+_*.html
+
+# On-disk caches built at runtime
+.cache/
+.playwright-mcp/
+
+# The Dra.'s working Excel files (PII / contractual data)
+BASE DE DATOS*.xlsx

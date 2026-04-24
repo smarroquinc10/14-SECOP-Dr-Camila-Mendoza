@@ -24,6 +24,11 @@ from secop_ii.excel_io import (
 from secop_ii.extractors import FieldExtractor, REGISTRY, get_extractor
 from secop_ii.extractors.base import ExtractionResult, ProcessContext
 from secop_ii.extractors.modificatorios import COL_DETALLE
+from secop_ii.observaciones import (
+    OUTPUT_COLUMNS as OBS_OUTPUT_COLUMNS,
+    detect_observaciones_column,
+    parse_observaciones,
+)
 from secop_ii.secop_client import SecopClient
 from secop_ii.url_parser import InvalidSecopUrlError, parse_secop_url
 
@@ -108,11 +113,17 @@ def process_workbook(
     wb, ws = load_workbook(path, sheet_name=sheet_name)
 
     url_col = detect_url_column(ws, header_row=header_row, preferred=url_column)
+    # OBSERVACIONES is read-only — we never write to it, just mirror its
+    # signals ("NO LEG", modificatorio mentions) into separate columns.
+    obs_col = detect_observaciones_column(ws, header_row=header_row)
 
     extractors = _resolve_extractors(fields)
     output_columns: list[str] = [STATUS_COLUMN, LAST_UPDATE_COLUMN]
     for ext in extractors:
         output_columns.extend(ext.output_columns)
+    # Only add the OBS columns if we actually found the source column.
+    if obs_col is not None:
+        output_columns.extend(OBS_OUTPUT_COLUMNS)
     column_map = ensure_columns(ws, output_columns, header_row=header_row)
 
     client = SecopClient(app_token=app_token, rate_per_second=rate_per_second)
@@ -126,6 +137,7 @@ def process_workbook(
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
 
     for idx, (row_idx, url) in enumerate(rows, start=1):
+        obs_text = ws.cell(row=row_idx, column=obs_col).value if obs_col else None
         row_report = _process_one_row(
             row_idx=row_idx,
             url=url,
@@ -134,6 +146,7 @@ def process_workbook(
             ws=ws,
             column_map=column_map,
             now=now,
+            obs_text=obs_text,
         )
         report.rows.append(row_report)
         if row_report.ok:
@@ -173,14 +186,21 @@ def _process_one_row(
     ws,
     column_map: dict[str, int],
     now: str,
+    obs_text: str | None = None,
 ) -> RowReport:
+    obs_values = parse_observaciones(obs_text) if obs_text else {}
     try:
         ref = parse_secop_url(url)
     except InvalidSecopUrlError as exc:
         write_row(
             ws,
             row_idx,
-            {STATUS_COLUMN: "url_invalida", LAST_UPDATE_COLUMN: now, COL_DETALLE: str(exc)},
+            {
+                STATUS_COLUMN: "url_invalida",
+                LAST_UPDATE_COLUMN: now,
+                COL_DETALLE: str(exc),
+                **obs_values,
+            },
             column_map,
         )
         return RowReport(
@@ -217,6 +237,10 @@ def _process_one_row(
 
     combined_values[STATUS_COLUMN] = row_status if row_ok else (row_status or "error")
     combined_values[LAST_UPDATE_COLUMN] = now
+    # OBSERVACIONES-derived columns are appended last so they read as
+    # extra context next to the SECOP API data (API is authoritative;
+    # these are the Dra.'s hand-noted FEAB admin markers).
+    combined_values.update(obs_values)
     write_row(ws, row_idx, combined_values, column_map)
 
     return RowReport(

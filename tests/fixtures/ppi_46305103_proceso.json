@@ -1,12 +1,12 @@
 [
   {
-    "id_del_proceso": "CO1.PPI.46305103",
-    "urlproceso": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.46305103",
-    "nombre_entidad": "FEAB - Entidad de ejemplo",
+    "id_del_proceso": "CO1.REQ.46305103",
+    "id_del_portafolio": "CO1.BDOS.46305103",
+    "urlproceso": {"url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/Index?noticeUID=CO1.NTC.46305103"},
+    "entidad": "FEAB - Entidad de ejemplo",
     "nit_entidad": "900000000",
     "descripci_n_del_procedimiento": "FEAB-EB-0001-2026",
     "fase": "Presentación de oferta",
-    "adendas": "",
     "precio_base": "0"
   }
 ]

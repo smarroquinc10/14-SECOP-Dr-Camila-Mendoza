@@ -276,10 +276,10 @@ def update_excel_cmd(
     _configure_logging(verbose)
 
     def _progress(done: int, total: int, row) -> None:
-        mark = "✓" if row.ok else "✗"
+        mark = "[OK]" if row.ok else "[X] "
         console.print(
             f"[dim]{done:>3}/{total}[/] {mark} fila {row.row}: "
-            f"{row.process_id or row.url[:60]} → {row.status}"
+            f"{row.process_id or row.url[:60]} -> {row.status}"
         )
 
     report = process_workbook(

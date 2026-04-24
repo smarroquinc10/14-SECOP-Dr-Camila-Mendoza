@@ -35,7 +35,9 @@ from tenacity import (
 from secop_ii.config import (
     DATASET_ADICIONES,
     DATASET_CONTRATOS,
+    DATASET_MOD_CONTRATOS,
     DATASET_PROCESOS,
+    DATASET_UBICACIONES,
     DEFAULT_PAGE_SIZE,
     DEFAULT_RATE_NO_TOKEN,
     DEFAULT_RATE_WITH_TOKEN,
@@ -43,10 +45,13 @@ from secop_ii.config import (
     FIELD_ADICION_CONTRATO,
     FIELD_CONTRATO_PROCESO,
     FIELD_CONTRATO_URL,
+    FIELD_MODCTR_CONTRATO,
     FIELD_PROCESO_ID,
     FIELD_PROCESO_URL,
+    FIELD_UBIC_CONTRATO,
     SOCRATA_BASE,
 )
+from secop_ii.notice_resolver import NoticeResolver
 
 log = logging.getLogger(__name__)
 
@@ -90,6 +95,7 @@ class SecopClient:
     app_token: str | None = None
     rate_per_second: float | None = None
     timeout_s: int = DEFAULT_TIMEOUT_S
+    notice_resolver: NoticeResolver | None = None
     _session: requests.Session = field(default_factory=requests.Session, repr=False)
     _cache: dict[tuple[str, str], list[dict[str, Any]]] = field(
         default_factory=dict, repr=False
@@ -103,16 +109,38 @@ class SecopClient:
                 DEFAULT_RATE_WITH_TOKEN if self.app_token else DEFAULT_RATE_NO_TOKEN
             )
         self._limiter = RateLimiter(rate)
+        if self.notice_resolver is None:
+            self.notice_resolver = NoticeResolver()
 
     # ------------------------------------------------------------------
     # Logical queries
     # ------------------------------------------------------------------
+    def resolve_notice_uid(self, process_id: str, url: str | None) -> str | None:
+        """Return the ``CO1.NTC.*`` notice id for a PPI-pivot URL, if any.
+
+        FEAB and other entities publish ``?PPI=CO1.PPI.*`` pivot links that
+        aren't indexed in the Socrata datasets — only the nested
+        ``?noticeUID=CO1.NTC.*`` URL is. This helper hides that detail from
+        the rest of the client.
+        """
+        if not process_id.startswith("CO1.PPI."):
+            return None
+        if not url or not self.notice_resolver:
+            return None
+        return self.notice_resolver.resolve(url)
+
     def get_proceso(self, process_id: str, url: str | None = None) -> dict | None:
         """Return the process row for ``process_id`` or ``None``.
 
-        Tries ``id_del_proceso = <process_id>`` first. If that misses, falls
-        back to a substring match on ``urlproceso`` using the raw URL when
-        provided — this catches URL variants that encode the id differently.
+        Strategy, in order:
+
+        1. Exact match on ``id_del_proceso`` (works for ``CO1.REQ.*`` ids
+           that come straight from the dataset).
+        2. For ``CO1.PPI.*`` pivot ids, resolve the embedded ``CO1.NTC.*``
+           notice id via :class:`NoticeResolver` and match against
+           ``urlproceso.url``.
+        3. Last-ditch substring match of the raw token against
+           ``urlproceso.url`` (covers future URL variants we haven't seen).
         """
         rows = self.query(
             DATASET_PROCESOS,
@@ -121,32 +149,77 @@ class SecopClient:
         )
         if rows:
             return rows[0]
+
+        notice_uid = self.resolve_notice_uid(process_id, url)
+        if notice_uid:
+            # urlproceso is a Socrata URL-typed column (JSON object); LIKE on
+            # the raw object raises type-mismatch, so we access ``.url``.
+            rows = self.query(
+                DATASET_PROCESOS,
+                where=f"{FIELD_PROCESO_URL}.url like '%{_escape(notice_uid)}%'",
+                limit=1,
+            )
+            if rows:
+                return rows[0]
+
         if url:
             rows = self.query(
                 DATASET_PROCESOS,
-                where=f"{FIELD_PROCESO_URL} like '%{_escape(process_id)}%'",
+                where=f"{FIELD_PROCESO_URL}.url like '%{_escape(process_id)}%'",
                 limit=1,
             )
             if rows:
                 return rows[0]
         return None
 
-    def get_contratos(self, process_id: str) -> list[dict]:
-        """Return every contract row linked to ``process_id``."""
+    def get_contratos(
+        self,
+        portfolio_id: str | None = None,
+        *,
+        notice_uid: str | None = None,
+    ) -> list[dict]:
+        """Return contract rows for a given portfolio or notice.
+
+        ``jbjy-vk9h.proceso_de_compra`` holds the ``CO1.BDOS.*`` portfolio
+        id (equivalent to ``p6dx-8zbt.id_del_portafolio``). That is the
+        canonical join key between procesos and contratos. ``notice_uid``
+        is an alternate match against the URL field, useful when the
+        portfolio id wasn't on the proceso row.
+        """
+        clauses: list[str] = []
+        if portfolio_id:
+            clauses.append(f"{FIELD_CONTRATO_PROCESO}='{_escape(portfolio_id)}'")
+        if notice_uid:
+            clauses.append(f"{FIELD_CONTRATO_URL}.url like '%{_escape(notice_uid)}%'")
+        if not clauses:
+            return []
         return self.query(
             DATASET_CONTRATOS,
-            where=(
-                f"{FIELD_CONTRATO_PROCESO}='{_escape(process_id)}'"
-                f" OR {FIELD_CONTRATO_URL} like '%{_escape(process_id)}%'"
-            ),
+            where=" OR ".join(clauses),
             limit=DEFAULT_PAGE_SIZE,
         )
 
     def get_adiciones(self, id_contrato: str) -> list[dict]:
-        """Return every modification/addition row for ``id_contrato``."""
+        """Return cb9c-h8sn rows for ``id_contrato`` (tipo + descripción)."""
         return self.query(
             DATASET_ADICIONES,
             where=f"{FIELD_ADICION_CONTRATO}='{_escape(id_contrato)}'",
+            limit=DEFAULT_PAGE_SIZE,
+        )
+
+    def get_modificaciones_ricas(self, id_contrato: str) -> list[dict]:
+        """Return u8cx-r425 rows for ``id_contrato`` (valor, días, fecha aprobación)."""
+        return self.query(
+            DATASET_MOD_CONTRATOS,
+            where=f"{FIELD_MODCTR_CONTRATO}='{_escape(id_contrato)}'",
+            limit=DEFAULT_PAGE_SIZE,
+        )
+
+    def get_ubicaciones(self, id_contrato: str) -> list[dict]:
+        """Return the dirección/ubicación rows for ``id_contrato``."""
+        return self.query(
+            DATASET_UBICACIONES,
+            where=f"{FIELD_UBIC_CONTRATO}='{_escape(id_contrato)}'",
             limit=DEFAULT_PAGE_SIZE,
         )
 
