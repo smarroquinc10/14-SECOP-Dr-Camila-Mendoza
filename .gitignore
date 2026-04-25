@@ -83,3 +83,4 @@ tauri/sidecar_smoke.err
 tauri/gen/
 # WiX downloads its toolchain into the user-local Tauri folder.
 .tauri/
+PR_BODY.md
