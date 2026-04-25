@@ -136,14 +136,17 @@ function Update-PyProjectIfPresent([string]$newVer) {
     }
 }
 
-function Invoke-Git([string[]]$args) {
+function Invoke-Git([string[]]$gitArgs) {
+    # NOTA: el par�metro NO se llama `$args` porque PowerShell ya tiene esa
+    # variable autom�tica y, aunque parezca que la sombra, en algunas
+    # ediciones queda vac�a y los `git` lanzados quedan sin argumentos.
     if ($DryRun) {
-        Write-Host "  [DRY] git $($args -join ' ')"
+        Write-Host "  [DRY] git $($gitArgs -join ' ')"
         return
     }
-    & git @args
+    & git @gitArgs
     if ($LASTEXITCODE -ne 0) {
-        throw "git $($args -join ' ') fall� (exit $LASTEXITCODE)"
+        throw "git $($gitArgs -join ' ') fall� (exit $LASTEXITCODE)"
     }
 }
 
