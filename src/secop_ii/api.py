@@ -530,20 +530,54 @@ def _save_watched(items: list[dict[str, Any]]) -> None:
 
 @app.get("/watch")
 async def watch_list() -> dict[str, Any]:
-    """Return the manually-tracked SECOP URLs (in addition to the
-    auto-discovered FEAB contracts)."""
-    return {"items": _load_watched()}
+    """Return the manually-tracked SECOP URLs, each enriched with the
+    Dra's Excel data (estado, valor, fecha firma, proveedor, prórrogas,
+    liquidación, observaciones) so the UI can show real values for
+    procesos that the public API doesn't expose by NTC.
+
+    The Excel data is cached per workbook mtime and merged in-memory
+    on each request — no persistence change. Items the Dra added by
+    URL paste (without sheet) get ``excel_data: null`` and the UI
+    shows what little SECOP exposes.
+    """
+    items = _load_watched()
+    for it in items:
+        try:
+            it["excel_data"] = _excel_data_for(
+                process_id=it.get("process_id"),
+                notice_uid=it.get("notice_uid"),
+                contract_id=None,
+                url=it.get("url"),
+            )
+        except Exception as exc:
+            log.warning("excel_data lookup failed for %s: %s",
+                       it.get("process_id"), exc)
+            it["excel_data"] = None
+    return {"items": items}
 
 
 @app.post("/watch")
 async def watch_add(payload: dict[str, str]) -> dict[str, Any]:
     """Add a SECOP URL to the watch list. Dedup by parsed process_id.
 
+    Body::
+
+        {"url": "<URL del SECOP II>",
+         "note": "optional comment",
+         "sheet": "FEAB 2024"  # optional — la hoja a la que pertenece}
+
+    If ``sheet`` is provided, the new item is recorded as appearing on
+    that sheet (sheets=[sheet], vigencias=[derived from sheet name],
+    one synthetic appearance with row=None to mark it as manual). If
+    the URL was already in the list, the new sheet is APPENDED to its
+    existing sheets/vigencias/appearances — we never overwrite history.
+
     Returns ``{added: true|false, item, total}`` so the UI can show
     "ya estaba en tu lista" feedback without inventing duplicates.
     """
     url = (payload.get("url") or "").strip()
     note = (payload.get("note") or "").strip() or None
+    sheet = (payload.get("sheet") or "").strip() or None
     if not url:
         raise HTTPException(400, "url is required")
     if "secop.gov.co" not in url.lower():
@@ -559,19 +593,60 @@ async def watch_add(payload: dict[str, str]) -> dict[str, Any]:
         # Allow URLs we can't parse; we'll dedup by URL string instead.
         pass
 
+    vigencia = _vigencia_from_sheet_name(sheet) if sheet else None
+
     with _WATCH_LOCK:
         items = _load_watched()
         # Dedup: prefer process_id match, fall back to URL match.
         for it in items:
             same_id = process_id and it.get("process_id") == process_id
             same_url = it.get("url") == url
-            if same_id or same_url:
+            if not (same_id or same_url):
+                continue
+            # Already in the list. If the user picked a sheet that's
+            # not yet in this item's sheets[], append it (the same
+            # process can legitimately live on multiple sheets).
+            if sheet:
+                it.setdefault("sheets", [])
+                it.setdefault("vigencias", [])
+                it.setdefault("appearances", [])
+                if sheet not in it["sheets"]:
+                    it["sheets"].append(sheet)
+                if vigencia and vigencia not in it["vigencias"]:
+                    it["vigencias"].append(vigencia)
+                # Synthetic appearance from manual add (row=None to
+                # distinguish from Excel-imported rows).
+                already = any(
+                    a.get("sheet") == sheet
+                    and a.get("row") is None
+                    and a.get("url") == url
+                    for a in it["appearances"]
+                )
+                if not already:
+                    it["appearances"].append({
+                        "sheet": sheet,
+                        "vigencia": vigencia,
+                        "row": None,
+                        "url": url,
+                    })
+                _save_watched(items)
                 return {"added": False, "item": it, "total": len(items),
-                       "reason": "ya estaba en tu lista"}
+                       "reason": f"ya estaba en tu lista — agregado también a {sheet}"}
+            return {"added": False, "item": it, "total": len(items),
+                   "reason": "ya estaba en tu lista"}
+
         new_item = {
             "url": url,
             "process_id": process_id,
             "notice_uid": notice_uid,
+            "sheets": [sheet] if sheet else [],
+            "vigencias": [vigencia] if vigencia else [],
+            "appearances": [{
+                "sheet": sheet,
+                "vigencia": vigencia,
+                "row": None,
+                "url": url,
+            }] if sheet else [],
             "added_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "note": note,
         }
@@ -759,12 +834,7 @@ def _vigencia_from_sheet_name(sheet_name: str) -> str | None:
 
 
 def _find_obs_column(ws, header_row: int) -> int | None:
-    """Locate the ``OBSERVACIONES`` column in a sheet by header text.
-
-    Lives at col 75 in FEAB 2026/2025/2024/2023/2022 and at col 73 in
-    FEAB 2018-2021. Match is by header substring 'OBSERVAC' so it
-    works across "72. OBSERVACIONES" and any minor formatting.
-    """
+    """Locate the ``OBSERVACIONES`` column in a sheet by header text."""
     try:
         row = next(ws.iter_rows(min_row=header_row, max_row=header_row,
                                 values_only=True))
@@ -778,10 +848,100 @@ def _find_obs_column(ws, header_row: int) -> int | None:
     return None
 
 
+# Headers we want to surface to the UI when SECOP API has no contract
+# but the Dra's Excel does. The match is by SUBSTRING (case-insensitive,
+# accent-tolerant via unicodedata) so minor formatting variations don't
+# break it. Order matters: the FIRST match wins per field.
+_FIELD_HEADER_MATCHERS: dict[str, list[str]] = {
+    "estado": ["10.ESTADO DEL CONTRATO", "ESTADO DEL CONTRATO"],
+    "fecha_firma": ["5. FECHA SUSCRIPCION", "FECHA SUSCRIPCION"],
+    "fecha_inicio": ["8. FECHA INICIO", "FECHA INICIO"],
+    "fecha_terminacion": ["9. FECHA TERMINACION", "FECHA TERMINACION"],
+    "valor_total": ["36. VALOR TOTAL", "36: VALOR TOTAL", "VALOR TOTAL"],
+    "valor_inicial": [
+        "28.VALOR INICIAL DEL CONTRATO",
+        "VALOR INICIAL DEL CONTRATO",
+    ],
+    "proveedor": [
+        "43. CONTRATISTA : NOMBRE COMPLETO",
+        "CONTRATISTA : NOMBRE COMPLETO",
+        "NOMBRE COMPLETO",
+    ],
+    "objeto": ["4. OBJETO", "OBJETO"],
+    "modalidad": ["12. MODALIDAD DE SELECCION", "MODALIDAD DE SELECCION"],
+    "dias_prorrogas": ["37. PRORROGAS : NUMERO DE DIAS", "PRORROGAS : NUMERO DE DIAS"],
+    "adiciones_count": ["35A ADICIONES", "35. TIPO DE ADICIONES"],
+    "liquidacion": ["67.REQUIERE LIQUIDACION", "REQUIERE LIQUIDACION"],
+    "fecha_liquidacion": ["68. FECHA LIQUIDACION", "FECHA LIQUIDACION"],
+    "numero_contrato": ["2. NUMERO DE CONTRATO", "NUMERO DE CONTRATO"],
+    "supervisor": ["54.NOMBRE DEL INTERVENTOR", "NOMBRE DEL INTERVENTOR"],
+}
+
+
+def _norm(s: str) -> str:
+    """Uppercase + strip accents for header matching."""
+    import unicodedata
+    return "".join(
+        c for c in unicodedata.normalize("NFD", s.upper())
+        if unicodedata.category(c) != "Mn"
+    )
+
+
+def _find_field_columns(ws, header_row: int) -> dict[str, int]:
+    """Return {field_name -> 1-indexed col} for every recognized header
+    in ``_FIELD_HEADER_MATCHERS``. Skips fields whose header isn't found."""
+    try:
+        row = next(ws.iter_rows(min_row=header_row, max_row=header_row,
+                                values_only=True))
+    except StopIteration:
+        return {}
+    headers_norm = [
+        _norm(str(v).strip()) if v is not None else "" for v in row
+    ]
+    out: dict[str, int] = {}
+    for field, candidates in _FIELD_HEADER_MATCHERS.items():
+        for cand in candidates:
+            cand_n = _norm(cand)
+            for i, h in enumerate(headers_norm, start=1):
+                if cand_n in h:
+                    out[field] = i
+                    break
+            if field in out:
+                break
+    return out
+
+
+def _read_excel_row_fields(
+    row: tuple, field_cols: dict[str, int]
+) -> dict[str, Any]:
+    """Pluck the recognized fields out of a row, normalizing values."""
+    import datetime as _dt
+    out: dict[str, Any] = {}
+    for field, col in field_cols.items():
+        if len(row) < col:
+            continue
+        v = row[col - 1]
+        if v is None:
+            continue
+        if isinstance(v, _dt.datetime):
+            out[field] = v.strftime("%Y-%m-%d")
+        elif isinstance(v, _dt.date):
+            out[field] = v.isoformat()
+        elif isinstance(v, (int, float)):
+            out[field] = v
+        else:
+            text = str(v).strip()
+            if text:
+                out[field] = text
+    return out
+
+
 # In-memory cache keyed by (workbook_path, mtime) so we re-read the
 # Excel only when it actually changes.
 _OBS_INDEX_CACHE: dict[tuple[str, float],
                        dict[str, list[dict[str, Any]]]] = {}
+_DATA_INDEX_CACHE: dict[tuple[str, float],
+                        dict[str, dict[str, Any]]] = {}
 
 
 def _load_excel_obs_index(workbook_path: Path) -> dict[
@@ -863,6 +1023,104 @@ def _load_excel_obs_index(workbook_path: Path) -> dict[
     _OBS_INDEX_CACHE.clear()
     _OBS_INDEX_CACHE[cache_key] = index
     return index
+
+
+def _load_excel_data_index(workbook_path: Path) -> dict[str, dict[str, Any]]:
+    """Build ``{key -> {sheet, row, vigencia, estado, valor_total, ...}}``
+    where ``key`` is every URL/process_id/lower-URL we can extract from
+    each row that has a SECOP link. Last-write wins per key (the most
+    recent sheet's data takes priority).
+
+    Cached per (path, mtime). The set of fields surfaced is defined
+    by ``_FIELD_HEADER_MATCHERS`` so the columns auto-adjust if the
+    Dra renames things in the Excel.
+    """
+    if not workbook_path.exists():
+        return {}
+    mtime = workbook_path.stat().st_mtime
+    cache_key = (str(workbook_path), mtime)
+    cached = _DATA_INDEX_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
+
+    from openpyxl import load_workbook
+    wb = load_workbook(workbook_path, data_only=True, read_only=True)
+    index: dict[str, dict[str, Any]] = {}
+
+    for sheet_name in wb.sheetnames:
+        ws = wb[sheet_name]
+        link_loc = _find_link_column(ws)
+        if not link_loc:
+            continue
+        header_row, link_col = link_loc
+        field_cols = _find_field_columns(ws, header_row)
+        if not field_cols:
+            continue
+        vig_col = _find_vigencia_column(ws, header_row)
+        sheet_fallback_vig = _vigencia_from_sheet_name(sheet_name)
+
+        for excel_row_idx, row in enumerate(
+            ws.iter_rows(min_row=header_row + 1, values_only=True),
+            start=header_row + 1,
+        ):
+            if not row or len(row) < link_col:
+                continue
+            link_v = row[link_col - 1]
+            if link_v is None:
+                continue
+            url = str(link_v).strip()
+            if not url or "secop.gov.co" not in url.lower():
+                continue
+
+            data = _read_excel_row_fields(row, field_cols)
+            if not data:
+                continue
+
+            # Vigencia (per-row col preferred, sheet name fallback)
+            vigencia: str | None = None
+            if vig_col is not None and len(row) >= vig_col:
+                rv = row[vig_col - 1]
+                if rv is not None:
+                    if isinstance(rv, (int, float)):
+                        vigencia = str(int(rv))
+                    else:
+                        vigencia = str(rv).strip() or None
+            if not vigencia:
+                vigencia = sheet_fallback_vig
+
+            data["sheet"] = sheet_name
+            data["row"] = excel_row_idx
+            data["vigencia"] = vigencia
+
+            index[url] = data
+            index[url.lower()] = data
+            try:
+                ref = parse_secop_url(url)
+                index[ref.process_id] = data
+            except InvalidSecopUrlError:
+                pass
+
+    _DATA_INDEX_CACHE.clear()
+    _DATA_INDEX_CACHE[cache_key] = index
+    return index
+
+
+def _excel_data_for(
+    process_id: str | None,
+    notice_uid: str | None,
+    contract_id: str | None,
+    url: str | None,
+) -> dict[str, Any] | None:
+    """Look up a row's Excel data by any of its identifiers."""
+    workbook = Path(_DEFAULT_WORKBOOK)
+    index = _load_excel_data_index(workbook)
+    for key in (process_id, notice_uid, contract_id,
+                url, (url or "").lower()):
+        if not key:
+            continue
+        if key in index:
+            return index[key]
+    return None
 
 
 def _observaciones_for(

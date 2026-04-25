@@ -15,6 +15,7 @@ import { ModsPanel } from "@/components/mods-panel";
 import { SlicerPills } from "@/components/slicer-pills";
 import {
   buildUnifiedRows,
+  expandRowsByAppearance,
   UnifiedTable,
   type UnifiedRow,
 } from "@/components/unified-table";
@@ -117,7 +118,7 @@ export default function HomePage() {
 
   // ---- Apply filters ----------------------------------------------------
   const filtered = React.useMemo(() => {
-    return allRows.filter((r) => {
+    const base = allRows.filter((r) => {
       if (onlyMine && !r.watched) return false;
       if (search) {
         const blob = (
@@ -140,10 +141,18 @@ export default function HomePage() {
         return false;
       if (sheets.length && !sheets.some((s) => r.sheets.includes(s)))
         return false;
-      if (onlyMod && !(r.estado ?? "").toLowerCase().includes("modific"))
-        return false;
+      if (onlyMod) {
+        const isMod =
+          /modific/i.test(r.estado ?? "") ||
+          (r.dias_adicionados != null && r.dias_adicionados > 0);
+        if (!isMod) return false;
+      }
       return true;
     });
+    // When the user picks one or more sheet pills, expand every row
+    // by its appearances in those sheets so the count matches the
+    // Excel exactly (e.g. FEAB 2024 → 85 rows, not 66 dedup-by-process).
+    return expandRowsByAppearance(base, sheets);
   }, [allRows, search, years, states, modalities, sheets, onlyMod, onlyMine]);
 
   // ---- Refresh + watch CRUD --------------------------------------------
@@ -253,13 +262,13 @@ export default function HomePage() {
 
       {/* Header */}
       <div className="mx-auto max-w-7xl px-8 pt-12 pb-6">
-        <div className="eyebrow mb-3">Auditoría · Gestión Contractual</div>
+        <div className="eyebrow mb-3">
+          Auditoría · Gestión Contractual · SECOP
+        </div>
         <h1 className="serif text-5xl font-bold tracking-tight text-ink mb-2">
           Bienvenida, Dra. María Camila Mendoza Zubiría
         </h1>
-        <div className="eyebrow text-ink-soft">
-          Jefe de Gestión Contractual del FEAB · {TODAY}
-        </div>
+        <div className="eyebrow text-ink-soft">{TODAY}</div>
       </div>
 
       <div className="rule mx-auto max-w-7xl mb-8" />
@@ -348,25 +357,31 @@ export default function HomePage() {
               />
             </div>
             <div>
-              <span className="eyebrow mb-2 block">Marcas</span>
+              <span className="eyebrow mb-2 block">Filtros rápidos</span>
               <div className="flex flex-col gap-2">
-                <label className="flex items-center gap-2 text-sm text-ink cursor-pointer h-9 px-3 border border-input rounded-md hover:bg-background">
+                <label
+                  className="flex items-center gap-2 text-sm text-ink cursor-pointer h-9 px-3 border border-input rounded-md hover:bg-background"
+                  title="Solo procesos que la Dra registró en el Excel (491 únicos)"
+                >
                   <input
                     type="checkbox"
                     checked={onlyMine}
                     onChange={(e) => setOnlyMine(e.target.checked)}
                     className="rounded border-border"
                   />
-                  Solo mis procesos seguidos
+                  Solo los procesos del Excel
                 </label>
-                <label className="flex items-center gap-2 text-sm text-ink cursor-pointer h-9 px-3 border border-input rounded-md hover:bg-background">
+                <label
+                  className="flex items-center gap-2 text-sm text-ink cursor-pointer h-9 px-3 border border-input rounded-md hover:bg-background"
+                  title="Solo contratos cuyo estado es 'Modificado' o tienen días adicionados"
+                >
                   <input
                     type="checkbox"
                     checked={onlyMod}
                     onChange={(e) => setOnlyMod(e.target.checked)}
                     className="rounded border-border"
                   />
-                  Solo modificados
+                  Solo contratos modificados
                 </label>
               </div>
             </div>

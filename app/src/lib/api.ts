@@ -133,8 +133,29 @@ export interface ModSummary {
 export interface WatchedAppearance {
   sheet: string;
   vigencia: string | null;
-  row: number;
+  row: number | null;
   url: string;
+}
+
+export interface ExcelData {
+  sheet?: string;
+  row?: number;
+  vigencia?: string | null;
+  estado?: string;
+  fecha_firma?: string;
+  fecha_inicio?: string;
+  fecha_terminacion?: string;
+  valor_total?: number | string;
+  valor_inicial?: number | string;
+  proveedor?: string;
+  objeto?: string;
+  modalidad?: string;
+  dias_prorrogas?: number | string;
+  adiciones_count?: number | string;
+  liquidacion?: string;
+  fecha_liquidacion?: string;
+  numero_contrato?: string;
+  supervisor?: string;
 }
 
 export interface WatchedItem {
@@ -144,6 +165,7 @@ export interface WatchedItem {
   sheets: string[];
   vigencias: string[];
   appearances: WatchedAppearance[];
+  excel_data?: ExcelData | null;
   added_at: string;
   note: string | null;
 }

@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import {
   api,
   type Contract,
+  type WatchedAppearance,
   type WatchedItem,
 } from "@/lib/api";
 import { cn, fmtDate, moneyCO } from "@/lib/utils";
@@ -49,12 +50,49 @@ export interface UnifiedRow {
   // From watch list (if present)
   sheets: string[];
   vigencias: string[];
+  appearances: WatchedAppearance[];
   appearances_count: number;
   watched: boolean;
   watch_url: string | null;
 
   // Verify status taxonomy (derived)
   verifyStatus: "verificado" | "contrato_firmado" | "borrador" | "no_en_api";
+}
+
+
+/**
+ * When a sheet filter is active, expand each watched row to ONE ROW
+ * per appearance in the matching sheet(s). This makes the count
+ * match the Excel exactly — if FEAB 2024 has 85 rows pointing at
+ * SECOP URLs, the table shows 85 lines, not the 66 dedup-by-process.
+ */
+export function expandRowsByAppearance(
+  rows: UnifiedRow[],
+  selectedSheets: string[],
+): UnifiedRow[] {
+  if (selectedSheets.length === 0) return rows;
+  const out: UnifiedRow[] = [];
+  for (const r of rows) {
+    if (!r.watched || r.appearances.length === 0) {
+      // Orphan or empty: keep as one line if any of its sheets matches
+      const hit = r.sheets.some((s) => selectedSheets.includes(s));
+      if (hit || r.sheets.length === 0) out.push(r);
+      continue;
+    }
+    const matching = r.appearances.filter((a) =>
+      selectedSheets.includes(a.sheet),
+    );
+    for (const a of matching) {
+      out.push({
+        ...r,
+        key: `${r.key}#${a.sheet}#${a.row ?? "manual"}`,
+        // Override sheet/vigencia to the appearance's specific values
+        sheets: [a.sheet],
+        vigencias: a.vigencia ? [a.vigencia] : r.vigencias,
+      });
+    }
+  }
+  return out;
 }
 
 
@@ -81,6 +119,11 @@ function classifyStatus(
  * list. A contract whose `proceso_de_compra` matches a watched item's
  * process_id (or notice_uid, or URL) is folded into that watch row.
  * Orphan contracts (in SECOP, not in watch) get added at the end.
+ *
+ * Three-tier fallback for each cell:
+ *   1. SECOP API contract  (most authoritative)
+ *   2. Excel data           (Dra's master file — used when API has no contract)
+ *   3. null                 (the row is from a brand-new manual add)
  */
 export function buildUnifiedRows(
   watched: WatchedItem[],
@@ -110,32 +153,72 @@ export function buildUnifiedRows(
     }
     if (contract?.id_contrato) usedContracts.add(contract.id_contrato);
 
-    const dias = parseInt(String(contract?.dias_adicionados ?? "0"), 10);
-    const liq =
+    const ex = w.excel_data ?? null;
+    const apiDias = parseInt(String(contract?.dias_adicionados ?? "0"), 10);
+    const exDias = parseInt(String(ex?.dias_prorrogas ?? "0"), 10);
+    const dias =
+      Number.isFinite(apiDias) && apiDias > 0
+        ? apiDias
+        : Number.isFinite(exDias) && exDias > 0
+          ? exDias
+          : null;
+    const apiLiq =
       String(contract?.liquidaci_n ?? "")
         .trim()
         .toLowerCase() === "si";
+    const exLiq =
+      String(ex?.liquidacion ?? "")
+        .trim()
+        .toLowerCase()
+        .startsWith("s");
+    const liq = apiLiq || exLiq;
+
+    // Compose human-readable "Notas" line. Prefer API-computed; else
+    // build from Excel signals.
+    let notas: string | null = (contract?._notas as string) ?? null;
+    if (!notas) {
+      const parts: string[] = [];
+      const estado =
+        (contract?.estado_contrato as string) ?? ex?.estado ?? "";
+      if (/modific/i.test(estado)) parts.push("Modificado");
+      if (dias && dias > 0) parts.push(`+${dias} días`);
+      if (liq) parts.push("Liquidado");
+      notas = parts.length ? parts.join(" · ") : null;
+    }
+
+    const valorRaw = contract?.valor_del_contrato ?? ex?.valor_total ??
+      ex?.valor_inicial;
+    const valor = valorRaw != null && valorRaw !== ""
+      ? Number(valorRaw)
+      : null;
 
     rows.push({
-      key: contract?.id_contrato ?? w.url,
+      key: contract?.id_contrato ?? w.url ?? `${w.process_id ?? "noid"}-${rows.length}`,
       process_id: w.process_id,
       id_contrato: contract?.id_contrato ?? null,
       notice_uid: w.notice_uid ?? contract?.proceso_de_compra ?? null,
       url: w.url,
-      objeto: (contract?.objeto_del_contrato as string) ?? null,
-      proveedor: (contract?.proveedor_adjudicado as string) ?? null,
-      valor: contract?.valor_del_contrato
-        ? Number(contract.valor_del_contrato)
-        : null,
-      fecha_firma: ((contract?.fecha_de_firma as string) ?? "").slice(0, 10) ||
+      objeto:
+        (contract?.objeto_del_contrato as string) ?? ex?.objeto ?? null,
+      proveedor:
+        (contract?.proveedor_adjudicado as string) ?? ex?.proveedor ?? null,
+      valor: valor != null && Number.isFinite(valor) ? valor : null,
+      fecha_firma:
+        ((contract?.fecha_de_firma as string) ?? "").slice(0, 10) ||
+        (ex?.fecha_firma ?? null) ||
         null,
-      estado: (contract?.estado_contrato as string) ?? null,
-      modalidad: (contract?.modalidad_de_contratacion as string) ?? null,
-      notas: (contract?._notas as string) ?? null,
-      dias_adicionados: Number.isFinite(dias) && dias > 0 ? dias : null,
+      estado:
+        (contract?.estado_contrato as string) ?? ex?.estado ?? null,
+      modalidad:
+        (contract?.modalidad_de_contratacion as string) ??
+        ex?.modalidad ??
+        null,
+      notas,
+      dias_adicionados: dias,
       liquidado: liq,
       sheets: w.sheets ?? [],
       vigencias: w.vigencias ?? [],
+      appearances: w.appearances ?? [],
       appearances_count: w.appearances?.length ?? 0,
       watched: true,
       watch_url: w.url,
@@ -164,6 +247,7 @@ export function buildUnifiedRows(
       estado: (c.estado_contrato as string) ?? null,
       modalidad: (c.modalidad_de_contratacion as string) ?? null,
       notas: (c._notas as string) ?? null,
+      appearances: [],
       dias_adicionados: Number.isFinite(dias) && dias > 0 ? dias : null,
       liquidado: liq,
       sheets: [],
@@ -291,14 +375,16 @@ export function UnifiedTable({
               <tr>
                 <th className="text-left px-3 py-2 w-20">Vigencia</th>
                 <th className="text-left px-3 py-2 w-44">Código</th>
+                <th className="text-left px-3 py-2 w-40">Notice UID</th>
                 <th className="text-left px-3 py-2">Objeto</th>
                 <th className="text-left px-3 py-2 w-44">Proveedor</th>
                 <th className="text-right px-3 py-2 w-32">Valor (COP)</th>
                 <th className="text-left px-3 py-2 w-24">Firma</th>
                 <th className="text-left px-3 py-2 w-28">Estado</th>
+                <th className="text-left px-3 py-2 w-40">Notas</th>
                 <th className="text-left px-3 py-2 w-28">Verificación</th>
                 <th className="text-left px-3 py-2 w-28">Hoja</th>
-                <th className="text-right px-3 py-2 w-32"></th>
+                <th className="text-right px-3 py-2 w-44">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -335,6 +421,9 @@ export function UnifiedTable({
                         </span>
                       )}
                     </td>
+                    <td className="px-3 py-2 font-mono text-[10px] text-ink-soft">
+                      {r.notice_uid ?? "—"}
+                    </td>
                     <td className="px-3 py-2 text-xs text-ink">
                       {r.objeto
                         ? r.objeto.slice(0, 80) + (r.objeto.length > 80 ? "…" : "")
@@ -363,11 +452,9 @@ export function UnifiedTable({
                       ) : (
                         <span className="text-ink-soft/50">—</span>
                       )}
-                      {r.notas && (
-                        <div className="text-[10px] text-ink-soft mt-0.5 italic">
-                          {r.notas}
-                        </div>
-                      )}
+                    </td>
+                    <td className="px-3 py-2 text-[11px] text-ink-soft italic">
+                      {r.notas ?? <span className="not-italic">—</span>}
                     </td>
                     <td className="px-3 py-2">
                       <StatusBadge status={r.verifyStatus} />
@@ -420,16 +507,17 @@ export function UnifiedTable({
                           </button>
                         </div>
                       ) : (
-                        <div className="flex items-center justify-end gap-0.5">
+                        <div className="flex items-center justify-end gap-1">
                           {r.url && (
                             <a
                               href={r.url}
                               target="_blank"
                               rel="noreferrer"
-                              className="inline-flex items-center justify-center h-7 w-7 rounded text-burgundy hover:bg-burgundy/10"
-                              title="Abrir en SECOP II"
+                              className="inline-flex items-center gap-1 px-2 h-7 rounded text-[11px] text-burgundy hover:bg-burgundy/10 border border-transparent hover:border-burgundy/30"
+                              title="Abrir el link del proceso en el portal SECOP II"
                             >
-                              <ExternalLink className="h-4 w-4" />
+                              <ExternalLink className="h-3.5 w-3.5" />
+                              Abrir
                             </a>
                           )}
                           {r.watched && r.watch_url && (
@@ -440,20 +528,22 @@ export function UnifiedTable({
                                   setEditDraft(r.watch_url ?? "");
                                 }}
                                 disabled={busy}
-                                className="inline-flex items-center justify-center h-7 w-7 rounded text-burgundy hover:bg-burgundy/10 disabled:opacity-50"
-                                title="Corregir URL del proceso"
+                                className="inline-flex items-center gap-1 px-2 h-7 rounded text-[11px] text-burgundy hover:bg-burgundy/10 border border-transparent hover:border-burgundy/30 disabled:opacity-50"
+                                title="Corregir el link del proceso si está mal"
                               >
-                                <Pencil className="h-4 w-4" />
+                                <Pencil className="h-3.5 w-3.5" />
+                                Editar
                               </button>
                               <button
                                 onClick={() =>
                                   r.watch_url && onRemove(r.watch_url)
                                 }
                                 disabled={busy}
-                                className="inline-flex items-center justify-center h-7 w-7 rounded text-rose-700 hover:bg-rose-50 disabled:opacity-50"
-                                title="Quitar de tu lista de seguimiento"
+                                className="inline-flex items-center gap-1 px-2 h-7 rounded text-[11px] text-rose-700 hover:bg-rose-50 border border-transparent hover:border-rose-300 disabled:opacity-50"
+                                title="Quitar este proceso de tu lista"
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 className="h-3.5 w-3.5" />
+                                Quitar
                               </button>
                             </>
                           )}
