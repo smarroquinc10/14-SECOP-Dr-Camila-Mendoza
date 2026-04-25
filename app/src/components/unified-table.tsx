@@ -108,10 +108,25 @@ export interface UnifiedRow {
   // De qué fuente vienen los campos visibles (estado/valor/proveedor/...).
   // - "api"        → SECOP API estandar (p6dx-8zbt / jbjy-vk9h vía /contracts)
   // - "integrado"  → SECOP Integrado (rpmr-utcd) — fallback sin captcha
+  // - "portal"     → Snapshot cacheado del scraper de community.secop.gov.co
+  //                  bakeado al bundle (cuando ningún API público lo expone).
   // - null         → ninguna fuente tuvo match; las celdas muestran "—" honesto
-  // La UI muestra un badge claro cuando data_source === "integrado"
-  // para que la procedencia NUNCA quede ambigua.
-  data_source: "api" | "integrado" | null;
+  // La UI muestra un badge claro cuando data_source !== "api" para que la
+  // procedencia NUNCA quede ambigua.
+  data_source: "api" | "integrado" | "portal" | null;
+}
+
+/** Mapa del bulk Portal cache pasado por la página — cada entry es el
+ *  snapshot ya scrapeado del portal community.secop, indexado por
+ *  notice_uid. */
+export interface PortalBulk {
+  [notice_uid: string]: {
+    fields?: Record<string, string | null>;
+    documents?: { name: string; url: string }[];
+    notificaciones?: { proceso: string; evento: string; fecha: string }[];
+    status?: string | null;
+    scraped_at?: string | null;
+  };
 }
 
 
@@ -155,22 +170,67 @@ function classifyStatus(
   watch: WatchedItem | null,
   contract: Contract | null,
   integ: IntegradoSummary | null = null,
+  hasPortalSnapshot: boolean = false,
 ): UnifiedRow["verifyStatus"] {
   // 1. If we have an API contract, it IS in the public API.
   if (contract?.id_contrato) return "contrato_firmado";
   // 2. If watch has notice_uid resolved, it's verified against datos.gov.co.
   if (watch?.notice_uid) return "verificado";
-  // 3. NEW: Integrado matchea => el proceso ESTÁ publicado en datos.gov.co
-  //    (rpmr-utcd combina SECOP I + II). El badge "no_en_api" en estos
-  //    casos era un FALSE NEGATIVE que ocultaba data que sí teníamos.
+  // 3. Integrado matchea => el proceso ESTÁ publicado en datos.gov.co
+  //    (rpmr-utcd combina SECOP I + II).
   if (integ) return "verificado";
-  // 4. If process_id is a workspace ID (REQ/BDOS), it's a draft.
+  // 4. Portal cache hit => sí está en community.secop.gov.co aunque no
+  //    en datos.gov.co. La data viene del scrape previo bakeado.
+  if (hasPortalSnapshot) return "verificado";
+  // 5. If process_id is a workspace ID (REQ/BDOS), it's a draft.
   const pid = watch?.process_id ?? "";
   if (pid.startsWith("CO1.REQ.") || pid.startsWith("CO1.BDOS.")) {
     return "borrador";
   }
-  // 5. Otherwise: not in the public API.
+  // 6. Otherwise: not in any public source.
   return "no_en_api";
+}
+
+/**
+ * El portal SECOP devuelve `valor_total` como string formateado al estilo
+ * colombiano: "12.000.000" o "$ 12.000.000,00". Lo normalizo a number
+ * para que la columna de Valor muestre el monto bien formateado por
+ * `moneyCO`. Si no parsea, devuelvo null (la celda muestra "—" honesto).
+ */
+function parsePortalValor(raw: string | null | undefined): number | null {
+  if (!raw) return null;
+  // Limpia "$", espacios, "COP", " ".
+  let s = String(raw).replace(/[^\d.,-]/g, "").trim();
+  if (!s) return null;
+  // En CO: separador de miles "." y decimal ",". Si hay coma, lo trato
+  // como decimal — antes de la coma son miles.
+  if (s.includes(",")) {
+    s = s.replace(/\./g, "").replace(",", ".");
+  } else {
+    // Solo dots: pueden ser miles. "12.000.000" → "12000000"
+    s = s.replace(/\./g, "");
+  }
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * El portal usa formatos de fecha tipo "27/05/2024 10:30 AM (UTC -5)" o
+ * "2024-05-27T10:30:00". Extraigo la fecha YYYY-MM-DD si puedo. Si no,
+ * devuelvo null.
+ */
+function parsePortalFecha(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const s = String(raw).trim();
+  // ISO: 2024-05-27 / 2024-05-27T...
+  const iso = s.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (iso) return iso[1];
+  // CO: 27/05/2024 → 2024-05-27
+  const co = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (co) {
+    return `${co[3]}-${co[2].padStart(2, "0")}-${co[1].padStart(2, "0")}`;
+  }
+  return null;
 }
 
 
@@ -189,6 +249,7 @@ export function buildUnifiedRows(
   watched: WatchedItem[],
   contracts: Contract[],
   integradoBulk?: IntegradoBulk | null,
+  portalBulk?: PortalBulk | null,
 ): UnifiedRow[] {
   // Index contracts by every key we may match against
   const byIdContrato = new Map<string, Contract>();
@@ -243,21 +304,32 @@ export function buildUnifiedRows(
     if (contract?.id_contrato) usedContracts.add(contract.id_contrato);
 
     // Cascada de fuentes (regla cardinal: cada celda con su procedencia clara):
-    //   1. SECOP API contracts dataset  →  data_source = "api"
-    //   2. SECOP Integrado (rpmr-utcd)  →  data_source = "integrado"
-    //   3. ninguna  →  data_source = null, todos los campos null, UI muestra "—"
+    //   1. SECOP API contracts dataset       →  data_source = "api"
+    //   2. SECOP Integrado (rpmr-utcd)       →  data_source = "integrado"
+    //   3. Portal cache (community.secop)    →  data_source = "portal"
+    //   4. ninguna  →  data_source = null, campos null, UI muestra "—"
     //
-    // NO se mergean: si el API tiene contract, ese gana entero; si no
-    // hay contract pero hay Integrado, Integrado llena; si no hay nada,
-    // todo queda null. La Dra siempre sabe de qué fuente viene cada fila.
+    // NO se mergean: el primer match gana entero. La Dra siempre sabe
+    // de qué fuente viene cada fila gracias al badge en la columna Origen.
     const integ =
       contract == null
         ? lookupIntegrado(w.notice_uid, w.process_id)
         : null;
+    // Portal cache: clave es notice_uid (formato CO1.NTC.X). Si el watch
+    // ya tiene notice_uid lo usamos; si no, el process_id puede ser un
+    // NTC también (mismo agujero que ya tapamos en lookupIntegrado).
+    let portalSnap: PortalBulk[string] | null = null;
+    if (contract == null && integ == null && portalBulk) {
+      const key1 = w.notice_uid ?? "";
+      const key2 = w.process_id ?? "";
+      portalSnap = portalBulk[key1] ?? portalBulk[key2] ?? null;
+    }
     const dataSource: UnifiedRow["data_source"] = contract
       ? "api"
       : integ
       ? "integrado"
+      : portalSnap
+      ? "portal"
       : null;
 
     const apiDias = parseInt(String(contract?.dias_adicionados ?? "0"), 10);
@@ -268,7 +340,7 @@ export function buildUnifiedRows(
         .trim()
         .toLowerCase() === "si";
 
-    // Valor: del API si hay contrato, sino del Integrado (si hay).
+    // Valor: del API si hay contrato, sino del Integrado, sino del Portal.
     let valor: number | null = null;
     if (contract) {
       const valorRaw = contract.valor_del_contrato;
@@ -279,6 +351,8 @@ export function buildUnifiedRows(
     } else if (integ?.valor_contrato) {
       const n = Number(integ.valor_contrato);
       if (Number.isFinite(n)) valor = n;
+    } else if (portalSnap?.fields?.valor_total) {
+      valor = parsePortalValor(portalSnap.fields.valor_total);
     }
 
     // Notas: notas computadas del SECOP API (cuando hay contrato).
@@ -306,29 +380,37 @@ export function buildUnifiedRows(
         (contract?.referencia_del_contrato as string) ??
         integ?.numero_de_proceso ??
         integ?.numero_del_contrato ??
+        portalSnap?.fields?.numero_contrato ??
+        portalSnap?.fields?.numero_proceso ??
         null,
       url: w.url,
       objeto:
         (contract?.objeto_del_contrato as string) ??
         integ?.objeto_a_contratar ??
+        portalSnap?.fields?.descripcion ??
+        portalSnap?.fields?.objeto ??
         null,
       proveedor:
         (contract?.proveedor_adjudicado as string) ??
         integ?.nom_raz_social_contratista ??
+        portalSnap?.fields?.proveedor ??
         null,
       valor,
       fecha_firma:
         ((contract?.fecha_de_firma as string) ??
           integ?.fecha_de_firma_del_contrato ??
+          parsePortalFecha(portalSnap?.fields?.fecha_firma_contrato ?? portalSnap?.fields?.fecha_firma) ??
           "")
           .slice(0, 10) || null,
       estado:
         (contract?.estado_contrato as string) ??
         integ?.estado_del_proceso ??
+        portalSnap?.fields?.estado ??
         null,
       modalidad:
         (contract?.modalidad_de_contratacion as string) ??
         integ?.modalidad_de_contrataci_n ??
+        portalSnap?.fields?.modalidad ??
         null,
       notas,
       dias_adicionados: dias,
@@ -339,7 +421,7 @@ export function buildUnifiedRows(
       appearances_count: w.appearances?.length ?? 0,
       watched: true,
       watch_url: w.url,
-      verifyStatus: classifyStatus(w, contract, integ),
+      verifyStatus: classifyStatus(w, contract, integ, portalSnap != null),
       data_source: dataSource,
     });
   }

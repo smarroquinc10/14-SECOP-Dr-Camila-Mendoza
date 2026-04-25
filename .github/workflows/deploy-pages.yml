@@ -1,0 +1,94 @@
+name: Deploy a GitHub Pages
+
+# Workflow del flujo HTML pura.
+#
+# Disparador: cualquier push a `main`. Si Sergio mergea el PR del feature
+# branch, el deploy se dispara automáticamente y Cami ve el cambio en su
+# próximo refresh del browser.
+#
+# Pasos:
+#   1. Setup Node 20.
+#   2. `npm ci` en app/ — usa el package-lock.json para reproducibilidad.
+#   3. `npm run build` con `NEXT_PUBLIC_BASE_PATH=/14-SECOP-Dr-Camila-Mendoza`
+#      para que los assets prefijen correctamente al servir desde
+#      https://smarroquinc10.github.io/14-SECOP-Dr-Camila-Mendoza/.
+#   4. Genera `app/out/` (HTML estático).
+#   5. Agrega `.nojekyll` (sin esto, GitHub Pages ignora archivos con
+#      underscore como `_next/`).
+#   6. Sube `app/out/` como artifact de Pages.
+#   7. Deploy automático.
+#
+# Después del primer deploy exitoso, la URL queda viva permanentemente.
+# Updates posteriores (push → workflow → deploy) se reflejan en ~1-2 min
+# en su browser.
+
+on:
+  push:
+    branches:
+      - main
+      # También deploya el branch del PR para que Sergio pueda probar
+      # antes del merge. El URL del preview es el mismo (Pages reemplaza
+      # el último deploy), así que mergeá cuando esté seguro.
+      - "claude/**"
+  workflow_dispatch:
+
+# Permisos requeridos para deploy a Pages.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Una sola corrida de deploy a la vez. Si pusheás dos veces seguidas, la
+# primera se cancela.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install deps
+        working-directory: app
+        run: npm ci --no-audit --no-fund
+
+      - name: Configure Pages
+        id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Build Next.js (static export)
+        working-directory: app
+        env:
+          # Le dice tanto al next.config.ts como a state-store.ts que
+          # estamos en sub-path mode.
+          NEXT_PUBLIC_BASE_PATH: ${{ steps.pages.outputs.base_path }}
+        run: npm run build
+
+      - name: Add .nojekyll (sin esto Pages ignora _next/)
+        run: touch app/out/.nojekyll
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: app/out
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

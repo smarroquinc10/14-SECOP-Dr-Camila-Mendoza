@@ -301,7 +301,29 @@ const FEAB_ENTITY: FeabEntity = {
 // `integradoSync()` o `verifyWatch()`.
 let _contractsCache: SocrataContrato[] | null = null;
 let _integradoCache: SocrataIntegrado[] | null = null;
+let _portalBulkCache: PortalBulk | null = null;
 let _lastSyncedAt: string | null = null;
+
+/**
+ * Tipo del bulk del portal cache. La key es el `notice_uid` y el value
+ * es el snapshot scrapeado del portal community.secop.gov.co.
+ *
+ * Este cache vive como archivo estático en `/data/portal_opportunity_seed.json`,
+ * bakeado al bundle al momento del último scrape (~66 procesos típicamente).
+ * No se actualiza desde el browser — es read-only fallback para los
+ * procesos que el API público de datos.gov.co no expone.
+ */
+export type PortalBulk = Record<
+  string,
+  {
+    fields?: Record<string, string | null>;
+    documents?: { name: string; url: string }[];
+    notificaciones?: { proceso: string; evento: string; fecha: string }[];
+    status?: string | null;
+    scraped_at?: string | null;
+    all_labels?: Record<string, string>;
+  }
+>;
 
 async function getContracts(forceRefresh = false): Promise<SocrataContrato[]> {
   if (!forceRefresh && _contractsCache) return _contractsCache;
@@ -317,6 +339,28 @@ async function getIntegrado(forceRefresh = false): Promise<SocrataIntegrado[]> {
   _lastSyncedAt = new Date().toISOString();
   await setMeta("last_synced_at", _lastSyncedAt);
   return _integradoCache;
+}
+
+/**
+ * Bulk del portal cache: lo bajamos UNA sola vez como archivo estático
+ * y lo dejamos en memoria. Si el bundle no incluye el seed (deploy
+ * fresco sin scraper history), devolvemos `{}` para que la cascada de
+ * fallbacks de `unified-table.tsx` siga siendo honesta.
+ */
+async function getPortalBulk(): Promise<PortalBulk> {
+  if (_portalBulkCache) return _portalBulkCache;
+  try {
+    const url = withBasePath("/data/portal_opportunity_seed.json");
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) {
+      _portalBulkCache = {};
+      return _portalBulkCache;
+    }
+    _portalBulkCache = (await res.json()) as PortalBulk;
+  } catch {
+    _portalBulkCache = {};
+  }
+  return _portalBulkCache;
 }
 
 function toContract(row: SocrataContrato): Contract {
@@ -786,6 +830,15 @@ export const api = {
       pid: 0,
       cmd: `html-pure: refetch rpmr-utcd?nit_de_la_entidad=${nit ?? FEAB_NIT}`,
     };
+  },
+
+  /**
+   * Bulk del portal cache (seed estático) — usado por `unified-table.tsx`
+   * como tercer nivel de fallback cuando ni el SECOP API ni Integrado
+   * tienen datos del proceso. La key es el `notice_uid`.
+   */
+  portalBulk: async (): Promise<PortalBulk> => {
+    return getPortalBulk();
   },
 };
 

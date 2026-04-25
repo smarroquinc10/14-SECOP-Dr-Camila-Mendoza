@@ -21,6 +21,7 @@ import {
   UnifiedTable,
   type UnifiedRow,
 } from "@/components/unified-table";
+import type { PortalBulk } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -86,6 +87,18 @@ export default function HomePage() {
     { refreshInterval: 300_000 }
   );
 
+  // Portal cache (community.secop.gov.co) — seed estático bakeado al
+  // bundle. Cubre los procesos que ni el SECOP API ni el Integrado
+  // exponen (típicamente ~66 procs scrapeados del portal con captcha
+  // resuelto a mano cuando se generó el seed). Cero refresh — es read-
+  // only. Cuando deployes una versión nueva con seed actualizado, Cami
+  // ve la nueva data al refrescar.
+  const { data: portalBulk } = useSWR<PortalBulk>(
+    "portal-bulk",
+    api.portalBulk,
+    { refreshInterval: 0, revalidateOnFocus: false }
+  );
+
   const isLoading = loadingContracts || loadingWatch;
 
   // ---- Filter state -----------------------------------------------------
@@ -108,8 +121,8 @@ export default function HomePage() {
   //   - data_source = "integrado"  → SECOP Integrado (sin captcha)
   //   - data_source = null         → ninguno; UI muestra "—" honesto
   const allRows = React.useMemo(
-    () => buildUnifiedRows(watched, contracts, integradoBulk ?? null),
-    [watched, contracts, integradoBulk]
+    () => buildUnifiedRows(watched, contracts, integradoBulk ?? null, portalBulk ?? null),
+    [watched, contracts, integradoBulk, portalBulk]
   );
 
   const totalAppearances = React.useMemo(
