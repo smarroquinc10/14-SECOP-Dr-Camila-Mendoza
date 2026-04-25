@@ -24,3 +24,47 @@ htmlcov/
 
 config.local.json
 appdata/
+
+# Diagnostic / probe scripts (kept locally during development)
+_probe_*.py
+_test_portal*.py
+_*.txt
+_*.html
+
+# On-disk caches built at runtime
+.cache/
+.playwright-mcp/
+
+# The Dra.'s working Excel files (PII / contractual data)
+BASE DE DATOS*.xlsx
+
+# Next.js build output and node_modules — never commit
+app/.next/
+app/node_modules/
+app/out/
+**/node_modules/
+
+# Dev-time runtime logs (kept locally only)
+_smoke_*.log
+_update_*.log
+_*.log
+
+# Smoke / dev screenshots
+smoke_*.png
+next_*.png
+final_*.png
+
+# Per-row drill-down HTML files generated at runtime
+detalles/
+detalles_test/
+
+# One-off audit reports (timestamped, not part of the codebase)
+AUDITORIA_*.md
+AUDITORIA_*.xlsx
+INVESTIGACION_*.md
+
+# Claude Code local settings (may include tokens)
+.claude/
+
+# TypeScript incremental build cache
+*.tsbuildinfo

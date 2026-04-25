@@ -38,21 +38,21 @@ class _FakeClient:
     """Minimal drop-in for SecopClient used in pipeline tests."""
 
     def __init__(self, *_, **__):
+        self.notice_resolver = None
         self._proc = {
             "CO1.PPI.46305103": {
-                "id_del_proceso": "CO1.PPI.46305103",
-                "adendas": "",
+                "id_del_proceso": "CO1.REQ.46305103",
+                "id_del_portafolio": "CO1.BDOS.46305103",
             },
             "CO1.NTC.9999001": {
-                "id_del_proceso": "CO1.NTC.9999001",
-                "adendas": "Adenda 1; Adenda 2",
+                "id_del_proceso": "CO1.REQ.9999001",
+                "id_del_portafolio": "CO1.BDOS.9999001",
             },
         }
         self._contracts = {
-            "CO1.NTC.9999001": [
+            "CO1.BDOS.9999001": [
                 {
                     "id_contrato": "CO1.PCCNTR.5551234",
-                    "valor_pagado_adiciones": "8000000",
                     "dias_adicionados": "30",
                 }
             ],
@@ -61,17 +61,15 @@ class _FakeClient:
             "CO1.PCCNTR.5551234": [
                 {
                     "id_contrato": "CO1.PCCNTR.5551234",
-                    "tipo_modificacion": "Adición",
-                    "descripci_n": "Adición por mayor cantidad",
-                    "fecha_registro": "2026-02-10T00:00:00.000",
-                    "valor_adicion": "8000000",
+                    "tipo": "Adición",
+                    "descripcion": "Adición por mayor cantidad",
+                    "fecharegistro": "2026-02-10T00:00:00.000",
                 },
                 {
                     "id_contrato": "CO1.PCCNTR.5551234",
-                    "tipo_modificacion": "Prórroga",
-                    "descripci_n": "Prórroga de 30 días",
-                    "fecha_registro": "2026-03-05T00:00:00.000",
-                    "valor_adicion": "0",
+                    "tipo": "Prórroga",
+                    "descripcion": "Prórroga de 30 días",
+                    "fecharegistro": "2026-03-05T00:00:00.000",
                 },
             ],
         }
@@ -79,11 +77,40 @@ class _FakeClient:
     def get_proceso(self, process_id, url=None):
         return self._proc.get(process_id)
 
-    def get_contratos(self, process_id):
-        return self._contracts.get(process_id, [])
+    def resolve_notice_uid(self, process_id, url):
+        return None
+
+    def get_contratos(self, portfolio_id=None, *, notice_uid=None):
+        return self._contracts.get(portfolio_id or "", [])
 
     def get_adiciones(self, id_contrato):
         return self._adiciones.get(id_contrato, [])
+
+    def get_modificaciones_ricas(self, id_contrato):
+        return []
+
+    def get_ubicaciones(self, id_contrato):
+        return []
+
+    def get_archivos(self, portfolio_id):
+        return []
+
+    # New datasets (step 2, March 2026). The test doesn't exercise them
+    # deeply; each extractor just needs to see an empty list to short-circuit.
+    def get_garantias(self, id_contrato):
+        return []
+
+    def get_facturas(self, id_contrato):
+        return []
+
+    def get_ejecucion(self, id_contrato):
+        return []
+
+    def get_suspensiones(self, id_contrato):
+        return []
+
+    def get_mod_procesos(self, portfolio_id):
+        return []
 
     def build_query_url(self, dataset_id, *, where=None, limit=10):
         return (

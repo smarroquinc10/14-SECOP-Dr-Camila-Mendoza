@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es-CO">
+<head><meta charset="utf-8"><title>OpportunityDetail · Sample</title></head>
+<body>
+  <!-- Vortal layout: each <tr> has label in first <td>, value in next sibling <td> -->
+  <table id="DetailGrid">
+    <tr>
+      <td><label>Número del proceso:</label></td>
+      <td><input type="text" value="FEAB-LP-2024-001" readonly /></td>
+    </tr>
+    <tr>
+      <td><label>Título:</label></td>
+      <td><span>Adquisición de bienes para el FEAB</span></td>
+    </tr>
+    <tr>
+      <td><label>Tipo de proceso:</label></td>
+      <td>Licitación pública</td>
+    </tr>
+    <tr>
+      <td><label>Estado:</label></td>
+      <td>Adjudicado</td>
+    </tr>
+    <tr>
+      <td><label>Fase:</label></td>
+      <td>Ejecución</td>
+    </tr>
+    <tr>
+      <td><label>Tipo de contrato:</label></td>
+      <td>Compraventa</td>
+    </tr>
+    <tr>
+      <td><label>Valor total:</label></td>
+      <td><input type="text" value="$ 250.000.000,00" readonly /></td>
+    </tr>
+    <tr>
+      <td><label>Descripción:</label></td>
+      <td>Compra de equipos&nbsp;para sede FEAB Bogotá.</td>
+    </tr>
+    <tr>
+      <td><label>Dirección de ejecución del contrato:</label></td>
+      <td>Calle 26 # 13-49, Bogotá D.C.</td>
+    </tr>
+    <tr>
+      <td><label>Código UNSPSC:</label></td>
+      <td>43211500 - Computadores</td>
+    </tr>
+    <tr>
+      <td><label>Fecha de Firma del Contrato:</label></td>
+      <td>2024-08-15</td>
+    </tr>
+    <tr>
+      <td><label>Solicitud de garantías?:</label></td>
+      <td>Sí</td>
+    </tr>
+    <tr>
+      <td><label>% del valor del contrato:</label></td>
+      <td>20%</td>
+    </tr>
+    <!-- Empty value: parser must NOT pretend it had data -->
+    <tr>
+      <td><label>Justificación de la modalidad de contratación:</label></td>
+      <td></td>
+    </tr>
+    <!-- Translator JS placeholder: parser must drop this -->
+    <tr>
+      <td><label>Lotes?:</label></td>
+      <td>translator.loadFile('xx')</td>
+    </tr>
+    <!-- Noise labels (radio button sí/no) — must be filtered -->
+    <tr>
+      <td><label>Sí</label></td>
+      <td>x</td>
+    </tr>
+    <tr>
+      <td><label>*</label></td>
+      <td>radio</td>
+    </tr>
+  </table>
+
+  <!-- Document grid -->
+  <table id="DocumentList">
+    <tr>
+      <td><span class="VortalSpan">Pliego_definitivo.pdf</span></td>
+      <td>
+        <a onclick="javascript:getAction('/Public/Tendering/ContractNoticePhases/DownloadFile' + '?' + 'documentFileId=' + '12345', true);" href="javascript:void(0)">Descargar</a>
+      </td>
+    </tr>
+    <tr>
+      <td><span class="VortalSpan">Adenda_01.pdf</span></td>
+      <td>
+        <a onclick="javascript:getAction('/Public/Tendering/ContractNoticePhases/DownloadFile' + '?' + 'documentFileId=' + '67890' + '&' + 'mkey=' + 'abc123def4', true);" href="javascript:void(0)">Descargar</a>
+      </td>
+    </tr>
+    <!-- Duplicate name: parser must dedup -->
+    <tr>
+      <td><span class="VortalSpan">Pliego_definitivo.pdf</span></td>
+      <td>
+        <a onclick="javascript:getAction('/Public/Tendering/Other/DownloadFile' + '?' + 'documentFileId=' + '99999', true);" href="javascript:void(0)">Descargar</a>
+      </td>
+    </tr>
+  </table>
+
+  <!-- Notifications log -->
+  <table id="NotifLog">
+    <tr>
+      <td>Notificación</td>
+      <td>FEAB-LP-2024-001</td>
+      <td>Publicación inicial</td>
+      <td>15/07/2024 10:30 AM</td>
+    </tr>
+    <tr>
+      <td>Notificación</td>
+      <td>FEAB-LP-2024-001</td>
+      <td>Adenda 01 publicada 22/07/2024 03:15 PM</td>
+      <td></td>
+    </tr>
+    <!-- Non-notification row: parser must skip -->
+    <tr>
+      <td>Otro</td>
+      <td>x</td>
+      <td>y</td>
+      <td>z</td>
+    </tr>
+  </table>
+</body>
+</html>

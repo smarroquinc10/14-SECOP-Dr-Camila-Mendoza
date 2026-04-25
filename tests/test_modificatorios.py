@@ -35,6 +35,9 @@ class _FakeContext(ProcessContext):
     def proceso(self):
         return self._p
 
+    def notice_uid(self):
+        return None
+
     def contratos(self):
         return self._c
 
@@ -58,7 +61,7 @@ class TestModificatoriosExtractor:
         assert result.values[COL_CANTIDAD] == 0
         assert result.values[COL_TIPOS] == ""
 
-    def test_process_with_adendas_and_adiciones_is_summarized(self):
+    def test_process_with_adiciones_is_summarized(self):
         ref = parse_secop_url(
             "https://community.secop.gov.co/x?noticeUID=CO1.NTC.9999001"
         )
@@ -73,12 +76,11 @@ class TestModificatoriosExtractor:
 
         assert result.ok is True
         assert result.values[COL_TIENE] == "Sí"
-        assert result.values[COL_CANTIDAD] == 4  # 2 adendas + 2 adiciones
+        assert result.values[COL_CANTIDAD] == 2  # 2 adiciones from cb9c-h8sn
         assert "Adición" in result.values[COL_TIPOS]
         assert "Prórroga" in result.values[COL_TIPOS]
         assert result.values[COL_FECHA_ULTIMO] == "2026-03-05T00:00:00.000"
-        assert "contrato(2)" in result.values[COL_FUENTE]
-        assert "pliego(2)" in result.values[COL_FUENTE]
+        assert "cb9c(2)" in result.values[COL_FUENTE]
 
     def test_process_not_found_marks_row_as_not_found(self):
         ref = parse_secop_url(
@@ -93,27 +95,23 @@ class TestModificatoriosExtractor:
         assert "no_encontrado" in result.values["Detalle modificatorios"]
 
     @pytest.mark.parametrize(
-        "valor_pagado_adiciones, dias_adicionados, expected",
+        "dias_adicionados, expected",
         [
-            ("0", "0", "No"),
-            ("1000000", "0", "Sí"),
-            ("0", "15", "Sí"),
-            ("", "", "No"),
+            ("0", "No"),
+            ("15", "Sí"),
+            ("", "No"),
         ],
     )
-    def test_aggregate_contract_flags_trigger_modificatorio(
-        self, valor_pagado_adiciones, dias_adicionados, expected
-    ):
+    def test_dias_adicionados_triggers_modificatorio(self, dias_adicionados, expected):
         ref = parse_secop_url(
             "https://community.secop.gov.co/x?noticeUID=CO1.NTC.1"
         )
         ctx = _FakeContext(
             ref,
-            proceso={"id_del_proceso": "CO1.NTC.1", "adendas": ""},
+            proceso={"id_del_proceso": "CO1.NTC.1"},
             contratos=[
                 {
                     "id_contrato": "CO1.PCCNTR.1",
-                    "valor_pagado_adiciones": valor_pagado_adiciones,
                     "dias_adicionados": dias_adicionados,
                 }
             ],

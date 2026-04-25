@@ -1,0 +1,838 @@
+"use client";
+
+import * as React from "react";
+import useSWR from "swr";
+import {
+  CheckCircle2,
+  Database,
+  Globe,
+  Loader2,
+  RefreshCcw,
+  ShieldCheck,
+  ShieldAlert,
+} from "lucide-react";
+
+import { DetailDialog } from "@/components/detail-dialog";
+import { ModsPanel } from "@/components/mods-panel";
+import { SlicerPills } from "@/components/slicer-pills";
+import {
+  buildUnifiedRows,
+  expandRowsByAppearance,
+  UnifiedTable,
+  type UnifiedRow,
+} from "@/components/unified-table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  api,
+  type Contract,
+  type WatchedItem,
+} from "@/lib/api";
+import { cn } from "@/lib/utils";
+
+const TODAY = new Intl.DateTimeFormat("es-CO", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+}).format(new Date());
+
+export default function HomePage() {
+  // ---- Live data from FastAPI ------------------------------------------
+  const { data: feab } = useSWR("feab", api.feab, { refreshInterval: 0 });
+  const {
+    data: contracts = [],
+    isLoading: loadingContracts,
+    mutate: reloadContracts,
+  } = useSWR<Contract[]>("contracts:500", () => api.contracts(500));
+  const {
+    data: watch,
+    isLoading: loadingWatch,
+    mutate: reloadWatch,
+  } = useSWR<{ items: WatchedItem[] }>("watch", api.watchList);
+  const watched = watch?.items ?? [];
+  const { data: audit } = useSWR("audit:50", () => api.auditLog(50), {
+    refreshInterval: 60_000,
+  });
+  const { data: ultActualiz, mutate: reloadUltActualiz } = useSWR(
+    "ultima-actualizacion",
+    api.ultimaActualizacion,
+    { refreshInterval: 30_000 }
+  );
+
+  // Verify progress: poll every 3s while a verify_watch_list.py run is
+  // active, every 30s otherwise (in case the user kicks one off via CLI).
+  const { data: verifyProgress, mutate: reloadVerifyProgress } = useSWR(
+    "verify-progress",
+    api.verifyProgress,
+    { refreshInterval: 3_000 }
+  );
+
+  // Portal scrape progress: poll igual que verify-progress pero para el
+  // scraper del portal SECOP (community.secop.gov.co). Cada item toma
+  // ~30-55s (Chrome visible + captcha amortizado), por eso refresh 5s.
+  const { data: portalProgress, mutate: reloadPortalProgress } = useSWR(
+    "portal-progress",
+    api.portalProgress,
+    { refreshInterval: 5_000 }
+  );
+
+  // SECOP Integrado bulk: enriquece la tabla principal con los procesos
+  // que el API estándar no expone, SIN captcha. Recargamos cada 5 min
+  // (el dataset rpmr-utcd no cambia más rápido que eso).
+  const { data: integradoBulk, mutate: reloadIntegradoBulk } = useSWR(
+    "integrado-bulk",
+    api.integradoBulk,
+    { refreshInterval: 300_000 }
+  );
+
+  const isLoading = loadingContracts || loadingWatch;
+
+  // ---- Filter state -----------------------------------------------------
+  const [search, setSearch] = React.useState("");
+  const [years, setYears] = React.useState<string[]>([]);
+  const [states, setStates] = React.useState<string[]>([]);
+  const [modalities, setModalities] = React.useState<string[]>([]);
+  const [sheets, setSheets] = React.useState<string[]>([]);
+  const [selected, setSelected] = React.useState<string | null>(null);
+  // Cardinal rules (no toggle, always ON):
+  //   - Always show only the Dra's tracked processes (Excel-imported).
+  //   - "Modificados" gets filtered from the column header (Excel-style),
+  //     no separate toggle needed.
+  const onlyMine = true;
+  const onlyMod = false;
+
+  // ---- Build unified rows + busy/feedback state for actions -----------
+  // Cardinal rule: cada celda con su procedencia clara.
+  //   - data_source = "api"        → SECOP API estándar
+  //   - data_source = "integrado"  → SECOP Integrado (sin captcha)
+  //   - data_source = null         → ninguno; UI muestra "—" honesto
+  const allRows = React.useMemo(
+    () => buildUnifiedRows(watched, contracts, integradoBulk ?? null),
+    [watched, contracts, integradoBulk]
+  );
+
+  const totalAppearances = React.useMemo(
+    () => watched.reduce((acc, w) => acc + (w.appearances?.length ?? 0), 0),
+    [watched]
+  );
+
+  // ---- Distinct option sets for slicers --------------------------------
+  const yearOptions = React.useMemo(
+    () =>
+      Array.from(
+        new Set(
+          allRows
+            .flatMap((r) => [
+              ...r.vigencias,
+              r.fecha_firma ? r.fecha_firma.slice(0, 4) : "",
+            ])
+            .filter(Boolean)
+        )
+      ).sort((a, b) => b.localeCompare(a)),
+    [allRows]
+  );
+  const stateOptions = React.useMemo(
+    () =>
+      Array.from(new Set(allRows.map((r) => r.estado ?? "").filter(Boolean))).sort(),
+    [allRows]
+  );
+  const modalityOptions = React.useMemo(
+    () =>
+      Array.from(
+        new Set(allRows.map((r) => r.modalidad ?? "").filter(Boolean))
+      ).sort(),
+    [allRows]
+  );
+  const sheetOptions = React.useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const r of allRows) {
+      for (const s of r.sheets) counts.set(s, (counts.get(s) ?? 0) + 1);
+    }
+    return Array.from(counts.keys()).sort((a, b) => b.localeCompare(a));
+  }, [allRows]);
+
+  // ---- Apply filters ----------------------------------------------------
+  const filtered = React.useMemo(() => {
+    const base = allRows.filter((r) => {
+      if (onlyMine && !r.watched) return false;
+      if (search) {
+        const blob = (
+          (r.id_contrato ?? "") +
+          (r.process_id ?? "") +
+          (r.objeto ?? "") +
+          (r.proveedor ?? "")
+        ).toLowerCase();
+        if (!blob.includes(search.toLowerCase())) return false;
+      }
+      if (years.length) {
+        const rowYears = new Set([
+          ...r.vigencias,
+          r.fecha_firma ? r.fecha_firma.slice(0, 4) : "",
+        ]);
+        if (!years.some((y) => rowYears.has(y))) return false;
+      }
+      if (states.length && !states.includes(r.estado ?? "")) return false;
+      if (modalities.length && !modalities.includes(r.modalidad ?? ""))
+        return false;
+      if (sheets.length && !sheets.some((s) => r.sheets.includes(s)))
+        return false;
+      if (onlyMod) {
+        const isMod =
+          /modific/i.test(r.estado ?? "") ||
+          (r.dias_adicionados != null && r.dias_adicionados > 0);
+        if (!isMod) return false;
+      }
+      return true;
+    });
+    // When the user picks one or more sheet pills, expand every row
+    // by its appearances in those sheets so the count matches the
+    // Excel exactly (e.g. FEAB 2024 → 85 rows, not 66 dedup-by-process).
+    return expandRowsByAppearance(base, sheets);
+  }, [allRows, search, years, states, modalities, sheets, onlyMod, onlyMine]);
+
+  // ---- Refresh + watch CRUD --------------------------------------------
+  const [refreshing, setRefreshing] = React.useState(false);
+  const [busy, setBusy] = React.useState(false);
+  const [feedback, setFeedback] = React.useState<{
+    kind: "ok" | "info" | "error";
+    text: string;
+  } | null>(null);
+  const [lastRefresh, setLastRefresh] = React.useState<string | null>(null);
+
+  async function handleRefresh() {
+    // Trigger the watch-list verify (re-checks every URL against SECOP).
+    // Returns immediately; the JSONL writer pushes progress that the
+    // verify-progress polling picks up.
+    setRefreshing(true);
+    try {
+      await api.verifyWatch();
+      // Wait briefly for the spawned process to start writing the JSONL,
+      // then refresh related data.
+      await new Promise((r) => setTimeout(r, 1500));
+      await Promise.all([reloadVerifyProgress(), reloadUltActualiz()]);
+      setLastRefresh(new Date().toISOString());
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  /** Lanza el scraper del portal para TODOS los procesos pendientes
+   *  (los que el API público no expone o los que tienen cache parcial).
+   *  Tarda ~30-55s por proceso por el captcha amortizado. */
+  async function handleScrapePortalAll() {
+    setRefreshing(true);
+    try {
+      await api.portalScrape({});
+      await new Promise((r) => setTimeout(r, 2000));
+      await reloadPortalProgress();
+      setFeedback({
+        kind: "info",
+        text:
+          "Lectura del portal SECOP iniciada en segundo plano. " +
+          "Si pide captcha la primera vez, resolvelo en la ventana de Chrome.",
+      });
+    } catch (err) {
+      setFeedback({
+        kind: "error",
+        text: err instanceof Error ? err.message : "No pude iniciar el scraper.",
+      });
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  /** Sincroniza el dataset SECOP Integrado (rpmr-utcd) — fuente pública
+   *  sin captcha. Toma ~1s. Resuelve un montón de procesos sin tener
+   *  que abrir el scraper del portal. */
+  const [syncingInteg, setSyncingInteg] = React.useState(false);
+  async function handleIntegradoSync() {
+    setSyncingInteg(true);
+    try {
+      await api.integradoSync();
+      // Esperar que el subprocess escriba (~1-2s típico) + refrescar.
+      await new Promise((r) => setTimeout(r, 2500));
+      await reloadIntegradoBulk();
+      setFeedback({
+        kind: "ok",
+        text: "SECOP Integrado actualizado desde datos.gov.co.",
+      });
+    } catch (err) {
+      setFeedback({
+        kind: "error",
+        text:
+          err instanceof Error
+            ? err.message
+            : "No pude sincronizar SECOP Integrado.",
+      });
+    } finally {
+      setSyncingInteg(false);
+    }
+  }
+
+  async function handleAdd(url: string) {
+    setBusy(true);
+    setFeedback(null);
+    try {
+      const res = await api.watchAdd(url);
+      setFeedback(
+        res.added
+          ? { kind: "ok", text: `Agregado · ${res.item.process_id ?? "URL aceptada"}` }
+          : { kind: "info", text: res.reason ?? "Esa URL ya estaba en tu lista." }
+      );
+      await reloadWatch();
+    } catch (err) {
+      setFeedback({
+        kind: "error",
+        text: err instanceof Error ? err.message : "No pude agregar la URL.",
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleUpdate(oldUrl: string, newUrl: string) {
+    setBusy(true);
+    setFeedback(null);
+    try {
+      const res = await api.watchUpdate(oldUrl, newUrl);
+      setFeedback({
+        kind: "ok",
+        text: `Link actualizado · ${res.item.process_id ?? "URL aceptada"}`,
+      });
+      await reloadWatch();
+    } catch (err) {
+      setFeedback({
+        kind: "error",
+        text: err instanceof Error ? err.message : "No pude actualizar.",
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleRemove(url: string) {
+    setBusy(true);
+    setFeedback(null);
+    try {
+      await api.watchRemove(url);
+      setFeedback({ kind: "ok", text: "URL retirada de tu lista." });
+      await reloadWatch();
+    } catch (err) {
+      setFeedback({
+        kind: "error",
+        text: err instanceof Error ? err.message : "No pude eliminar.",
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function fmtTimestamp(iso: string | null | undefined): string {
+    if (!iso) return "—";
+    const d = new Date(iso);
+    return new Intl.DateTimeFormat("es-CO", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(d);
+  }
+
+  /** Format a number of seconds as "Xm Ys" / "Ys" — for refresh timer/ETA. */
+  function fmtDuration(seconds: number): string {
+    if (seconds < 60) return `${Math.round(seconds)}s`;
+    const m = Math.floor(seconds / 60);
+    const s = Math.round(seconds % 60);
+    return `${m}m ${s}s`;
+  }
+
+  const pageFiltersActive =
+    !!search ||
+    years.length > 0 ||
+    states.length > 0 ||
+    modalities.length > 0 ||
+    sheets.length > 0 ||
+    onlyMod;
+
+  return (
+    <main className="min-h-screen bg-background">
+      {/* Top institutional strip — Fiscalía / FEAB identity */}
+      <div className="border-b border-rule bg-surface">
+        <div className="mx-auto max-w-7xl px-8 py-3 flex items-center justify-between gap-4">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/feab-logo.png"
+            alt="Fiscalía General de la Nación"
+            className="h-10 md:h-11 object-contain"
+          />
+          <div className="text-right">
+            <div className="text-[10px] md:text-[11px] font-semibold uppercase tracking-[0.18em] text-burgundy">
+              FEAB · Fondo Especial para la Administración de Bienes
+            </div>
+            <div className="text-[9px] md:text-[10px] text-ink-soft mt-0.5">
+              NIT 901148337 · Adscrito a la Fiscalía General de la Nación
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Burgundy accent line */}
+      <div className="h-1 bg-burgundy" />
+
+      {/* Header — program title + personal greeting */}
+      <div className="mx-auto max-w-7xl px-8 pt-10 pb-6">
+        <div className="eyebrow mb-3">
+          Sistema de Seguimiento de Contratos · SECOP II
+        </div>
+        <h1 className="serif text-4xl md:text-5xl font-bold tracking-tight text-ink mb-2">
+          Bienvenida, Dra. María Camila Mendoza Zubiría
+        </h1>
+        <div className="eyebrow text-ink-soft">{TODAY}</div>
+      </div>
+
+      <div className="rule mx-auto max-w-7xl mb-8" />
+
+      {/* Action bar + audit chip */}
+      <div className="mx-auto max-w-7xl px-8 mb-8 flex flex-wrap items-center gap-4">
+        <Button
+          size="lg"
+          variant="outline"
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="gap-2"
+        >
+          {refreshing ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <RefreshCcw className="h-4 w-4" />
+          )}
+          {refreshing ? "Refrescando…" : "Refrescar desde SECOP"}
+        </Button>
+
+        <Button
+          size="lg"
+          variant="outline"
+          onClick={handleIntegradoSync}
+          disabled={syncingInteg}
+          className="gap-2"
+          title="Sincroniza el dataset SECOP Integrado (rpmr-utcd) — fuente pública sin captcha. Tarda ~1 segundo."
+        >
+          {syncingInteg ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Database className="h-4 w-4" />
+          )}
+          {syncingInteg
+            ? "Sincronizando…"
+            : `Integrado (${integradoBulk?.total_rows ?? "—"})`}
+        </Button>
+
+        <Button
+          size="lg"
+          variant="outline"
+          onClick={handleScrapePortalAll}
+          disabled={refreshing || (portalProgress?.running ?? false)}
+          className="gap-2"
+          title="Lee directo del portal community.secop.gov.co los procesos que el API público no expone"
+        >
+          {portalProgress?.running ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Globe className="h-4 w-4" />
+          )}
+          {portalProgress?.running
+            ? `Leyendo portal… (${portalProgress.processed}/${portalProgress.total})`
+            : "Leer del portal SECOP"}
+        </Button>
+
+        {feab && (
+          <div className="text-sm text-ink-soft">
+            <span className="font-mono">{feab.contratos}</span> contratos ·{" "}
+            <span className="font-mono">{feab.procesos}</span> procesos ·{" "}
+            <span className="font-mono">{watched.length}</span> en seguimiento
+          </div>
+        )}
+
+        {ultActualiz?.ultima_consulta && (
+          <div className="flex flex-col text-[11px] text-ink-soft border-l border-rule pl-3">
+            <span className="eyebrow">Última actividad</span>
+            <span className="font-mono text-ink">
+              {fmtTimestamp(ultActualiz.ultima_consulta)}
+            </span>
+            {ultActualiz.ultimo_replace && (
+              <span className="text-[10px] mt-0.5">
+                Refresh: {fmtTimestamp(ultActualiz.ultimo_replace)}
+              </span>
+            )}
+          </div>
+        )}
+
+        <div className="flex-1" />
+
+        {audit && (
+          <a
+            href="#audit"
+            className={cn(
+              "inline-flex items-center gap-2 px-3 py-1.5 rounded-md border text-xs",
+              audit.intact
+                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                : "border-rose-200 bg-rose-50 text-rose-700"
+            )}
+            title={
+              audit.intact
+                ? "Hash-chain del audit log íntegro"
+                : "ALERTA: chain rota — revisar problemas"
+            }
+          >
+            {audit.intact ? (
+              <ShieldCheck className="h-3.5 w-3.5" />
+            ) : (
+              <ShieldAlert className="h-3.5 w-3.5" />
+            )}
+            {audit.total} entradas · {audit.intact ? "íntegro" : "alerta"}
+          </a>
+        )}
+      </div>
+
+      {/* Verify progress bar — only visible while a refresh is in flight,
+          OR for ~30s after a completed run so the Dra sees the result.
+          Layout: counts on top row, ETA + elapsed on bottom row so it
+          never hides off-screen on narrow windows. */}
+      {verifyProgress && (verifyProgress.running ||
+        (verifyProgress.processed > 0 &&
+          (verifyProgress.last_update_age_seconds ?? 999) < 30)) && (
+        <div className="mx-auto max-w-7xl px-8 mb-6">
+          <div
+            className={cn(
+              "border rounded-lg p-4",
+              verifyProgress.running
+                ? "border-burgundy/30 bg-burgundy/5"
+                : "border-emerald-300 bg-emerald-50"
+            )}
+          >
+            <div className="flex items-center justify-between text-xs mb-2 gap-3">
+              <span className="font-medium text-ink truncate">
+                {verifyProgress.running
+                  ? "Refrescando contra SECOP…"
+                  : "Refresco completado"}
+              </span>
+              <span className="font-mono text-ink-soft whitespace-nowrap">
+                {verifyProgress.processed} / {verifyProgress.total} ·{" "}
+                {verifyProgress.percent}%
+              </span>
+            </div>
+            <div className="h-2 bg-stone-100 rounded-full overflow-hidden">
+              <div
+                className={cn(
+                  "h-full transition-all duration-300 rounded-full",
+                  verifyProgress.running ? "bg-burgundy" : "bg-emerald-500"
+                )}
+                style={{ width: `${verifyProgress.percent}%` }}
+              />
+            </div>
+            {/* Tiempo transcurrido + ETA — siempre visibles abajo, nunca se cortan. */}
+            <div className="flex flex-wrap items-center justify-between gap-3 mt-3 text-[11px]">
+              <div className="text-ink-soft font-mono">
+                {verifyProgress.elapsed_seconds != null && (
+                  <span>
+                    Transcurrido:{" "}
+                    <span className="text-ink font-semibold">
+                      {fmtDuration(verifyProgress.elapsed_seconds)}
+                    </span>
+                  </span>
+                )}
+              </div>
+              <div className="font-mono">
+                {verifyProgress.running &&
+                  verifyProgress.eta_seconds != null && (
+                    <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-burgundy/10 text-burgundy">
+                      <span className="text-[10px] uppercase tracking-wider opacity-70">
+                        Tiempo restante
+                      </span>
+                      <span className="font-bold">
+                        ≈ {fmtDuration(verifyProgress.eta_seconds)}
+                      </span>
+                    </span>
+                  )}
+                {verifyProgress.running &&
+                  verifyProgress.eta_seconds == null && (
+                    <span className="text-ink-soft italic">
+                      Calculando tiempo restante…
+                    </span>
+                  )}
+              </div>
+            </div>
+            {!verifyProgress.running && verifyProgress.processed > 0 && (
+              <div className="text-[11px] text-ink-soft mt-2 italic">
+                Cada link se consultó en datos.gov.co. Los notice_uid
+                se actualizaron en tu lista.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Portal scrape progress — barra paralela a la del verify para
+          el scraper de community.secop.gov.co. Se muestra mientras el
+          scraper escribe en .cache/portal_progress.jsonl y ~30s después
+          de terminar para que la Dra vea el resumen. */}
+      {portalProgress &&
+        portalProgress.total > 0 &&
+        (portalProgress.running ||
+          (portalProgress.processed > 0 &&
+            (portalProgress.last_update_age_seconds ?? 999) < 30)) && (
+          <div className="mx-auto max-w-7xl px-8 mb-6">
+            <div
+              className={cn(
+                "border rounded-lg p-4",
+                portalProgress.running
+                  ? "border-burgundy/30 bg-burgundy/5"
+                  : "border-emerald-300 bg-emerald-50",
+              )}
+            >
+              <div className="flex items-center justify-between text-xs mb-2 gap-3">
+                <span className="font-medium text-ink truncate inline-flex items-center gap-1.5">
+                  <Globe className="h-3.5 w-3.5" />
+                  {portalProgress.running
+                    ? "Leyendo del portal SECOP…"
+                    : "Lectura del portal completada"}
+                </span>
+                <span className="font-mono text-ink-soft whitespace-nowrap">
+                  {portalProgress.processed} / {portalProgress.total} ·{" "}
+                  {portalProgress.percent}%
+                </span>
+              </div>
+              <div className="h-2 bg-stone-100 rounded-full overflow-hidden">
+                <div
+                  className={cn(
+                    "h-full transition-all duration-300 rounded-full",
+                    portalProgress.running ? "bg-burgundy" : "bg-emerald-500",
+                  )}
+                  style={{ width: `${portalProgress.percent}%` }}
+                />
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-3 mt-3 text-[11px]">
+                <div className="text-ink-soft font-mono">
+                  {portalProgress.elapsed_seconds != null && (
+                    <span>
+                      Transcurrido:{" "}
+                      <span className="text-ink font-semibold">
+                        {fmtDuration(portalProgress.elapsed_seconds)}
+                      </span>
+                    </span>
+                  )}
+                </div>
+                <div className="font-mono">
+                  {portalProgress.running &&
+                    portalProgress.eta_seconds != null && (
+                      <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-burgundy/10 text-burgundy">
+                        <span className="text-[10px] uppercase tracking-wider opacity-70">
+                          Tiempo restante
+                        </span>
+                        <span className="font-bold">
+                          ≈ {fmtDuration(portalProgress.eta_seconds)}
+                        </span>
+                      </span>
+                    )}
+                </div>
+              </div>
+              {!portalProgress.running && portalProgress.processed > 0 && (
+                <div className="text-[11px] text-ink-soft mt-2 italic">
+                  {portalProgress.ok ?? 0} completos · {portalProgress.partial ?? 0}{" "}
+                  parciales · {portalProgress.errored ?? 0} errores. Cada
+                  proceso ya está en el snapshot del portal.
+                </div>
+              )}
+              {portalProgress.running && (
+                <div className="text-[11px] text-ink-soft mt-2 italic">
+                  Si SECOP pide captcha, resolvelo en la ventana de Chrome
+                  visible — queda guardado para los siguientes procesos.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+      {/* Modificatorios summary panel — context first */}
+      <div className="mx-auto max-w-7xl px-8 mb-6">
+        <ModsPanel onPickContract={(id) => setSelected(id)} />
+      </div>
+
+      {/* FILTROS arriba — antes de la tabla unificada */}
+      <div className="mx-auto max-w-7xl px-8 mb-6">
+        <div className="border border-rule rounded-lg bg-surface p-5 space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-span-2">
+              <span className="eyebrow mb-2 block">Buscar</span>
+              <Input
+                placeholder="Proveedor, objeto, código…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <SlicerPills
+            label="Vigencia / Año de firma"
+            options={yearOptions}
+            selected={years}
+            onChange={setYears}
+          />
+          <SlicerPills
+            label="Estado del contrato"
+            options={stateOptions}
+            selected={states}
+            onChange={setStates}
+          />
+          <SlicerPills
+            label="Modalidad de contratación"
+            options={modalityOptions}
+            selected={modalities}
+            onChange={setModalities}
+          />
+          {sheetOptions.length > 0 && (
+            <SlicerPills
+              label="Hoja Excel (donde la Dra registró el proceso)"
+              options={sheetOptions}
+              selected={sheets}
+              onChange={setSheets}
+            />
+          )}
+
+          {pageFiltersActive && (
+            <div className="flex justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSearch("");
+                  setYears([]);
+                  setStates([]);
+                  setModalities([]);
+                  setSheets([]);
+                }}
+              >
+                Limpiar filtros
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {feedback && (
+        <div className="mx-auto max-w-7xl px-8 mb-4">
+          <div
+            className={cn(
+              "text-sm px-4 py-2 rounded-md border",
+              feedback.kind === "ok" &&
+                "bg-emerald-50 text-emerald-700 border-emerald-200",
+              feedback.kind === "info" &&
+                "bg-amber-50 text-amber-800 border-amber-200",
+              feedback.kind === "error" &&
+                "bg-rose-50 text-rose-700 border-rose-200"
+            )}
+          >
+            {feedback.text}
+          </div>
+        </div>
+      )}
+
+      {/* TABLA UNIFICADA */}
+      <div className="mx-auto max-w-7xl px-8 pb-12">
+        <div className="flex items-baseline justify-between mb-4">
+          <h2 className="serif text-2xl font-semibold text-ink">
+            {onlyMine ? "Mis procesos seguidos" : "Inventario completo"}
+          </h2>
+          <span className="text-xs text-ink-soft">
+            {filtered.length} de {allRows.length} mostrados
+          </span>
+        </div>
+
+        {isLoading ? (
+          <div className="flex items-center gap-2 py-16 text-ink-soft">
+            <Loader2 className="h-5 w-5 animate-spin" /> Cargando datos…
+          </div>
+        ) : (
+          <UnifiedTable
+            rows={filtered}
+            onPick={(id) => setSelected(id)}
+            onAdd={handleAdd}
+            onUpdate={handleUpdate}
+            onRemove={handleRemove}
+            busy={busy}
+            totalAppearances={totalAppearances}
+          />
+        )}
+      </div>
+
+      <DetailDialog
+        contractId={selected}
+        open={!!selected}
+        onOpenChange={(o) => !o && setSelected(null)}
+      />
+
+      {/* Institutional footer — sellos del Estado Colombiano + identidad FEAB */}
+      <div className="border-t border-rule bg-surface mt-12">
+        <div className="mx-auto max-w-7xl px-8 py-8">
+          {/* Sellos gov.co — wrapped, monochromed at low opacity for sobriety */}
+          <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-4 mb-6 opacity-80">
+            {[
+              { src: "/sellos/Todos_pais.png", alt: "Todos por un país" },
+              { src: "/sellos/Col_compra.png", alt: "Colombia Compra Eficiente" },
+              { src: "/sellos/gov.co-footer.png", alt: "gov.co" },
+              { src: "/sellos/Gob_linea.png", alt: "Gobierno en línea" },
+            ].map((s) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={s.src}
+                src={s.src}
+                alt={s.alt}
+                className="h-9 md:h-10 object-contain"
+              />
+            ))}
+          </div>
+
+          <div className="rule mb-5" />
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start text-[11px]">
+            <div>
+              <div className="eyebrow mb-1">Entidad</div>
+              <div className="text-ink font-semibold">
+                FEAB — Fondo Especial para la Administración de Bienes
+              </div>
+              <div className="text-ink-soft mt-0.5">
+                NIT 901148337 · Adscrito a la Fiscalía General de la Nación
+              </div>
+            </div>
+            <div>
+              <div className="eyebrow mb-1">Sistema</div>
+              <div className="text-ink font-semibold">
+                Sistema de Seguimiento de Contratos · SECOP II
+              </div>
+              <div className="text-ink-soft mt-0.5">
+                Espejo automático del SECOP — datos oficiales{" "}
+                <code className="font-mono">datos.gov.co</code>
+              </div>
+            </div>
+            <div>
+              <div className="eyebrow mb-1">Estado</div>
+              <div className="text-ink-soft font-mono">
+                {new Date().toISOString().slice(0, 10)}
+              </div>
+              {lastRefresh && (
+                <div className="text-emerald-700 mt-0.5 inline-flex items-center gap-1">
+                  <CheckCircle2 className="h-3 w-3" />
+                  Última actualización: {lastRefresh.slice(11, 16)} UTC
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}

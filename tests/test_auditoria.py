@@ -16,12 +16,16 @@ from secop_ii.url_parser import parse_secop_url
 
 
 class _FakeCtx(ProcessContext):
-    def __init__(self, ref, proceso):
+    def __init__(self, ref, proceso, notice_uid=None):
         super().__init__(ref=ref, client=SecopClient())
         self._p = proceso
+        self._ntc = notice_uid
 
     def proceso(self):
         return self._p
+
+    def notice_uid(self):
+        return self._ntc
 
     def contratos(self):
         return []
@@ -38,7 +42,7 @@ class TestAuditoriaExtractor:
         proceso = {
             "id_del_proceso": "CO1.NTC.123",
             "fase": "Adjudicado",
-            "nombre_entidad": "Alcaldía de Ejemplo",
+            "entidad": "Alcaldía de Ejemplo",
             "nit_entidad": "800000000",
             "descripci_n_del_procedimiento": "Suministro de papel 2026",
             "precio_base": "50000000",

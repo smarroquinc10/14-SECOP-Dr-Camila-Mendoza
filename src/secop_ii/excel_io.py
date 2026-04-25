@@ -210,6 +210,72 @@ def save_workbook(wb: Workbook, path: Path | str) -> None:
     wb.save(str(path))
 
 
+def append_process_url(
+    path: Path | str,
+    url: str,
+    *,
+    sheet_name: str | None = None,
+    header_row: int = 1,
+    url_column_header: str | None = None,
+) -> int:
+    """Append a new row with a single URL to the next empty row and save.
+
+    The URL is written to the column whose header matches one of the
+    :data:`URL_HEADER_CANDIDATES` (or the explicitly given
+    ``url_column_header``). All other cells on the new row stay blank —
+    the update pipeline fills them the next time it runs.
+
+    Returns the 1-based row number where the URL landed.
+    """
+    if not url or not str(url).strip():
+        raise ValueError("URL vacía")
+    url = str(url).strip()
+
+    wb, ws = load_workbook(path, sheet_name=sheet_name)
+    url_col = detect_url_column(ws, header_row=header_row, preferred=url_column_header)
+
+    # Find the first fully-blank row after the header (looking at the URL
+    # column AND at any other cell — don't skip rows that have notes but
+    # no URL, the user may want to fill that row).
+    target_row = header_row + 1
+    for r in range(header_row + 1, ws.max_row + 2):
+        row_is_empty = True
+        for c in range(1, ws.max_column + 1):
+            if ws.cell(row=r, column=c).value not in (None, ""):
+                row_is_empty = False
+                break
+        if row_is_empty:
+            target_row = r
+            break
+
+    ws.cell(row=target_row, column=url_col, value=url)
+    save_workbook(wb, path)
+    return target_row
+
+
+def delete_row(
+    path: Path | str,
+    row_idx: int,
+    *,
+    sheet_name: str | None = None,
+    header_row: int = 1,
+) -> None:
+    """Delete the given data row (1-based) from the workbook and save.
+
+    Refuses to delete the header row or any row at or below it. Shifts
+    the rows below up by one so the workbook stays contiguous.
+    """
+    if row_idx <= header_row:
+        raise ValueError(
+            f"Fila {row_idx} es parte del encabezado (fila {header_row}) — no se borra"
+        )
+    wb, ws = load_workbook(path, sheet_name=sheet_name)
+    if row_idx > ws.max_row:
+        raise ValueError(f"Fila {row_idx} no existe (max_row={ws.max_row})")
+    ws.delete_rows(row_idx, amount=1)
+    save_workbook(wb, path)
+
+
 def preview_as_dicts(
     ws: Worksheet, header_row: int = 1, limit: int | None = None
 ) -> list[dict[str, Any]]:
@@ -258,7 +324,9 @@ def _normalize_cell_value(value: Any) -> Any:
 
 __all__ = [
     "ExcelStructureError",
+    "append_process_url",
     "backup_workbook",
+    "delete_row",
     "detect_url_column",
     "ensure_columns",
     "iter_rows",

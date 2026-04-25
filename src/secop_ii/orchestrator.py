@@ -24,6 +24,12 @@ from secop_ii.excel_io import (
 from secop_ii.extractors import FieldExtractor, REGISTRY, get_extractor
 from secop_ii.extractors.base import ExtractionResult, ProcessContext
 from secop_ii.extractors.modificatorios import COL_DETALLE
+from secop_ii.discrepancies import COL_DISCREPANCIAS, detect_discrepancies
+from secop_ii.observaciones import (
+    OUTPUT_COLUMNS as OBS_OUTPUT_COLUMNS,
+    detect_observaciones_column,
+    parse_observaciones,
+)
 from secop_ii.secop_client import SecopClient
 from secop_ii.url_parser import InvalidSecopUrlError, parse_secop_url
 
@@ -82,6 +88,9 @@ def process_workbook(
     do_backup: bool = True,
     progress: ProgressCallback | None = None,
     dry_run: bool = False,
+    mirror_portal: bool = False,
+    generate_detalles: bool = True,
+    apply_view: bool = True,
 ) -> RunReport:
     """Update ``path`` in place with SECOP II data.
 
@@ -108,11 +117,33 @@ def process_workbook(
     wb, ws = load_workbook(path, sheet_name=sheet_name)
 
     url_col = detect_url_column(ws, header_row=header_row, preferred=url_column)
+    # OBSERVACIONES is read-only — we never write to it, just mirror its
+    # signals ("NO LEG", modificatorio mentions) into separate columns.
+    obs_col = detect_observaciones_column(ws, header_row=header_row)
 
     extractors = _resolve_extractors(fields)
+
+    # ``--mirror-portal`` opens visible Chrome and scrapes each
+    # OpportunityDetail directly. The PortalScraper has its own session
+    # lifetime so we manage it as a context manager around the row loop.
+    portal_scraper_cm = None
+    if mirror_portal:
+        from secop_ii.extractors.portal import PortalExtractor
+        from secop_ii.portal_scraper import PortalScraper
+        portal_scraper_cm = PortalScraper()
+        portal_scraper_cm.__enter__()
+        portal_ext = PortalExtractor(scraper=portal_scraper_cm)
+        extractors.append(portal_ext)
+
     output_columns: list[str] = [STATUS_COLUMN, LAST_UPDATE_COLUMN]
     for ext in extractors:
         output_columns.extend(ext.output_columns)
+    # Only add the OBS columns if we actually found the source column.
+    if obs_col is not None:
+        output_columns.extend(OBS_OUTPUT_COLUMNS)
+    # API ↔ Portal cross-check column only makes sense when both sides ran.
+    if mirror_portal:
+        output_columns.append(COL_DISCREPANCIAS)
     column_map = ensure_columns(ws, output_columns, header_row=header_row)
 
     client = SecopClient(app_token=app_token, rate_per_second=rate_per_second)
@@ -125,7 +156,20 @@ def process_workbook(
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
 
+    # Pre-compute a header->col-index map so we can snapshot each row's
+    # current values for the no-overwrite check in FeabFillExtractor.
+    inverse_column_map = {col_idx: name for name, col_idx in column_map.items()}
+
     for idx, (row_idx, url) in enumerate(rows, start=1):
+        obs_text = ws.cell(row=row_idx, column=obs_col).value if obs_col else None
+        # Snapshot the current row — extractors that enforce
+        # no-overwrite (feab_fill) read this via ctx.existing_row.
+        existing_row: dict[str, Any] = {}
+        for col_idx, name in inverse_column_map.items():
+            v = ws.cell(row=row_idx, column=col_idx).value
+            if v is not None and str(v).strip() != "":
+                existing_row[name] = v
+
         row_report = _process_one_row(
             row_idx=row_idx,
             url=url,
@@ -134,6 +178,8 @@ def process_workbook(
             ws=ws,
             column_map=column_map,
             now=now,
+            obs_text=obs_text,
+            existing_row=existing_row,
         )
         report.rows.append(row_report)
         if row_report.ok:
@@ -150,6 +196,38 @@ def process_workbook(
 
     if not dry_run:
         save_workbook(wb, path)
+        # Take a snapshot so the next run can show "what changed since last time"
+        try:
+            from secop_ii.changelog import save_snapshot, snapshot_from_excel
+            snap = snapshot_from_excel(path)
+            save_snapshot(snap)
+        except Exception as exc:  # pragma: no cover — best-effort
+            log.warning("No pude guardar snapshot de changelog: %s", exc)
+
+        # Generate per-process HTML drill-downs next to the workbook so
+        # the Dra. can click "Abrir detalle ▶" from her Excel and see
+        # everything SECOP has, beautifully formatted.
+        if generate_detalles:
+            try:
+                _generate_detalles(path, report, client)
+            except Exception as exc:  # pragma: no cover — best-effort
+                log.warning("No pude generar HTML detalles: %s", exc)
+
+        # Hide auxiliary columns + freeze panes for her clean view.
+        if apply_view:
+            try:
+                from secop_ii.feab_view import apply_dra_view
+                stats = apply_dra_view(path, sheet_name=sheet_name)
+                log.info("Vista Dra. aplicada: %s visibles, %s ocultas",
+                        stats["visible"], stats["hidden"])
+            except Exception as exc:  # pragma: no cover — best-effort
+                log.warning("No pude aplicar vista Dra.: %s", exc)
+
+    if portal_scraper_cm is not None:
+        try:
+            portal_scraper_cm.__exit__(None, None, None)
+        except Exception:  # pragma: no cover - cleanup is best-effort
+            pass
 
     return report
 
@@ -173,14 +251,22 @@ def _process_one_row(
     ws,
     column_map: dict[str, int],
     now: str,
+    obs_text: str | None = None,
+    existing_row: dict[str, Any] | None = None,
 ) -> RowReport:
+    obs_values = parse_observaciones(obs_text) if obs_text else {}
     try:
         ref = parse_secop_url(url)
     except InvalidSecopUrlError as exc:
         write_row(
             ws,
             row_idx,
-            {STATUS_COLUMN: "url_invalida", LAST_UPDATE_COLUMN: now, COL_DETALLE: str(exc)},
+            {
+                STATUS_COLUMN: "url_invalida",
+                LAST_UPDATE_COLUMN: now,
+                COL_DETALLE: str(exc),
+                **obs_values,
+            },
             column_map,
         )
         return RowReport(
@@ -192,7 +278,11 @@ def _process_one_row(
             error=str(exc),
         )
 
-    ctx = ProcessContext(ref=ref, client=client)
+    ctx = ProcessContext(
+        ref=ref, client=client,
+        existing_row=existing_row or {},
+        row_idx=row_idx,
+    )
     combined_values: dict[str, Any] = {}
     row_ok = True
     first_error: str | None = None
@@ -217,6 +307,16 @@ def _process_one_row(
 
     combined_values[STATUS_COLUMN] = row_status if row_ok else (row_status or "error")
     combined_values[LAST_UPDATE_COLUMN] = now
+    # OBSERVACIONES-derived columns are appended last so they read as
+    # extra context next to the SECOP API data (API is authoritative;
+    # these are the Dra.'s hand-noted FEAB admin markers).
+    combined_values.update(obs_values)
+    # Audit column: detected discrepancies between API and Portal versions
+    # of the same field. Only meaningful when the portal extractor ran.
+    if COL_DISCREPANCIAS in column_map:
+        combined_values[COL_DISCREPANCIAS] = (
+            detect_discrepancies(combined_values) or "ninguna"
+        )
     write_row(ws, row_idx, combined_values, column_map)
 
     return RowReport(
@@ -228,6 +328,73 @@ def _process_one_row(
         error=first_error,
         values=combined_values,
     )
+
+
+def _generate_detalles(workbook_path: Path, report: RunReport,
+                       client) -> int:
+    """Build one HTML per row in ``detalles/`` next to the workbook."""
+    from datetime import datetime
+    from secop_ii.detalle_html import DetalleData, write_detalle
+    from secop_ii.url_parser import parse_secop_url
+
+    detalles_dir = workbook_path.parent / "detalles"
+    written = 0
+    for row in report.rows:
+        if not row.process_id:
+            continue
+        try:
+            ref = parse_secop_url(row.url)
+            proceso = client.get_proceso(ref.process_id, url=ref.source_url)
+            notice_uid = client.resolve_notice_uid(ref.process_id, url=ref.source_url)
+            portfolio = (proceso or {}).get("id_del_portafolio") or ""
+            contratos = client.get_contratos(
+                portfolio_id=str(portfolio), notice_uid=notice_uid,
+            )
+            adiciones = {c["id_contrato"]: client.get_adiciones(c["id_contrato"])
+                        for c in contratos if c.get("id_contrato")}
+            garantias = {c["id_contrato"]: client.get_garantias(c["id_contrato"])
+                        for c in contratos if c.get("id_contrato")}
+            pagos = {c["id_contrato"]: client.get_facturas(c["id_contrato"])
+                    for c in contratos if c.get("id_contrato")}
+            ejec = {c["id_contrato"]: client.get_ejecucion(c["id_contrato"])
+                   for c in contratos if c.get("id_contrato")}
+            susp = {c["id_contrato"]: client.get_suspensiones(c["id_contrato"])
+                   for c in contratos if c.get("id_contrato")}
+
+            data = DetalleData(
+                process_id=ref.process_id,
+                notice_uid=notice_uid,
+                source_url=ref.source_url,
+                proceso=proceso,
+                contratos=contratos,
+                adiciones_by_contrato=adiciones,
+                garantias_by_contrato=garantias,
+                pagos_by_contrato=pagos,
+                ejecucion_by_contrato=ejec,
+                suspensiones_by_contrato=susp,
+                mods_proceso=[],
+                docs=[],
+                portal_data=None,
+                feab_fills={k: v for k, v in row.values.items()
+                           if not k.startswith("FEAB:") and not k.startswith("Portal:")
+                              and not k.startswith("Docs:") and not k.startswith("Proceso:")
+                              and not k.startswith("Contrato:") and not k.startswith("Mods")
+                              and not k.startswith("Garantías:") and not k.startswith("Pagos:")
+                              and not k.startswith("Seguimiento:") and not k.startswith("Audit:")},
+                feab_confidences={},
+                feab_sources={},
+                feab_discrepancies=(row.values.get("FEAB: Valores reemplazados (manual previo)") or "").split(" | "),
+                feab_revisar=(row.values.get("FEAB: Celdas a revisar") or "").split(", "),
+                feab_hash=row.values.get("FEAB: Hash SECOP (SHA-256)") or "",
+                feab_obs=row.values.get("72. OBSERVACIONES"),
+                generated_at=datetime.now().strftime("%Y-%m-%d %H:%M"),
+            )
+            write_detalle(data, detalles_dir)
+            written += 1
+        except Exception as exc:  # pragma: no cover
+            log.warning("HTML detalle falló para fila %s: %s", row.row, exc)
+    log.info("HTML detalles generados: %d", written)
+    return written
 
 
 __all__ = ["RunReport", "RowReport", "process_workbook"]

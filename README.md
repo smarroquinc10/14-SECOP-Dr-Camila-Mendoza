@@ -5,9 +5,30 @@ Contratación Pública de Colombia) y mantener actualizado un Excel de
 seguimiento. Su primer foco es detectar **modificatorios**: adendas al pliego
 antes de la firma y adiciones/prórrogas/otrosíes después.
 
-La V1 funciona como **CLI** para validación. La siguiente iteración añadirá
-lectura/actualización de Excel y una interfaz web local (Streamlit) empaquetada
-como `.exe` para Windows.
+---
+
+## ⚡ Uso rápido en Windows (3 pasos)
+
+1. **Clona** el repo y entra en la carpeta:
+   ```powershell
+   cd "C:\Users\FGN\01 Claude Repositorio"
+   git clone https://github.com/smarroquinc10/Secop-II.git "14 SECOP Dr Camila Mendoza"
+   cd "14 SECOP Dr Camila Mendoza"
+   git checkout claude/secop-ii-integration-ee0Lr
+   ```
+
+2. **Un solo comando** instala todo y corre los tests:
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File .\setup.ps1
+   ```
+
+3. **Usar:**
+   - Interfaz web (recomendado): **doble clic en `ejecutar.bat`** → se abre el navegador.
+   - Actualizar un Excel rápido: **arrastra el .xlsx sobre `actualizar-excel.bat`**.
+   - Línea de comandos: `.\.venv\Scripts\python.exe -m secop_ii update-excel "Tu Excel.xlsx"`.
+
+> Si `setup.ps1` te dice que Python no está, instálalo desde
+> <https://www.python.org/downloads/> marcando **"Add Python to PATH"** y vuelve a correr el script.
 
 ---
 

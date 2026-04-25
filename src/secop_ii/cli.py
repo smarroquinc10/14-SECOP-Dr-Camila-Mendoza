@@ -270,17 +270,88 @@ def update_excel_cmd(
     dry_run: Annotated[
         bool, typer.Option("--dry-run", help="No escribe cambios al archivo."),
     ] = False,
+    no_portal: Annotated[
+        bool,
+        typer.Option(
+            "--no-portal",
+            help=(
+                "Saltar el espejo profundo del portal SECOP II. Por defecto "
+                "el programa abre Chrome visible y scrapea cada "
+                "OpportunityDetail (pide 1 clic al captcha por sesión). "
+                "Usa este flag si solo quieres datos del API datos.gov.co."
+            ),
+        ),
+    ] = False,
+    all_sheets: Annotated[
+        bool,
+        typer.Option(
+            "--all-sheets",
+            help=(
+                "Itera por TODAS las hojas del libro (FEAB 2026, 2025, 2024, "
+                "2023, 2022, 2018-2021). Auto-detecta header_row 4 para "
+                "'FEAB 2018-2021' (formato gestión contractual con títulos "
+                "en filas 1-3). Sin este flag solo procesa la hoja activa."
+            ),
+        ),
+    ] = False,
     verbose: Annotated[bool, typer.Option("-v", "--verbose")] = False,
 ) -> None:
     """Actualiza un Excel con datos del SECOP II."""
     _configure_logging(verbose)
 
     def _progress(done: int, total: int, row) -> None:
-        mark = "✓" if row.ok else "✗"
+        mark = "[OK]" if row.ok else "[X] "
         console.print(
             f"[dim]{done:>3}/{total}[/] {mark} fila {row.row}: "
-            f"{row.process_id or row.url[:60]} → {row.status}"
+            f"{row.process_id or row.url[:60]} -> {row.status}"
         )
+
+    if all_sheets:
+        from openpyxl import load_workbook as _lw
+        wb = _lw(input_file, read_only=True)
+        sheet_names = list(wb.sheetnames)
+        wb.close()
+        console.print(
+            f"[bold]--all-sheets:[/] procesando {len(sheet_names)} hojas: "
+            f"{', '.join(sheet_names)}"
+        )
+
+        # Backup once at the start, then disable per-sheet backups so we
+        # don't generate 6 timestamped copies.
+        do_backup_first = not no_backup
+        all_errors = 0
+        all_ok = 0
+        for sn in sheet_names:
+            # FEAB 2018-2021 (legacy format) keeps headers in row 4.
+            sheet_header_row = 4 if sn.strip() == "FEAB 2018-2021" else header_row
+            console.print(
+                f"\n[bold cyan]>>> Hoja:[/] {sn} (header_row={sheet_header_row})"
+            )
+            try:
+                report_i = process_workbook(
+                    input_file,
+                    url_column=url_column,
+                    sheet_name=sn,
+                    header_row=sheet_header_row,
+                    app_token=app_token,
+                    do_backup=do_backup_first,
+                    progress=_progress,
+                    dry_run=dry_run,
+                    mirror_portal=not no_portal,
+                )
+                all_ok += report_i.ok
+                all_errors += report_i.errors
+            except Exception as exc:
+                console.print(f"[red]Error en hoja {sn}: {exc}[/]")
+                all_errors += 1
+            do_backup_first = False  # only backup before the first sheet
+
+        console.print(
+            f"\n[bold]Resumen --all-sheets:[/] {all_ok} ok, {all_errors} errores"
+        )
+        if all_errors:
+            raise typer.Exit(code=1)
+        return
 
     report = process_workbook(
         input_file,
@@ -291,6 +362,7 @@ def update_excel_cmd(
         do_backup=not no_backup,
         progress=_progress,
         dry_run=dry_run,
+        mirror_portal=not no_portal,
     )
 
     console.print("\n[bold]Resumen:[/]")
@@ -299,6 +371,345 @@ def update_excel_cmd(
         console.print(f"  [cyan]{key}:[/] {value}")
     if report.errors:
         raise typer.Exit(code=1)
+
+
+@app.command("report")
+def report_cmd(
+    input_file: Annotated[str, typer.Argument(help="Excel ya enriquecido (después de update-excel).")],
+    output: Annotated[
+        str | None,
+        typer.Option("--output", "-o", help="Ruta de salida; por defecto AUDITORIA_<fecha>.xlsx en el mismo dir."),
+    ] = None,
+    md_too: Annotated[
+        bool, typer.Option("--md", help="Generar también el AUDITORIA.md clásico junto al .xlsx."),
+    ] = False,
+) -> None:
+    """Generate a professional auditing Excel from the enriched workbook.
+
+    The output is a 3-sheet workbook (Resumen, Detalle, Banderas Rojas)
+    with conditional formatting, autofilters, frozen panes — designed to
+    be handed to a supervisor or compliance officer without further edits.
+    """
+    from secop_ii.audit import audit_workbook, render_markdown
+    from secop_ii.excel_pro import build_audit_workbook
+
+    src = os.path.abspath(input_file)
+    audits = audit_workbook(src)
+
+    if output is None:
+        from datetime import datetime as _dt
+        stem = _dt.now().strftime("AUDITORIA_%Y-%m-%d_%H%M.xlsx")
+        output = os.path.join(os.path.dirname(src) or ".", stem)
+
+    info = build_audit_workbook(audits, output, excel_source=os.path.basename(src))
+    console.print(f"[green]OK[/]  Reporte Excel generado: [bold]{output}[/]")
+    console.print(
+        f"      {info.total_rows} filas | {info.needs_review} requieren revisión humana"
+    )
+
+    if md_too:
+        md_path = os.path.splitext(output)[0] + ".md"
+        from pathlib import Path as _P
+        _P(md_path).write_text(render_markdown(audits), encoding="utf-8")
+        console.print(f"[green]OK[/]  Markdown:       {md_path}")
+
+
+@app.command("inspect")
+def inspect_cmd(
+    process_id: Annotated[str, typer.Argument(help="Identificador (CO1.PPI.* / CO1.NTC.* / CO1.REQ.*) o URL.")],
+    download: Annotated[
+        bool,
+        typer.Option(
+            "--download/--no-download",
+            help="Descargar y leer cada PDF publicado (cacheado en .cache/pdf).",
+        ),
+    ] = True,
+    max_pdfs: Annotated[
+        int, typer.Option("--max-pdfs", help="Máximo de PDFs a descargar/parsear."),
+    ] = 8,
+    note: Annotated[
+        str | None,
+        typer.Option(
+            "--note",
+            help="Texto OBSERVACIONES de la Dra. (opcional). Se compara fuzzy con los nombres de archivo.",
+        ),
+    ] = None,
+    verbose: Annotated[bool, typer.Option("-v", "--verbose")] = False,
+) -> None:
+    """Deep-dive on a single process: API + docs + PDF peek + fuzzy match.
+
+    This is the human-eyes mode for cases the audit flagged. It pulls
+    every record from every relevant Socrata dataset, downloads the
+    published PDFs (cached) and surfaces a compact report.
+    """
+    _configure_logging(verbose)
+    from secop_ii.notice_resolver import NoticeResolver
+    from secop_ii.pdf_reader import PdfReader
+    from rapidfuzz import fuzz
+
+    pid = process_id.strip()
+    is_url = pid.startswith("http")
+
+    client = SecopClient()
+    if is_url:
+        try:
+            ref = parse_secop_url(pid)
+            pid = ref.process_id
+        except InvalidSecopUrlError as exc:
+            console.print(f"[red]ERROR[/] {exc}")
+            raise typer.Exit(code=2)
+
+    # 1) Resolve PPI -> NTC if applicable
+    ntc = None
+    if pid.startswith("CO1.PPI."):
+        nr = NoticeResolver()
+        ntc = nr.resolve(f"https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI={pid}")
+        console.print(f"[cyan]PPI[/] {pid}  ->  NTC {ntc or '(no resolvió)'}")
+
+    # 2) Process row
+    proc = client.get_proceso(
+        pid,
+        url=f"https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI={pid}"
+        if pid.startswith("CO1.PPI.") else None,
+    )
+    if proc is None:
+        console.print("[yellow]No se encontró proceso en Socrata.[/]")
+    else:
+        portfolio = proc.get("id_del_portafolio") or "?"
+        console.print(f"[cyan]Proceso[/]  fase={proc.get('fase')}  adjudicado={proc.get('adjudicado')}  portafolio={portfolio}")
+        console.print(f"           objeto: {(proc.get('descripci_n_del_procedimiento') or '')[:120]}")
+
+    # 3) Contratos
+    contratos = []
+    if proc and proc.get("id_del_portafolio"):
+        contratos = client.get_contratos(portfolio_id=str(proc["id_del_portafolio"]))
+    if not contratos and ntc:
+        contratos = client.get_contratos(notice_uid=ntc)
+    console.print(f"[cyan]Contratos[/] encontrados: {len(contratos)}")
+    for c in contratos[:5]:
+        console.print(
+            f"           id_ctr={c.get('id_contrato')}  estado={c.get('estado_contrato')}  "
+            f"valor={c.get('valor_del_contrato')}"
+        )
+
+    # 4) Archivos publicados (Socrata)
+    archivos = []
+    if proc and proc.get("id_del_portafolio"):
+        archivos = client.get_archivos(str(proc["id_del_portafolio"]))
+    console.print(f"[cyan]Archivos[/] publicados: {len(archivos)}")
+
+    table = Table(title="PDFs publicados")
+    table.add_column("Fecha", style="dim", no_wrap=True)
+    table.add_column("Nombre", style="white", overflow="fold")
+    table.add_column("Engine", style="cyan", no_wrap=True)
+    table.add_column("Mod KW", style="yellow", no_wrap=True)
+    table.add_column("Match nota", style="magenta", no_wrap=True)
+
+    reader = PdfReader() if download else None
+    for arc in archivos[:max_pdfs]:
+        nm = arc.get("nombre_archivo") or ""
+        fc = (arc.get("fecha_carga") or "")[:10]
+        url_field = arc.get("_url_normalized") or arc.get("url_descarga_documento") or ""
+        if isinstance(url_field, dict):
+            url_field = url_field.get("url", "")
+
+        engine = "—"
+        mod_hits = ""
+        match_score = ""
+        if reader and url_field:
+            summary = reader.summarize(url_field)
+            engine = summary.engine
+            mod_hits = ",".join(summary.keywords_modif) if summary.keywords_modif else ""
+            if note:
+                # Fuzzy match nombre + preview vs OBSERVACIONES note
+                best = max(
+                    fuzz.partial_ratio(note, nm),
+                    fuzz.partial_ratio(note, summary.text_preview[:300]) if summary.text_preview else 0,
+                )
+                match_score = f"{best}%"
+        table.add_row(fc, nm[:80], engine, mod_hits[:40], match_score)
+    console.print(table)
+
+    # 5) Verdict on the spot
+    docs_says = sum(
+        1 for a in archivos
+        if any(kw in (a.get("nombre_archivo") or "").upper() for kw in ("MODIFIC", "OTROSI", "PRORROGA", "ADICION"))
+    )
+    api_says = len(contratos) > 0  # very rough
+    console.print()
+    console.print("[bold]Resumen rápido:[/]")
+    console.print(f"  proceso encontrado:      {'sí' if proc else 'no'}")
+    console.print(f"  contratos en Socrata:    {len(contratos)}")
+    console.print(f"  archivos en Socrata:     {len(archivos)}")
+    console.print(f"  filename con keyword mod: {docs_says}")
+    if not proc or (len(contratos) == 0 and len(archivos) == 0):
+        console.print("[red bold]  -> SECOP no tiene evidencia. Si tu nota afirma modificatorio,[/red bold]")
+        console.print("[red bold]     es un caso de revisión humana (archivo físico / otro NTC).[/red bold]")
+
+
+@app.command("export")
+def export_cmd(
+    source_excel: Annotated[
+        str,
+        typer.Argument(help="Excel de origen (provee la lista de URLs SECOP)."),
+    ],
+    out: Annotated[
+        str,
+        typer.Option("--out", "-o", help="Excel de salida con la espejo SECOP limpio."),
+    ] = "Dra_Cami_Contractual_export.xlsx",
+    sheet_name: Annotated[
+        str | None, typer.Option("--sheet", help="Hoja del origen."),
+    ] = None,
+    detalles: Annotated[
+        bool, typer.Option("--detalles/--no-detalles", help="Generar HTML drill-down."),
+    ] = True,
+    verbose: Annotated[bool, typer.Option("-v", "--verbose")] = False,
+) -> None:
+    """Genera un Excel LIMPIO desde cero con SECOP como única fuente.
+
+    Usa el archivo origen solo para extraer las URLs de los procesos.
+    Crea un nuevo workbook donde cada celda viene de SECOP — sin data
+    legacy. Útil para auditorías, entregables a leadership, o reset.
+    """
+    _configure_logging(verbose)
+    from openpyxl import Workbook, load_workbook as _open
+    from secop_ii.feab_columns import FEAB_COLUMNS_ORDERED
+    from secop_ii.excel_io import detect_url_column
+    from pathlib import Path
+    import shutil
+
+    src = Path(source_excel)
+    dst = Path(out)
+    if not src.exists():
+        console.print(f"[red]ERROR[/] no existe {src}")
+        raise typer.Exit(code=2)
+
+    # Strategy: copy the source as starting point so column structure
+    # and styles are preserved, then run the orchestrator on the copy
+    # with the FEAB filler — but we need to wipe the her-77 columns
+    # first so SECOP's values are pure (no merge with legacy).
+    shutil.copy(src, dst)
+    console.print(f"[green]OK[/]  Copia base: {dst}")
+
+    wb = _open(str(dst))
+    ws = wb[sheet_name] if sheet_name else wb.active
+    headers = {c.value: i for i, c in enumerate(ws[1], start=1) if c.value}
+    # Wipe SECOP-derivable columns so the filler writes from scratch.
+    # Internal columns stay (CDP, Orfeo, Abogado — those are FEAB-only).
+    from secop_ii.feab_columns import INTERNAL_ONLY
+    wiped = 0
+    for col_name, col_idx in headers.items():
+        if col_name in FEAB_COLUMNS_ORDERED and col_name not in INTERNAL_ONLY:
+            for r in range(2, ws.max_row + 1):
+                cell = ws.cell(row=r, column=col_idx)
+                if cell.value not in (None, ""):
+                    cell.value = None
+                    wiped += 1
+    wb.save(str(dst))
+    console.print(f"[green]OK[/]  Limpiadas {wiped} celdas (SECOP-derivables) para pinta fresca")
+
+    # Now run the orchestrator on the wiped copy. With no manual values
+    # in those cells, every fill is a fresh SECOP write — pure mirror.
+    console.print(f"[bold]Pintando[/] desde SECOP en vivo…")
+    report = process_workbook(
+        dst, do_backup=False, fields=["feab_fill"],
+        generate_detalles=detalles, apply_view=True,
+    )
+    console.print(
+        f"[bold green]Export listo[/] · {report.ok}/{report.total} filas OK · "
+        f"errores: {report.errors}"
+    )
+    console.print(f"  Excel: {dst}")
+    if detalles:
+        console.print(f"  Detalles: {dst.parent / 'detalles'}/")
+
+
+@app.command("verify")
+def verify_cmd(
+    excel_path: Annotated[str, typer.Argument(help="Ruta del Excel con hashes.")],
+    out: Annotated[
+        str | None,
+        typer.Option("--out", help="Si se da, escribe el reporte en Markdown."),
+    ] = None,
+    verbose: Annotated[bool, typer.Option("-v", "--verbose")] = False,
+) -> None:
+    """Re-pega contra SECOP y compara hashes con los del Excel.
+
+    Detecta filas donde SECOP cambió desde el último update — esas
+    filas están "stale" y conviene re-correr update-excel para
+    refrescar. Filas frescas = todavía espejo de SECOP.
+    """
+    _configure_logging(verbose)
+    from secop_ii.verify import render_verification_markdown, verify_workbook
+
+    console.print(f"[bold]Verificando[/] {excel_path} contra SECOP en vivo…")
+
+    def _progress(idx: int, total: int, row_v) -> None:
+        status = (
+            "[red]drift[/]" if row_v.changed
+            else "[yellow]error[/]" if row_v.error
+            else "[green]fresh[/]"
+        )
+        console.print(f"  {idx}/{total} fila {row_v.row} {row_v.process_id} → {status}")
+
+    report = verify_workbook(excel_path, progress=_progress)
+
+    console.print()
+    console.print("[bold]Resultado[/]")
+    console.print(f"  Total:         {report.total}")
+    console.print(f"  [green]Frescas:[/]      {report.fresh_count}")
+    console.print(f"  [red]Con drift:[/]    {report.stale_count}")
+    console.print(f"  [yellow]Errores:[/]      {report.error_count}")
+
+    if out:
+        from pathlib import Path
+        Path(out).write_text(render_verification_markdown(report), encoding="utf-8")
+        console.print(f"[green]OK[/]  Reporte: {out}")
+
+
+@app.command("audit-log")
+def audit_log_cmd(
+    log_path: Annotated[
+        str, typer.Argument(help="Ruta del audit log JSONL."),
+    ] = ".cache/audit_log.jsonl",
+    verify_chain: Annotated[
+        bool,
+        typer.Option("--verify/--no-verify", help="Verificar la integridad del hash-chain."),
+    ] = True,
+    out: Annotated[
+        str | None, typer.Option("--out", help="Markdown con el resumen."),
+    ] = None,
+) -> None:
+    """Auditoría inmutable: muestra y verifica el log hash-chained.
+
+    Cada operación que escribe en el Excel deja una entrada en el log
+    enlazada por SHA-256 con la anterior. Si alguien edita una entrada
+    pasada, la cadena se rompe y este comando lo reporta.
+    """
+    from pathlib import Path
+    from secop_ii.audit_log import render_audit_summary, verify_audit_log
+
+    p = Path(log_path)
+    if not p.exists():
+        console.print(f"[yellow]Aviso:[/] no existe {log_path} — no hay log aún.")
+        raise typer.Exit(code=0)
+
+    summary = render_audit_summary(p)
+    console.print(summary)
+
+    if verify_chain:
+        intact, problems = verify_audit_log(p)
+        console.print()
+        if intact:
+            console.print("[green bold]Hash-chain íntegro[/] — ninguna alteración detectada.")
+        else:
+            console.print("[red bold]ALERTA: cadena rota[/]")
+            for p_msg in problems:
+                console.print(f"  [red]·[/] {p_msg}")
+
+    if out:
+        Path(out).write_text(summary, encoding="utf-8")
+        console.print(f"[green]OK[/]  Resumen: {out}")
 
 
 if __name__ == "__main__":  # pragma: no cover
