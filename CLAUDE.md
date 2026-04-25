@@ -207,6 +207,25 @@ viene del SECOP API.** Auditoría forense (`audit_fidelity.py` prueba 5):
 - GitHub Action `Refrescar seeds (datos.gov.co)` corre cron diario 06:00 UTC.
 - GitHub Action `Deploy a GitHub Pages` corre en cada push a `main` (~40s).
 
+## 🔒 Policy de pinning de dependencies
+
+> El RUNT Pro pinea Python a versiones exactas (`requests==2.32.0`) porque
+> pip no tiene lockfile estándar. Acá el patrón se aplica de forma
+> diferente — leerlo antes de "modernizar" deps:
+
+- **Python (`requirements.txt`)**: usa `>=` con tradeoffs documentados.
+  Ejemplo: `tenacity>=8.1` tiene nota explícita "loosen para compatibilidad
+  con streamlit (pinea <9)". **NO cambiar a `==` sin entender cada caso** —
+  varios paquetes streamlit-* tienen peer deps frágiles. Si necesitás
+  reproducibilidad total, generá un `requirements.lock` aparte con
+  `pip freeze`, no toques el `.txt`.
+- **Node (`app/package.json`)**: usa `^X.Y.Z` (rangos). El **`package-lock.json`
+  es la fuente de verdad** — pinea las versiones exactas instaladas y
+  garantiza reproducibilidad en CI. Pinear el `package.json` (quitar `^`)
+  introduce drift con el lock y rompe `npm ci` strict mode en GitHub
+  Action. **NO regenerar el lock sin sesión dedicada** — un cambio en el
+  lock = un cambio de surface real, no cosmético.
+
 ---
 
 ## 🚫 Skills auto-sugeridas que NO aplican (skipearlas)
