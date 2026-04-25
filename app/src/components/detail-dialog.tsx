@@ -261,7 +261,7 @@ export function DetailDialog({ contractId, open, onOpenChange }: Props) {
               {Object.values(data.adiciones_by_contrato).some((a) => a.length > 0) && (
                 <section>
                   <div className="eyebrow mb-2">
-                    Adiciones / Modificatorios
+                    Adiciones / Modificatorios al contrato
                   </div>
                   <div className="border border-rule rounded-md overflow-hidden">
                     <table className="w-full text-sm">
@@ -295,6 +295,75 @@ export function DetailDialog({ contractId, open, onOpenChange }: Props) {
                           ))}
                       </tbody>
                     </table>
+                  </div>
+                </section>
+              )}
+
+              {/* Modificatorios al PROCESO (distintos a adiciones de contrato).
+                  Vienen del dataset SECOP de modificatorios de proceso. */}
+              {data.mods_proceso?.length > 0 && (
+                <section>
+                  <div className="eyebrow mb-2">
+                    Modificatorios al proceso ({data.mods_proceso.length})
+                  </div>
+                  <div className="border border-rule rounded-md overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead className="bg-surface text-[11px] uppercase tracking-wider text-ink-soft">
+                        <tr>
+                          <th className="text-left px-3 py-2">Tipo</th>
+                          <th className="text-left px-3 py-2">Fecha</th>
+                          <th className="text-left px-3 py-2">Descripción</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {data.mods_proceso.map((m, i) => (
+                          <tr
+                            key={i}
+                            className="border-b border-rule/50 last:border-0"
+                          >
+                            <td className="px-3 py-2">
+                              {((m.tipo_modificacion as string) ??
+                                (m.tipo as string)) ??
+                                "—"}
+                            </td>
+                            <td className="px-3 py-2 font-mono text-ink-soft">
+                              {fmtDate(
+                                (m.fecha_modificacion as string) ??
+                                  (m.fecha as string) ??
+                                  "",
+                              )}
+                            </td>
+                            <td className="px-3 py-2 text-xs text-ink-soft">
+                              {((m.descripcion as string) ??
+                                (m.justificacion as string) ??
+                                "").slice(0, 120)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              )}
+
+              {/* OBSERVACIONES de la Dra (notas escritas a mano en el Excel).
+                  Vienen del Excel master, no de SECOP. */}
+              {data.observaciones_dra?.length > 0 && (
+                <section>
+                  <div className="eyebrow mb-2">
+                    Observaciones de la Dra ({data.observaciones_dra.length})
+                  </div>
+                  <div className="border border-rule rounded-md divide-y divide-rule/50">
+                    {data.observaciones_dra.map((o, i) => (
+                      <div key={i} className="p-3">
+                        <div className="text-[10px] font-mono text-ink-soft uppercase tracking-wider mb-1">
+                          {o.sheet} · fila {o.row}
+                        </div>
+                        <div className="text-sm text-ink whitespace-pre-wrap">
+                          {o.text}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </section>
               )}

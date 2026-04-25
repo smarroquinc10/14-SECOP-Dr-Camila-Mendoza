@@ -2,7 +2,14 @@
 
 import * as React from "react";
 import useSWR from "swr";
-import { ExternalLink, FileSpreadsheet, Plus, Trash2 } from "lucide-react";
+import {
+  Check,
+  ExternalLink,
+  Pencil,
+  Plus,
+  Trash2,
+  X as XIcon,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +37,6 @@ export function WatchListPanel({
 
   const [url, setUrl] = React.useState("");
   const [busy, setBusy] = React.useState(false);
-  const [importing, setImporting] = React.useState(false);
   const [feedback, setFeedback] = React.useState<{
     kind: "ok" | "info" | "error";
     text: string;
@@ -66,44 +72,6 @@ export function WatchListPanel({
     }
   }
 
-  async function handleImportFromExcel() {
-    setImporting(true);
-    setFeedback({
-      kind: "info",
-      text: "Leyendo el Excel y mergeando apariciones por hoja…",
-    });
-    try {
-      const res = await api.watchImportFromExcel();
-      const sheetSummary = Object.entries(res.per_sheet)
-        .map(([name, s]) => `${name}: ${s.found}`)
-        .join(" · ");
-      if (res.added_new > 0 || res.merged > 0) {
-        setFeedback({
-          kind: "ok",
-          text: `${res.total_unique} procesos únicos (${res.total_appearances} apariciones) · ${res.added_new} nuevos · ${res.merged} mergeados · ${sheetSummary}`,
-        });
-      } else if (res.already_recorded > 0) {
-        setFeedback({
-          kind: "info",
-          text: `Ya estaba todo. ${res.already_recorded} apariciones idénticas, ${res.total_unique} procesos únicos · ${sheetSummary}`,
-        });
-      } else {
-        setFeedback({
-          kind: "info",
-          text: "No encontré URLs SECOP en el Excel.",
-        });
-      }
-      mutate();
-    } catch (err) {
-      setFeedback({
-        kind: "error",
-        text: err instanceof Error ? err.message : "No pude importar.",
-      });
-    } finally {
-      setImporting(false);
-    }
-  }
-
   async function handleRemove(item: WatchedItem) {
     setBusy(true);
     try {
@@ -114,6 +82,27 @@ export function WatchListPanel({
       setFeedback({
         kind: "error",
         text: err instanceof Error ? err.message : "No pude eliminar.",
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleUpdate(oldUrl: string, newUrl: string) {
+    setBusy(true);
+    setFeedback(null);
+    try {
+      const res = await api.watchUpdate(oldUrl, newUrl);
+      setFeedback({
+        kind: "ok",
+        text: `Link actualizado · ${res.item.process_id ?? "URL aceptada"}`,
+      });
+      mutate();
+    } catch (err) {
+      setFeedback({
+        kind: "error",
+        text:
+          err instanceof Error ? err.message : "No pude actualizar el link.",
       });
     } finally {
       setBusy(false);
@@ -141,25 +130,15 @@ export function WatchListPanel({
             }}
             placeholder="https://community.secop.gov.co/Public/Tendering/..."
             className="flex-1"
-            disabled={busy || importing}
+            disabled={busy}
           />
           <Button
             onClick={handleAdd}
-            disabled={busy || importing || !url.trim()}
+            disabled={busy || !url.trim()}
             className="gap-2"
           >
             <Plus className="h-4 w-4" />
             Agregar
-          </Button>
-          <Button
-            onClick={handleImportFromExcel}
-            disabled={busy || importing}
-            variant="outline"
-            className="gap-2"
-            title="Lee la columna LINK de cada hoja del Excel y agrega los procesos no duplicados"
-          >
-            <FileSpreadsheet className="h-4 w-4" />
-            {importing ? "Importando…" : "Importar del Excel"}
           </Button>
         </div>
         {feedback && (
@@ -193,6 +172,7 @@ export function WatchListPanel({
             items={data.items}
             onPickProcessId={onPickProcessId}
             handleRemove={handleRemove}
+            handleUpdate={handleUpdate}
             busy={busy}
           />
         )}
@@ -214,14 +194,18 @@ function FilteredWatchTable({
   items,
   onPickProcessId,
   handleRemove,
+  handleUpdate,
   busy,
 }: {
   items: WatchedItem[];
   onPickProcessId: (id: string) => void;
   handleRemove: (it: WatchedItem) => void;
+  handleUpdate: (oldUrl: string, newUrl: string) => Promise<void>;
   busy: boolean;
 }) {
   const [sheetFilter, setSheetFilter] = React.useState<string | null>(null);
+  const [editingUrl, setEditingUrl] = React.useState<string | null>(null);
+  const [editDraft, setEditDraft] = React.useState("");
 
   // Count APPEARANCES per sheet (matches Excel row counts exactly).
   // A process that's in 2 rows of FEAB 2024 contributes 2 to "FEAB 2024",
@@ -433,16 +417,68 @@ function FilteredWatchTable({
                   </a>
                 </td>
                 <td className="px-4 py-2 text-right">
-                  {!a && (
-                    <button
-                      onClick={() => handleRemove(it)}
-                      disabled={busy}
-                      className="inline-flex items-center justify-center h-7 w-7 rounded text-rose-700 hover:bg-rose-50 disabled:opacity-50"
-                      title="Quitar de la lista"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  )}
+                  {!a && editingUrl === it.url ? (
+                    <div className="flex items-center justify-end gap-1">
+                      <Input
+                        autoFocus
+                        value={editDraft}
+                        onChange={(e) => setEditDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Escape") setEditingUrl(null);
+                          if (e.key === "Enter" && editDraft.trim()) {
+                            handleUpdate(it.url, editDraft.trim()).then(() =>
+                              setEditingUrl(null)
+                            );
+                          }
+                        }}
+                        className="h-7 text-[11px] w-64"
+                        placeholder="Nueva URL SECOP…"
+                      />
+                      <button
+                        onClick={() => {
+                          if (editDraft.trim()) {
+                            handleUpdate(it.url, editDraft.trim()).then(() =>
+                              setEditingUrl(null)
+                            );
+                          }
+                        }}
+                        disabled={busy || !editDraft.trim()}
+                        className="inline-flex items-center justify-center h-7 w-7 rounded text-emerald-700 hover:bg-emerald-50 disabled:opacity-50"
+                        title="Guardar"
+                      >
+                        <Check className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => setEditingUrl(null)}
+                        className="inline-flex items-center justify-center h-7 w-7 rounded text-ink-soft hover:bg-stone-100"
+                        title="Cancelar"
+                      >
+                        <XIcon className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : !a ? (
+                    <div className="flex items-center justify-end gap-0.5">
+                      <button
+                        onClick={() => {
+                          setEditingUrl(it.url);
+                          setEditDraft(it.url);
+                        }}
+                        disabled={busy}
+                        className="inline-flex items-center justify-center h-7 w-7 rounded text-burgundy hover:bg-burgundy/10 disabled:opacity-50"
+                        title="Corregir URL del proceso"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleRemove(it)}
+                        disabled={busy}
+                        className="inline-flex items-center justify-center h-7 w-7 rounded text-rose-700 hover:bg-rose-50 disabled:opacity-50"
+                        title="Quitar de la lista"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : null}
                 </td>
               </tr>
             );

@@ -139,6 +139,13 @@ class ProcessSummary(BaseModel):
     raw: dict[str, Any] = Field(default_factory=dict)
 
 
+class ObservacionDra(BaseModel):
+    """One OBSERVACIONES note the Dra wrote in the master Excel."""
+    sheet: str
+    row: int
+    text: str
+
+
 class ProcessDetail(BaseModel):
     """Full per-process payload: every dataset SECOP returns about it."""
     notice_uid: str | None
@@ -156,6 +163,7 @@ class ProcessDetail(BaseModel):
     feab_sources: dict[str, str]
     needs_review: list[str]
     issues: list[str]
+    observaciones_dra: list[ObservacionDra] = Field(default_factory=list)
     secop_hash: str
     code_version: str
     fetched_at: str
@@ -324,6 +332,23 @@ async def contract_detail(id_contrato: str) -> ProcessDetail:
             proceso=proceso, contratos=contratos, notice_uid=notice_uid,
         )
 
+        # Look up the Dra's manual notes from the Excel master file.
+        # Best-effort: if the workbook isn't available or the row
+        # doesn't exist, return an empty list — never blocks the API.
+        try:
+            obs_raw = _observaciones_for(
+                process_id=(proceso or {}).get("id_del_proceso"),
+                proceso_de_compra=str(c.get("proceso_de_compra") or "")
+                                  or None,
+                notice_uid=notice_uid,
+                contract_id=c.get("id_contrato"),
+                url=url,
+            )
+            obs = [ObservacionDra(**e) for e in obs_raw]
+        except Exception as exc:
+            log.warning("observaciones lookup failed: %s", exc)
+            obs = []
+
         return ProcessDetail(
             notice_uid=notice_uid,
             process_id=(proceso or {}).get("id_del_proceso", id_contrato),
@@ -340,6 +365,7 @@ async def contract_detail(id_contrato: str) -> ProcessDetail:
             feab_sources=result.sources,
             needs_review=sorted(validation.needs_review),
             issues=validation.issues,
+            observaciones_dra=obs,
             secop_hash=secop_hash,
             code_version=_CODE_VERSION,
             fetched_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -481,6 +507,83 @@ async def watch_remove(url: str = Query(..., description="URL exacta a borrar"),
         return {"removed": before - len(items), "total": len(items)}
 
 
+@app.put("/watch")
+async def watch_update(payload: dict[str, str]) -> dict[str, Any]:
+    """Edit a watched item — replace its URL while keeping its
+    appearances/sheets/vigencias history intact.
+
+    Body::
+
+        {"old_url": "<the URL currently stored>",
+         "new_url": "<the corrected URL>",
+         "note": "optional updated note"}
+
+    Re-parses ``new_url`` to extract ``process_id`` and resolves
+    ``notice_uid`` against SECOP. Refuses if ``new_url`` already
+    belongs to a different watched process (would create a duplicate).
+    """
+    old_url = (payload.get("old_url") or "").strip()
+    new_url = (payload.get("new_url") or "").strip()
+    note = payload.get("note")
+    if not old_url or not new_url:
+        raise HTTPException(400, "old_url y new_url son requeridos")
+    if "secop.gov.co" not in new_url.lower():
+        raise HTTPException(400, "new_url no parece de SECOP II")
+
+    new_process_id = None
+    new_notice_uid = None
+    try:
+        ref = parse_secop_url(new_url)
+        new_process_id = ref.process_id
+        new_notice_uid = _client.resolve_notice_uid(
+            ref.process_id, url=new_url
+        )
+    except InvalidSecopUrlError:
+        pass
+
+    with _WATCH_LOCK:
+        items = _load_watched()
+
+        # Locate the item to edit
+        target = None
+        for it in items:
+            if it.get("url") == old_url:
+                target = it
+                break
+        if target is None:
+            raise HTTPException(404, f"no encuentro old_url en tu lista")
+
+        # Refuse if new_url is already in another item (different process)
+        for it in items:
+            if it is target:
+                continue
+            if it.get("url") == new_url:
+                raise HTTPException(
+                    409, "new_url ya pertenece a otro proceso de tu lista"
+                )
+            if (new_process_id and it.get("process_id") == new_process_id):
+                raise HTTPException(
+                    409,
+                    f"new_url apunta al mismo process_id ({new_process_id}) "
+                    "que otro item de tu lista",
+                )
+
+        target["url"] = new_url
+        if new_process_id:
+            target["process_id"] = new_process_id
+        if new_notice_uid is not None:
+            target["notice_uid"] = new_notice_uid
+        if note is not None:
+            target["note"] = (note.strip() or None) if note else None
+        # Stamp the edit
+        target["edited_at"] = datetime.now(timezone.utc).isoformat(
+            timespec="seconds"
+        )
+
+        _save_watched(items)
+        return {"updated": True, "item": target, "total": len(items)}
+
+
 # ---- Excel → watch list importer -------------------------------------------
 # The Dra's master Excel keeps a "LINK" column with the SECOP URL of each
 # process she follows. Some sheets put headers in row 1 (FEAB 2026/2025/
@@ -564,6 +667,142 @@ def _vigencia_from_sheet_name(sheet_name: str) -> str | None:
     import re
     m = re.search(r"\b(\d{4})\s*$", sheet_name.strip())
     return m.group(1) if m else None
+
+
+def _find_obs_column(ws, header_row: int) -> int | None:
+    """Locate the ``OBSERVACIONES`` column in a sheet by header text.
+
+    Lives at col 75 in FEAB 2026/2025/2024/2023/2022 and at col 73 in
+    FEAB 2018-2021. Match is by header substring 'OBSERVAC' so it
+    works across "72. OBSERVACIONES" and any minor formatting.
+    """
+    try:
+        row = next(ws.iter_rows(min_row=header_row, max_row=header_row,
+                                values_only=True))
+    except StopIteration:
+        return None
+    for i, v in enumerate(row, start=1):
+        if v is None:
+            continue
+        if "OBSERVAC" in str(v).strip().upper():
+            return i
+    return None
+
+
+# In-memory cache keyed by (workbook_path, mtime) so we re-read the
+# Excel only when it actually changes.
+_OBS_INDEX_CACHE: dict[tuple[str, float],
+                       dict[str, list[dict[str, Any]]]] = {}
+
+
+def _load_excel_obs_index(workbook_path: Path) -> dict[
+    str, list[dict[str, Any]]
+]:
+    """Build ``{key -> [{sheet, row, text}, ...]}`` where ``key`` is
+    every URL substring or process_id we can cheaply extract from each
+    Excel row that has a non-empty OBSERVACIONES cell.
+
+    Cached per (path, mtime) — re-reads only when the Excel changes.
+    """
+    if not workbook_path.exists():
+        return {}
+    mtime = workbook_path.stat().st_mtime
+    cache_key = (str(workbook_path), mtime)
+    cached = _OBS_INDEX_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
+
+    from openpyxl import load_workbook
+    wb = load_workbook(workbook_path, data_only=True, read_only=True)
+    index: dict[str, list[dict[str, Any]]] = {}
+
+    for sheet_name in wb.sheetnames:
+        ws = wb[sheet_name]
+        link_loc = _find_link_column(ws)
+        if not link_loc:
+            continue
+        header_row, link_col = link_loc
+        obs_col = _find_obs_column(ws, header_row)
+        if obs_col is None:
+            continue
+
+        for excel_row_idx, row in enumerate(
+            ws.iter_rows(min_row=header_row + 1, values_only=True),
+            start=header_row + 1,
+        ):
+            if not row or len(row) < max(link_col, obs_col):
+                continue
+            obs_v = row[obs_col - 1]
+            if obs_v is None:
+                continue
+            text = str(obs_v).strip()
+            if not text:
+                continue
+
+            entry = {"sheet": sheet_name, "row": excel_row_idx,
+                    "text": text}
+
+            # Index by URL (full + lower) and parsed process_id.
+            # Skip non-URL values (the LINK column sometimes contains
+            # status words like "ANULADO" — those would pollute the
+            # index with garbage keys).
+            link_v = row[link_col - 1]
+            if link_v is not None:
+                url = str(link_v).strip()
+                if url and "secop.gov.co" in url.lower():
+                    index.setdefault(url, []).append(entry)
+                    index.setdefault(url.lower(), []).append(entry)
+                    try:
+                        ref = parse_secop_url(url)
+                        index.setdefault(ref.process_id, []).append(entry)
+                    except InvalidSecopUrlError:
+                        pass
+
+    # Dedup entries within each key (multiple keys can point to the same row)
+    for key, entries in index.items():
+        seen = set()
+        unique: list[dict[str, Any]] = []
+        for e in entries:
+            sig = (e["sheet"], e["row"])
+            if sig in seen:
+                continue
+            seen.add(sig)
+            unique.append(e)
+        index[key] = unique
+
+    # Evict older cache entries (single-workbook system)
+    _OBS_INDEX_CACHE.clear()
+    _OBS_INDEX_CACHE[cache_key] = index
+    return index
+
+
+def _observaciones_for(
+    process_id: str | None,
+    proceso_de_compra: str | None,
+    notice_uid: str | None,
+    contract_id: str | None,
+    url: str | None,
+) -> list[dict[str, Any]]:
+    """Look up the Dra's notes for a contract by every available key.
+
+    Tries: explicit URL, process_id, proceso_de_compra (NTC for many
+    contracts), notice_uid, id_contrato (PCCNTR). De-dups results.
+    """
+    workbook = Path(_DEFAULT_WORKBOOK)
+    index = _load_excel_obs_index(workbook)
+    found: list[dict[str, Any]] = []
+    seen_rows: set[tuple[str, int]] = set()
+    for key in (process_id, proceso_de_compra, notice_uid,
+                contract_id, url, (url or "").lower()):
+        if not key:
+            continue
+        for entry in index.get(key, []):
+            sig = (entry["sheet"], entry["row"])
+            if sig in seen_rows:
+                continue
+            seen_rows.add(sig)
+            found.append(entry)
+    return found
 
 
 def _import_workbook_urls(workbook_path: Path) -> dict[str, Any]:

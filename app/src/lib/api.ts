@@ -31,6 +31,12 @@ export interface Contract {
   [key: string]: unknown;
 }
 
+export interface ObservacionDra {
+  sheet: string;
+  row: number;
+  text: string;
+}
+
 export interface ContractDetail {
   notice_uid: string | null;
   process_id: string;
@@ -47,6 +53,7 @@ export interface ContractDetail {
   feab_sources: Record<string, string>;
   needs_review: string[];
   issues: string[];
+  observaciones_dra: ObservacionDra[];
   secop_hash: string;
   code_version: string;
   fetched_at: string;
@@ -173,6 +180,25 @@ export const api = {
     );
     if (!res.ok) throw new Error(`watch-remove ${res.status}`);
     return res.json() as Promise<{ removed: number; total: number }>;
+  },
+  watchUpdate: async (oldUrl: string, newUrl: string, note?: string) => {
+    const res = await fetch(`/api/secop/watch`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ old_url: oldUrl, new_url: newUrl, note }),
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      const err = await res
+        .json()
+        .catch(() => ({ detail: `${res.status}` }));
+      throw new Error(err.detail ?? `watch-update ${res.status}`);
+    }
+    return res.json() as Promise<{
+      updated: boolean;
+      item: WatchedItem;
+      total: number;
+    }>;
   },
   watchImportFromExcel: (workbook?: string) =>
     post<{
