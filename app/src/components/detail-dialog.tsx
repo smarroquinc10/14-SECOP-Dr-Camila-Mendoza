@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { api, type ContractDetail, type PortalSnapshot } from "@/lib/api";
+import { api, type Contract, type ContractDetail, type PortalSnapshot } from "@/lib/api";
 import { cn, confidenceColor, fmtDate, moneyCO } from "@/lib/utils";
 
 interface Props {
@@ -187,13 +187,31 @@ export function DetailDialog({ contractId, open, onOpenChange }: Props) {
     () => api.contract(contractId!)
   );
 
-  const contract = data?.contratos?.[0] || {};
+  // Cuando un proceso tiene varios contratos firmados (típico en subastas
+  // con múltiples ganadores), `data.contratos` trae todos los que comparten
+  // notice_uid. Antes el modal siempre mostraba `[0]` — si la Dra clickeaba
+  // PCCNTR.X y el primero del array era PCCNTR.Y, veía el contrato
+  // equivocado. Ahora preferimos el que matchea el id que clickeó.
+  const allContratos = data?.contratos ?? [];
+  const contract =
+    allContratos.find((c) => c.id_contrato === contractId) ??
+    allContratos[0] ??
+    {};
+  // Hermanos: otros contratos del mismo proceso (mismo notice_uid),
+  // distintos al que está mostrándose ahora. Se renderizan en una sección
+  // dedicada al final para que la Dra los vea de un vistazo.
+  const sibContratos = allContratos.filter(
+    (c) => c.id_contrato !== (contract as Contract).id_contrato,
+  );
   const url =
     (contract as Record<string, unknown>).urlproceso?.toString() ?? "";
 
-  // Estado del toggle de "Otros campos del API". Cerrado por default
-  // para no abrumar — pero la data SIEMPRE está disponible al click.
-  const [showAllApiFields, setShowAllApiFields] = React.useState(false);
+  // Toggle "Otros campos del API". ABIERTO por default — la regla
+  // cardinal "espejo y reflejo fiel" prohibe esconder data del SECOP
+  // detrás de un click que la Dra puede no descubrir. Si ella quiere
+  // colapsarlo para reducir scroll, queda como toggle. Pero la data
+  // se ve en cuanto abre el modal, sin trabajo extra.
+  const [showAllApiFields, setShowAllApiFields] = React.useState(true);
 
   // Calculamos los campos del API NO cubiertos por SECTIONS — son los
   // 29 campos que antes se "comían". Filtramos vacíos y ruido conocido.
@@ -373,6 +391,80 @@ export function DetailDialog({ contractId, open, onOpenChange }: Props) {
                 </section>
               )}
 
+              {/* Otros contratos del MISMO proceso (mismos notice_uid).
+                  Aparece cuando el proceso adjudicó a varios proveedores
+                  (típico en subastas con múltiples lotes/ganadores). Antes
+                  el modal silenciosamente solo mostraba el primero — los
+                  demás se "comían". Ahora cada hermano se renderiza con
+                  su mini-tabla de campos clave. */}
+              {sibContratos.length > 0 && (
+                <section>
+                  <div className="eyebrow mb-2">
+                    Otros contratos del mismo proceso ({sibContratos.length})
+                  </div>
+                  <div className="space-y-3">
+                    {sibContratos.map((sib, idx) => {
+                      const sibUrl =
+                        (sib as Record<string, unknown>).urlproceso?.toString() ?? "";
+                      return (
+                        <div
+                          key={(sib.id_contrato ?? `sib-${idx}`)}
+                          className="border border-rule rounded-md overflow-hidden"
+                        >
+                          <div className="bg-surface px-3 py-2 border-b border-rule flex items-center justify-between">
+                            <span className="font-mono text-[11px] text-burgundy">
+                              {sib.referencia_del_contrato ?? sib.id_contrato ?? "—"}
+                            </span>
+                            {sibUrl && (
+                              <a
+                                href={sibUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-[10px] text-ink-soft hover:text-burgundy hover:underline inline-flex items-center gap-1"
+                              >
+                                Abrir <ExternalLink className="h-3 w-3" />
+                              </a>
+                            )}
+                          </div>
+                          <table className="w-full text-sm">
+                            <tbody>
+                              {SECTIONS.flatMap((s) => s.fields)
+                                .map(([field, label]) => {
+                                  const value = (sib as Record<string, unknown>)[field];
+                                  if (value === null || value === undefined || value === "") {
+                                    return null;
+                                  }
+                                  return [field, label, value] as const;
+                                })
+                                .filter(
+                                  (r): r is readonly [string, string, NonNullable<unknown>] =>
+                                    r !== null,
+                                )
+                                .map(([field, label, value], i) => (
+                                  <tr
+                                    key={field}
+                                    className={cn(
+                                      "border-b border-rule/50 last:border-0",
+                                      i % 2 === 0 ? "bg-background" : "bg-surface",
+                                    )}
+                                  >
+                                    <td className="px-3 py-1.5 w-1/3 text-ink-soft text-[11px] uppercase tracking-wide">
+                                      {label}
+                                    </td>
+                                    <td className="px-3 py-1.5 text-ink text-xs">
+                                      {fmtValue(field, value)}
+                                    </td>
+                                  </tr>
+                                ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
+
               {/* Adiciones */}
               {Object.values(data.adiciones_by_contrato).some((a) => a.length > 0) && (
                 <section>
@@ -546,7 +638,10 @@ function PortalSection({ noticeUid }: { noticeUid: string }) {
     () => api.contractPortal(noticeUid),
   );
   const [scraping, setScraping] = React.useState(false);
-  const [showAllLabels, setShowAllLabels] = React.useState(false);
+  // Toggle "Ver TODOS los campos crudos del portal" — ABIERTO por
+  // default. Misma regla cardinal: si el portal devuelve un label, la
+  // Dra lo tiene que ver al abrir el modal. Sin escondrijos.
+  const [showAllLabels, setShowAllLabels] = React.useState(true);
 
   async function triggerScrape(force = false) {
     setScraping(true);

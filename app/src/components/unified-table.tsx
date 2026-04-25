@@ -119,6 +119,15 @@ export interface UnifiedRow {
   // Permite al badge mostrar antigüedad real ("hace 3 días" / "hace 2 meses")
   // en lugar del genérico "vía portal cache". null cuando no aplica.
   data_source_scraped_at: string | null;
+
+  // Payloads CRUDOS de cada fuente — guardados acá para que `export-excel.ts`
+  // pueda volcar TODOS los campos del SECOP al XLSX. La regla cardinal "ver
+  // todo" exige que la descarga incluya 100% de los campos que devuelve
+  // cada API, no solo los curados de la vista. Si una fuente no tiene
+  // match, el raw queda en null y no contribuye columnas a esa fila.
+  _raw_api: Record<string, unknown> | null;
+  _raw_integrado: Record<string, unknown> | null;
+  _raw_portal: Record<string, unknown> | null;
 }
 
 /** Mapa del bulk Portal cache pasado por la página — cada entry es el
@@ -431,6 +440,9 @@ export function buildUnifiedRows(
       verifyStatus: classifyStatus(w, contract, integ, portalSnap != null),
       data_source: dataSource,
       data_source_scraped_at: dataSourceScrapedAt,
+      _raw_api: contract ? (contract as Record<string, unknown>) : null,
+      _raw_integrado: integ ? (integ as Record<string, unknown>) : null,
+      _raw_portal: portalSnap ? (portalSnap as Record<string, unknown>) : null,
     });
   }
 
@@ -467,6 +479,9 @@ export function buildUnifiedRows(
       verifyStatus: "contrato_firmado",
       data_source: "api",
       data_source_scraped_at: null,
+      _raw_api: c as Record<string, unknown>,
+      _raw_integrado: null,
+      _raw_portal: null,
     });
   }
 

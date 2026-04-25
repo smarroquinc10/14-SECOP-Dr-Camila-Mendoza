@@ -463,7 +463,31 @@ export const api = {
   contract: async (id: string): Promise<ContractDetail> => {
     const all = await getContracts();
     const me = all.find((c) => c.id_contrato === id);
-    const noticeUid = me ? extractNoticeUid(typeof me.urlproceso === "string" ? me.urlproceso : undefined) : null;
+    // Resolver noticeUid en cascada — sino el PortalSection del modal
+    // nunca se renderiza para procs que viven solo en Integrado o en
+    // portal cache, y la Dra ve un modal vacío aunque la data exista.
+    //  1. Si el contrato API matchea, tomamos su urlproceso
+    //  2. Si el id ES un CO1.NTC.X, ese ES el notice_uid directamente
+    //  3. Si el id es CO1.PCCNTR.X, lo buscamos en Integrado bulk por
+    //     numero_del_contrato y extraemos notice_uid de su url_contrato
+    //  4. Si nada matchea, noticeUid queda null (y "Snapshot del portal"
+    //     no se muestra — fail-safe honesto)
+    let noticeUid: string | null = me
+      ? extractNoticeUid(typeof me.urlproceso === "string" ? me.urlproceso : undefined)
+      : null;
+    if (!noticeUid && id) {
+      const upperId = id.toUpperCase();
+      if (upperId.startsWith("CO1.NTC.")) {
+        noticeUid = upperId;
+      } else if (upperId.startsWith("CO1.PCCNTR.")) {
+        const integ = await getIntegrado().catch(() => [] as SocrataIntegrado[]);
+        const match = integ.find(
+          (r) => (r.numero_del_contrato ?? "").toUpperCase() === upperId,
+        );
+        const url = typeof match?.url_contrato === "string" ? match.url_contrato : null;
+        noticeUid = extractNoticeUid(url ?? undefined);
+      }
+    }
     // En la versión HTML solo agrupamos los contratos del MISMO proceso
     // (mismo notice_uid). No hay tablas separadas para adiciones/garantías
     // /pagos/ejecución/suspensiones — Socrata no las expone públicamente
@@ -724,11 +748,34 @@ export const api = {
     report_path: null as string | null,
   }),
 
-  // ---- Portal scraper (no aplica en HTML pura) ----
-  contractPortal: async (notice_uid: string): Promise<PortalSnapshot> => ({
-    available: false,
-    notice_uid,
-  }),
+  // ---- Portal cache (estático bakeado al bundle) ----
+  // Antes este método era un stub que devolvía `available: false` siempre,
+  // razonando "el scraper Playwright no corre en browser". Cierto, pero
+  // ignoraba que el bulk cache (`portal_opportunity_seed.json`) SÍ está
+  // disponible — la tabla principal lo lee vía `getPortalBulk()` para
+  // mostrar valor/estado/proveedor del portal. El modal hacía caso omiso
+  // y mostraba siempre el botón "Leer del portal ahora", aunque la data
+  // ya estuviera bakeada. Cardinal violation: data oculta al usuario.
+  // Ahora consultamos el bulk; si hay snapshot, lo devolvemos como
+  // `available: true` con TODOS sus fields, all_labels, documents,
+  // notificaciones y scraped_at.
+  contractPortal: async (notice_uid: string): Promise<PortalSnapshot> => {
+    const bulk = await getPortalBulk();
+    const snap = bulk[notice_uid];
+    if (!snap) {
+      return { available: false, notice_uid };
+    }
+    return {
+      available: true,
+      notice_uid,
+      fields: (snap.fields ?? {}) as Record<string, string>,
+      all_labels: snap.all_labels ?? {},
+      documents: snap.documents ?? [],
+      notificaciones: snap.notificaciones ?? [],
+      status: snap.status ?? "ok_completo",
+      scraped_at: snap.scraped_at ?? null,
+    };
+  },
 
   portalProgress: async () => ({
     running: false,
