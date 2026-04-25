@@ -1,15 +1,24 @@
-name: Build Windows .exe
+name: Build Windows .exe (legacy MSI)
+
+# WORKFLOW LEGACY — solo se corre manual (workflow_dispatch).
+#
+# Razón: el deploy real del dashboard es HTML pura via GitHub Pages
+# (ver deploy-pages.yml). Este workflow construye el bundle MSI/Tauri
+# de la UI Streamlit vieja, que NO está en producción.
+#
+# Quedaba corriendo en cada push y fallando porque requirements.txt
+# tiene deps pesadas (pycairo, streamlit, etc.) que requieren libs
+# del sistema en Ubuntu. Para re-habilitar el push trigger:
+#   1. Agregar `sudo apt-get install -y libcairo2-dev pkg-config
+#      libpango1.0-dev libgdk-pixbuf-2.0-dev libffi-dev shared-mime-info`
+#      antes de `pip install -r requirements.txt`.
+#   2. Resolver cualquier otra incompatibilidad de wheels Linux.
+#   3. Devolver `push:` y `pull_request:` triggers acá abajo.
+#
+# Mientras tanto: si alguien quiere el MSI bundle, lo dispara a mano
+# desde la UI de Actions. La app web sigue funcionando sin esto.
 
 on:
-  push:
-    branches:
-      - main
-      - claude/secop-ii-integration-ee0Lr
-    paths-ignore:
-      - "**.md"
-      - "docs/**"
-  pull_request:
-    branches: [main]
   workflow_dispatch:
 
 jobs:
