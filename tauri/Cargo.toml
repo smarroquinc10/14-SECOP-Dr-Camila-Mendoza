@@ -12,6 +12,14 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = [] }
 tauri-plugin-shell = "2"
+# Auto-updater: chequea GitHub Releases en busca de versiones nuevas,
+# verifica la firma minisign Ed25519 y reemplaza el .msi vivo. Pareja
+# con `@tauri-apps/plugin-updater` en el frontend para el popup.
+tauri-plugin-updater = "2"
+# Hace falta para que el frontend pueda hacer `relaunch()` después del
+# update — el plugin-updater prepara los archivos pero quien re-arranca
+# la app es el plugin-process.
+tauri-plugin-process = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 

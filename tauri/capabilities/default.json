@@ -1,7 +1,11 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "identifier": "default",
-  "description": "Capabilidad del shell — habilita los APIs core de Tauri en la ventana principal de la app FEAB. La frontend no llama plugins desde JS (todos los datos viajan via FastAPI :8000), pero la capability default es requerida por Tauri 2 para arrancar la ventana.",
+  "description": "Capabilidad del shell — habilita los APIs core de Tauri en la ventana principal de la app FEAB + el auto-updater (chequea GitHub Releases + descarga + reinicia). Los datos del SECOP siguen viajando via FastAPI :8000, no via Tauri commands.",
   "windows": ["main"],
-  "permissions": ["core:default"]
+  "permissions": [
+    "core:default",
+    "updater:default",
+    "process:default"
+  ]
 }

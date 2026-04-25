@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Source_Serif_4, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { UpdatePrompt } from "@/components/update-prompt";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -34,7 +35,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es" className={`${inter.variable} ${serif.variable} ${mono.variable}`}>
-      <body className="font-sans">{children}</body>
+      <body className="font-sans">
+        {children}
+        {/* Auto-updater popup — invisible cuando no hay update o cuando
+            corremos fuera de Tauri (npm run dev en browser normal). */}
+        <UpdatePrompt />
+      </body>
     </html>
   );
 }

@@ -191,10 +191,142 @@ Borrar esa carpeta y re-correr `cargo tauri build` fuerza la re-descarga.
 absolutos con espacios. Solución: pre-correr `npm run build` antes
 de `cargo tauri build` y dejar `beforeBuildCommand` vacío en la config.
 
+## Auto-updater (la parte clave)
+
+Después del bootstrap install, **vos mandás updates con UN solo comando**.
+Cami solo clickea "Actualizar" cuando le aparece el popup.
+
+### Bootstrap (UNA sola vez en la PC de Cami)
+
+1. **Instalar la PRIVATE KEY de Tauri en GitHub Secrets** (esto lo hacés en
+   tu PC, una vez):
+   ```powershell
+   # Lee tu llave privada
+   $key = Get-Content "$env:USERPROFILE\.tauri\dra-cami-contractual.key" -Raw
+
+   # Subila a GitHub Secrets via gh CLI (instalá gh con `winget install GitHub.cli`)
+   gh secret set TAURI_SIGNING_PRIVATE_KEY --body "$key"
+
+   # Si tu llave NO tiene password, set TAURI_SIGNING_PRIVATE_KEY_PASSWORD vacío:
+   gh secret set TAURI_SIGNING_PRIVATE_KEY_PASSWORD --body ""
+   ```
+
+2. **Build local del MSI con seed completo** (la versión 1.0.0 que va a la
+   PC de Cami):
+   ```powershell
+   .\scripts\release.ps1 -Version 1.0.0 "v1.0.0 — bootstrap"
+   # GitHub Actions compila, pero ese MSI no tiene seed.
+   # Para el bootstrap usamos el MSI LOCAL que ya hicimos a mano.
+   ```
+
+   El MSI local (con seed de los 491 procesos) está en
+   `tauri/target/release/bundle/msi/Dra Cami Contractual_1.0.0_x64_es-ES.msi`.
+
+3. **Instalar en la PC de Cami**:
+   - Copiar el `.msi` por USB / OneDrive / mail.
+   - Doble click → wizard español → Siguiente → Instalar.
+   - Verificar que aparece el ícono "Dra Cami Contractual" en su escritorio.
+   - Doble click al ícono. SmartScreen muestra "editor desconocido" la
+     primera vez → "Más información" → "Ejecutar de todos modos".
+   - La app abre con sus 491 procesos.
+
+Listo. **Eso es lo único manual que vas a hacer en su PC.**
+
+### Updates futuros (todas las veces)
+
+Desde TU PC, al raíz del repo:
+
+```powershell
+# 1. Hacés tus cambios al código (lo que sea)
+# 2. Un solo comando:
+.\release.bat "fix: la tabla rompía con vigencias mixtas"
+```
+
+Eso hace TODO:
+- Bumpea versión (1.0.0 → 1.0.1) en `tauri.conf.json`, `Cargo.toml`,
+  `app/package.json`, `pyproject.toml`
+- Commitea `chore: release v1.0.1` + tu mensaje como nota
+- Crea tag `v1.0.1` con anotación
+- `git push --follow-tags`
+
+GitHub Actions detecta el tag, en ~12 minutos:
+- Compila Python + Next + Rust + MSI
+- Firma con tu llave Ed25519 (pubkey ya embebida en la app de Cami)
+- Publica en GitHub Releases con el `.msi`, `.sig` y `latest.json`
+
+### Lo que ve Cami
+
+La próxima vez que abre la app (o cada 4 horas si la deja abierta), aparece
+un cartelito chiquito en la esquina inferior derecha:
+
+```
+┌─────────────────────────────────────┐
+│  ↻  Hay una actualización           │
+│      v1.0.1                         │
+│      fix: la tabla rompía con       │
+│      vigencias mixtas               │
+│                                     │
+│         [Más tarde]  [Actualizar]   │
+└─────────────────────────────────────┘
+```
+
+Click **Actualizar** → barra de progreso → app se reinicia → trabaja con la
+versión nueva. Su watch list, audit log y observaciones quedan intactos
+(viven en `%LOCALAPPDATA%`, el updater no los toca).
+
+### Variantes del comando release
+
+```powershell
+# Patch bump (1.0.0 → 1.0.1) — uso normal para bugs / cambios chicos
+.\release.bat "fix: typo en el modal"
+
+# Minor bump (1.0.5 → 1.1.0) — cuando agregás un feature
+.\release.bat -Minor "agregada columna de adiciones"
+
+# Major bump (1.x.x → 2.0.0) — cambios que rompen flujo
+.\release.bat -Major "rewrite del frontend"
+
+# Versión específica
+.\release.bat -Version 2.5.7 "release especial"
+
+# Dry-run (no commitea ni pushea, solo imprime qué haría)
+.\release.bat -DryRun "test"
+```
+
+### Si CI falla (cómo investigar)
+
+GitHub Actions muestra los logs en:
+`https://github.com/smarroquinc10/14-SECOP-Dr-Camila-Mendoza/actions`
+
+Errores comunes:
+- **"No .sig found"** → faltó el secret `TAURI_SIGNING_PRIVATE_KEY` o el password
+- **PyInstaller fail** → algún cambio en api.py introdujo un import nuevo que
+  hay que excluir o whitelistear con `--hidden-import`
+- **TypeScript error** → corré `cd app; npm run build` local antes del release
+
+Si algo falla, hacé `git tag -d vX.Y.Z` y `git push origin :vX.Y.Z` para
+borrar el tag fallido, arreglá el problema, y volvé a correr el release.
+GitHub no permite re-publicar el mismo tag automáticamente.
+
+### Si querés rollback
+
+Si una versión rompe algo en la PC de Cami, **NO pushees un downgrade del
+auto-updater** (no funcionan los downgrades). En cambio:
+
+1. Hacés un nuevo release con un fix:
+   ```powershell
+   .\release.bat "fix: rollback del problema introducido en v1.2.0"
+   ```
+2. Versión 1.2.0 (rota) → 1.2.1 (con el fix). Cami va a 1.2.1.
+
+Si urge y no tenés tiempo de fixear:
+- En tu PC: `git revert <commit-roto>` + `release.bat "rollback"`.
+- O entrás a la PC de Cami y le instalás manual el MSI viejo.
+
 ## Estado actual
 
 - ✅ `Cargo.toml`, `tauri.conf.json`, `src/main.rs` listos para Tauri 2
-- ✅ `capabilities/default.json` (mandatorio en Tauri 2)
+- ✅ `capabilities/default.json` con permisos `core:default + updater:default + process:default`
 - ✅ Sidecar 200MB (Python + uvicorn + fastapi + secop_ii + seed)
 - ✅ Sidecar smoke test verde: /health, /watch (491 items), /entity/feab,
    /audit-log (intact: True), /integrado-sync (runpy con UTF-8)
@@ -202,3 +334,6 @@ de `cargo tauri build` y dejar `beforeBuildCommand` vacío en la config.
 - ✅ State dir abstraction — `%LOCALAPPDATA%\Dra Cami Contractual\.cache\`
 - ✅ First-run seed: copia 8 entries (watch list + audit + caches)
 - ✅ Logging a `logs\sidecar.log`
+- ✅ **Auto-updater** firmado con minisign Ed25519, popup en frontend,
+   GitHub Actions release pipeline en `.github/workflows/release.yml`
+- ✅ **Release one-liner** `release.bat "msg"` desde la raíz del repo
