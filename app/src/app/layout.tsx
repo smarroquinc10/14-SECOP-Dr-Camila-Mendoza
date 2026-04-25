@@ -25,7 +25,10 @@ export const metadata: Metadata = {
   title: "Sistema de Seguimiento Contratos FEAB · Dra Cami",
   description:
     "Sistema de Seguimiento de Contratos SECOP II · FEAB Fondo Especial para la Administración de Bienes · Fiscalía General de la Nación",
-  icons: { icon: "/feab-logo.png" },
+  // El feab-logo-square.png es el cubo FEAB (4 cuadrados azul marino con
+  // F/E/A/B). Lo recortamos del feab-banner.png y lo padeamos en blanco
+  // para que sirva como icon de la pestaña/favicon de WebView2.
+  icons: { icon: "/feab-logo-square.png" },
 };
 
 export default function RootLayout({
