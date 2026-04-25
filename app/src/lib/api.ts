@@ -168,6 +168,9 @@ export interface WatchedItem {
   vigencias: string[];
   appearances: WatchedAppearance[];
   excel_data?: ExcelData | null;
+  numero_contrato_excel?: string | null;
+  obs_brief?: string | null;
+  is_modificado_excel?: boolean;
   added_at: string;
   note: string | null;
 }

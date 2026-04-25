@@ -67,8 +67,12 @@ export default function HomePage() {
   const [modalities, setModalities] = React.useState<string[]>([]);
   const [sheets, setSheets] = React.useState<string[]>([]);
   const [onlyMod, setOnlyMod] = React.useState(false);
-  const [onlyMine, setOnlyMine] = React.useState(true);
   const [selected, setSelected] = React.useState<string | null>(null);
+  // Always show only the Dra's tracked processes (Excel-imported).
+  // Per cardinal rule: truth = SECOP, Excel only contributes link +
+  // vigencia. The Dra cares about HER 491 procesos, not the full
+  // SECOP inventory. No toggle — implicit always.
+  const onlyMine = true;
 
   // ---- Build unified rows + busy/feedback state for actions -----------
   const allRows = React.useMemo(
@@ -357,40 +361,19 @@ export default function HomePage() {
               />
             </div>
             <div>
-              <span className="eyebrow mb-2 block">Qué procesos mostrar</span>
-              <div className="flex flex-col gap-2">
-                <label
-                  className="flex items-start gap-2 text-sm text-ink cursor-pointer px-3 py-2 border border-input rounded-md hover:bg-background"
-                  title="ON: solo los procesos que la Dra tiene registrados en el Excel (491 únicos). OFF: agrega también los contratos firmados que están en SECOP pero no aparecen en el Excel."
-                >
-                  <input
-                    type="checkbox"
-                    checked={onlyMine}
-                    onChange={(e) => setOnlyMine(e.target.checked)}
-                    className="rounded border-border mt-0.5"
-                  />
-                  <span className="flex flex-col">
-                    <span>Solo los procesos del Excel</span>
-                    <span className="text-[10px] text-ink-soft">
-                      {onlyMine
-                        ? "viendo tu lista (491 procesos)"
-                        : "viendo todos los contratos del FEAB en SECOP"}
-                    </span>
-                  </span>
-                </label>
-                <label
-                  className="flex items-start gap-2 text-sm text-ink cursor-pointer px-3 py-2 border border-input rounded-md hover:bg-background"
-                  title="Solo contratos con estado 'Modificado' o con días adicionados"
-                >
-                  <input
-                    type="checkbox"
-                    checked={onlyMod}
-                    onChange={(e) => setOnlyMod(e.target.checked)}
-                    className="rounded border-border mt-0.5"
-                  />
-                  <span>Solo contratos modificados</span>
-                </label>
-              </div>
+              <span className="eyebrow mb-2 block">Atajos</span>
+              <label
+                className="flex items-center gap-2 text-sm text-ink cursor-pointer h-10 px-3 border border-input rounded-md hover:bg-background"
+                title="Solo contratos con estado 'Modificado' o con días adicionados / prórrogas"
+              >
+                <input
+                  type="checkbox"
+                  checked={onlyMod}
+                  onChange={(e) => setOnlyMod(e.target.checked)}
+                  className="rounded border-border"
+                />
+                Solo contratos modificados
+              </label>
             </div>
           </div>
 

@@ -169,13 +169,31 @@ export function buildUnifiedRows(
       ? Number(valorRaw)
       : null;
 
+    // Notas: notas computadas del SECOP API (cuando hay contrato).
+    // Si no hay contrato y la Dra escribió una observación con palabras
+    // tipo "modificatorio" o "prórroga", agregamos un prefijo claro
+    // "(Excel)" para que la Dra distinga lo que viene de su nota
+    // manual de lo que viene del SECOP.
+    let notas: string | null = (contract?._notas as string) ?? null;
+    if (!notas && w.obs_brief) {
+      notas = `(Excel) ${w.obs_brief}`;
+    } else if (notas && w.obs_brief && w.is_modificado_excel) {
+      // Append the Dra's note to the SECOP notes for context.
+      notas = `${notas} · (Excel) ${w.obs_brief}`;
+    }
+
     rows.push({
       key: contract?.id_contrato ?? w.url ?? `${w.process_id ?? "noid"}-${rows.length}`,
       process_id: w.process_id,
       id_contrato: contract?.id_contrato ?? null,
       notice_uid: w.notice_uid ?? contract?.proceso_de_compra ?? null,
+      // numero_contrato: prefer SECOP's referencia_del_contrato; if
+      // not available (process not in API), fall back to the Dra's
+      // own numbering from her Excel (CONTRATO-FEAB-X-Y).
       numero_contrato:
-        (contract?.referencia_del_contrato as string) ?? null,
+        (contract?.referencia_del_contrato as string) ??
+        w.numero_contrato_excel ??
+        null,
       url: w.url,
       objeto: (contract?.objeto_del_contrato as string) ?? null,
       proveedor: (contract?.proveedor_adjudicado as string) ?? null,
@@ -185,7 +203,7 @@ export function buildUnifiedRows(
       estado: (contract?.estado_contrato as string) ?? null,
       modalidad:
         (contract?.modalidad_de_contratacion as string) ?? null,
-      notas: (contract?._notas as string) ?? null,
+      notas,
       dias_adicionados: dias,
       liquidado: liq,
       sheets: w.sheets ?? [],

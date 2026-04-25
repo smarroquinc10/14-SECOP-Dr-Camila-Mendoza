@@ -65,6 +65,25 @@ muestran SÓLO en el modal de detalle**, no en la tabla principal.
 - **NO existe el botón "Importar del Excel"** — los 491 procesos ya están
   importados de una vez. Si la Dra necesita re-importar, IT lo corre por CLI.
 
+### Vista por defecto (no negociable)
+- **SIEMPRE mostrar SOLO los procesos que están en el Excel de la Dra**.
+  No hay toggle "ver todos los contratos del FEAB" — eso confunde.
+  La Dra cuida sus 491 procesos del Excel, no los 287 del inventario
+  completo SECOP. La vista es una sola: SUS procesos, enriquecidos
+  con SECOP API cuando aplica.
+- El bloque "Atajos" arriba solo tiene "Solo contratos modificados"
+  (toggle simple, sin sección compleja).
+
+### Numero de contrato (excepción legítima al Excel)
+- El **numero_contrato** que la Dra escribe (CONTRATO-FEAB-X-Y) ES
+  un identificador legítimo del Excel — igual que vigencia + link.
+  No es "Excel-derived data" sino un ID interno que la Dra usa
+  para referirse a sus contratos.
+- Si el SECOP API tiene `referencia_del_contrato`, usar esa.
+- Si no, usar el `numero_contrato` del Excel (col 2).
+- NUNCA mostrar `CO1.NTC.X` como código primario si la Dra escribió
+  el suyo en el Excel.
+
 ## ✅ Lo que SÍ debe hacer el sistema
 
 1. **Espejo del SECOP**: cada link del watch list se debe poder verificar

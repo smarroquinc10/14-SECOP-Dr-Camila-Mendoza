@@ -534,16 +534,62 @@ async def watch_list() -> dict[str, Any]:
 
     Per the Dra's cardinal rule: **the truth lives in SECOP, the Excel
     only contributes the LINK and the VIGENCIA**. We never derive
-    estado/valor/proveedor/etc from the Excel — those flow exclusively
-    from the SECOP API (jbjy-vk9h, p6dx-8zbt) when the contract
-    exists. If the SECOP API has no record of a process, we render
-    "—" honestly and the UI prompts the Dra to open the portal link.
+    estado/valor/proveedor/etc from the Excel.
 
-    The Dra's hand-written OBSERVACIONES still surface in the per-
-    contract detail modal (``/contracts/{id}``) but never in the
-    summary table — that one mirrors SECOP, full stop.
+    Exception: the Dra's hand-written OBSERVACIONES (col 72) ARE
+    her own truth — they're not "Excel data we're guessing", they're
+    her audit annotations. We surface a brief of those observations
+    (`obs_brief`) and a `is_modificado` flag derived from her wording
+    so the UI can show a "Modificatorio (Excel)" line when the SECOP
+    API has no contract row to confirm. The label always makes clear
+    the source is the Dra's manual note, NEVER claiming SECOP truth.
     """
-    return {"items": _load_watched()}
+    items = _load_watched()
+    for it in items:
+        # Identifiers from Excel (NOT facts — these are how the Dra
+        # references the contract: numero_contrato = CONTRATO-FEAB-X-Y).
+        try:
+            data = _excel_data_for(
+                process_id=it.get("process_id"),
+                notice_uid=it.get("notice_uid"),
+                contract_id=None,
+                url=it.get("url"),
+            )
+        except Exception:
+            data = None
+        it["numero_contrato_excel"] = (data or {}).get("numero_contrato")
+
+        # The Dra's own annotations (modificatorios, prórrogas, etc.).
+        try:
+            obs_raw = _observaciones_for(
+                process_id=it.get("process_id"),
+                proceso_de_compra=it.get("notice_uid"),
+                notice_uid=it.get("notice_uid"),
+                contract_id=None,
+                url=it.get("url"),
+            )
+        except Exception:
+            obs_raw = []
+
+        if obs_raw:
+            obs_text = (obs_raw[0].get("text") or "").strip()
+            it["obs_brief"] = (
+                obs_text[:120] + "…"
+                if len(obs_text) > 120
+                else obs_text
+            ) if obs_text else None
+            blob = " ".join(
+                (o.get("text") or "").upper() for o in obs_raw
+            )
+            it["is_modificado_excel"] = any(
+                k in blob
+                for k in ("MODIFIC", "PRORROG", "PRÓRROG",
+                          "ADICION", "ADICIÓN", "MOD ", "MOD\n")
+            )
+        else:
+            it["obs_brief"] = None
+            it["is_modificado_excel"] = False
+    return {"items": items}
 
 
 @app.post("/watch")
