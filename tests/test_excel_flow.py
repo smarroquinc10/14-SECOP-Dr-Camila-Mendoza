@@ -95,6 +95,23 @@ class _FakeClient:
     def get_archivos(self, portfolio_id):
         return []
 
+    # New datasets (step 2, March 2026). The test doesn't exercise them
+    # deeply; each extractor just needs to see an empty list to short-circuit.
+    def get_garantias(self, id_contrato):
+        return []
+
+    def get_facturas(self, id_contrato):
+        return []
+
+    def get_ejecucion(self, id_contrato):
+        return []
+
+    def get_suspensiones(self, id_contrato):
+        return []
+
+    def get_mod_procesos(self, portfolio_id):
+        return []
+
     def build_query_url(self, dataset_id, *, where=None, limit=10):
         return (
             f"https://www.datos.gov.co/resource/{dataset_id}.json?"

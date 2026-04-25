@@ -1,29 +1,74 @@
 @echo off
-REM ejecutar.bat - Doble clic para abrir la interfaz web del CRM SECOP II.
-REM
-REM Requisito: haber corrido setup.ps1 al menos una vez en esta carpeta.
+REM Doble clic para abrir el Dra Cami Contractual en el navegador.
+REM La primera vez crea el entorno virtual y descarga dependencias — puede
+REM tardar unos minutos. Las siguientes veces arranca al instante.
 
 setlocal
-
 cd /d "%~dp0"
 
-if not exist ".venv\Scripts\python.exe" (
+set "VENV=.venv"
+set "PYEXE=%VENV%\Scripts\python.exe"
+
+REM --- 1) Asegurar que el .venv existe -----------------------------------
+if not exist "%PYEXE%" (
     echo.
-    echo [ERROR] No encuentro el entorno virtual .venv
-    echo         Corre primero: powershell -ExecutionPolicy Bypass -File setup.ps1
+    echo ==========================================================
+    echo  Primera ejecucion: creando entorno virtual e instalando
+    echo  dependencias. Esto tarda unos minutos la primera vez.
+    echo  Las siguientes veces sera instantaneo.
+    echo ==========================================================
     echo.
-    pause
-    exit /b 1
+
+    where py >nul 2>nul
+    if errorlevel 1 (
+        where python >nul 2>nul
+        if errorlevel 1 (
+            echo [ERROR] No encuentro Python instalado.
+            echo         Instala Python 3.11 o superior desde:
+            echo         https://www.python.org/downloads/
+            echo.
+            echo         Marca la opcion "Add Python to PATH" al instalar.
+            echo.
+            pause
+            exit /b 1
+        )
+        set "PY=python"
+    ) else (
+        set "PY=py -3"
+    )
+
+    %PY% -m venv "%VENV%"
+    if errorlevel 1 (
+        echo [ERROR] No pude crear el entorno virtual.
+        pause
+        exit /b 1
+    )
+
+    "%PYEXE%" -m pip install --upgrade --quiet pip setuptools wheel
+    echo Instalando dependencias (puede tardar 3-5 minutos)...
+    "%PYEXE%" -m pip install --quiet -r requirements.txt
+    if errorlevel 1 (
+        echo [ERROR] Falló la instalación de dependencias.
+        echo         Revisa la conexión a internet e intenta otra vez.
+        pause
+        exit /b 1
+    )
+    "%PYEXE%" -m pip install --quiet -e .
+    echo.
+    echo ==========================================================
+    echo  Entorno listo. Abriendo la aplicacion...
+    echo ==========================================================
+    echo.
 )
 
 set PYTHONPATH=src
 
 echo.
-echo Abriendo CRM SECOP II en tu navegador...
-echo (Esta ventana debe quedarse abierta mientras usas el programa)
+echo Abriendo Dra Cami Contractual en tu navegador...
+echo (No cierres esta ventana mientras uses el programa.)
 echo.
 
-".venv\Scripts\python.exe" -m secop_ii.launcher
+"%PYEXE%" -m secop_ii.launcher
 
 echo.
 echo Programa cerrado. Puedes cerrar esta ventana.

@@ -35,8 +35,13 @@ from tenacity import (
 from secop_ii.config import (
     DATASET_ADICIONES,
     DATASET_CONTRATOS,
+    DATASET_EJECUCION,
+    DATASET_FACTURAS,
+    DATASET_GARANTIAS,
     DATASET_MOD_CONTRATOS,
+    DATASET_MOD_PROCESOS,
     DATASET_PROCESOS,
+    DATASET_SUSPENSIONES,
     DATASET_UBICACIONES,
     DATASETS_ARCHIVO,
     DEFAULT_PAGE_SIZE,
@@ -47,9 +52,14 @@ from secop_ii.config import (
     FIELD_ARCHIVO_PROCESO,
     FIELD_CONTRATO_PROCESO,
     FIELD_CONTRATO_URL,
+    FIELD_EJEC_CONTRATO,
+    FIELD_FACT_CONTRATO,
+    FIELD_GAR_CONTRATO,
     FIELD_MODCTR_CONTRATO,
+    FIELD_MODP_PORTAFOLIO,
     FIELD_PROCESO_ID,
     FIELD_PROCESO_URL,
+    FIELD_SUSP_CONTRATO,
     FIELD_UBIC_CONTRATO,
     SOCRATA_BASE,
 )
@@ -225,6 +235,46 @@ class SecopClient:
             limit=DEFAULT_PAGE_SIZE,
         )
 
+    def get_garantias(self, id_contrato: str) -> list[dict]:
+        """Return gjp9-cutm rows for ``id_contrato`` (pólizas de cumplimiento)."""
+        return self.query(
+            DATASET_GARANTIAS,
+            where=f"{FIELD_GAR_CONTRATO}='{_escape(id_contrato)}'",
+            limit=DEFAULT_PAGE_SIZE,
+        )
+
+    def get_facturas(self, id_contrato: str) -> list[dict]:
+        """Return ibyt-yi2f rows for ``id_contrato`` (facturas y pagos)."""
+        return self.query(
+            DATASET_FACTURAS,
+            where=f"{FIELD_FACT_CONTRATO}='{_escape(id_contrato)}'",
+            limit=DEFAULT_PAGE_SIZE,
+        )
+
+    def get_ejecucion(self, id_contrato: str) -> list[dict]:
+        """Return mfmm-jqmq rows (avance real vs esperado)."""
+        return self.query(
+            DATASET_EJECUCION,
+            where=f"{FIELD_EJEC_CONTRATO}='{_escape(id_contrato)}'",
+            limit=DEFAULT_PAGE_SIZE,
+        )
+
+    def get_suspensiones(self, id_contrato: str) -> list[dict]:
+        """Return u99c-7mfm rows (suspensiones del contrato)."""
+        return self.query(
+            DATASET_SUSPENSIONES,
+            where=f"{FIELD_SUSP_CONTRATO}='{_escape(id_contrato)}'",
+            limit=DEFAULT_PAGE_SIZE,
+        )
+
+    def get_mod_procesos(self, portfolio_id: str) -> list[dict]:
+        """Return e2u2-swiw rows for the given portfolio (mods al proceso, no al contrato)."""
+        return self.query(
+            DATASET_MOD_PROCESOS,
+            where=f"{FIELD_MODP_PORTAFOLIO}='{_escape(portfolio_id)}'",
+            limit=DEFAULT_PAGE_SIZE,
+        )
+
     def get_archivos(self, portfolio_id: str) -> list[dict]:
         """Return all published documents for a portfolio (CO1.BDOS.*).
 
@@ -271,6 +321,7 @@ class SecopClient:
         *,
         where: str | None = None,
         select: str | None = None,
+        order: str | None = None,
         limit: int = DEFAULT_PAGE_SIZE,
         offset: int = 0,
     ) -> list[dict[str, Any]]:
@@ -280,6 +331,8 @@ class SecopClient:
             params["$where"] = where
         if select:
             params["$select"] = select
+        if order:
+            params["$order"] = order
 
         cache_key = (dataset_id, _params_key(params))
         if cache_key in self._cache:

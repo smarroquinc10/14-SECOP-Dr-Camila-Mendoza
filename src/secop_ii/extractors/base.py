@@ -22,10 +22,18 @@ _PROCESO_UNFETCHED = object()
 
 @dataclass
 class ProcessContext:
-    """Lazy, memoized view of a process for extractors to consume."""
+    """Lazy, memoized view of a process for extractors to consume.
+
+    ``existing_row`` carries the row's current cell values keyed by
+    header name. The :class:`FeabFillExtractor` uses it to enforce the
+    no-overwrite rule: a cell with manual data is never replaced —
+    discrepancies vs SECOP are logged but the user's value stays.
+    """
 
     ref: ProcessRef
     client: SecopClient
+    existing_row: dict[str, Any] = field(default_factory=dict)
+    row_idx: int | None = None
     _proceso: Any = field(default=_PROCESO_UNFETCHED, init=False, repr=False)
     _contratos: list[dict] | None = field(default=None, init=False, repr=False)
     _adiciones_by_contrato: dict[str, list[dict]] = field(
@@ -83,6 +91,61 @@ class ProcessContext:
         if id_contrato not in cache:
             cache[id_contrato] = self.client.get_ubicaciones(id_contrato)
         return cache[id_contrato]
+
+    def garantias_de(self, id_contrato: str) -> list[dict]:
+        """Pólizas (gjp9-cutm) para ``id_contrato``. Memoized."""
+        cache = getattr(self, "_gar_by_contrato", None)
+        if cache is None:
+            cache = {}
+            object.__setattr__(self, "_gar_by_contrato", cache)
+        if id_contrato not in cache:
+            cache[id_contrato] = self.client.get_garantias(id_contrato)
+        return cache[id_contrato]
+
+    def facturas_de(self, id_contrato: str) -> list[dict]:
+        """Facturas (ibyt-yi2f) para ``id_contrato``. Memoized."""
+        cache = getattr(self, "_fact_by_contrato", None)
+        if cache is None:
+            cache = {}
+            object.__setattr__(self, "_fact_by_contrato", cache)
+        if id_contrato not in cache:
+            cache[id_contrato] = self.client.get_facturas(id_contrato)
+        return cache[id_contrato]
+
+    def ejecucion_de(self, id_contrato: str) -> list[dict]:
+        """Avance de ejecución (mfmm-jqmq) para ``id_contrato``. Memoized."""
+        cache = getattr(self, "_ejec_by_contrato", None)
+        if cache is None:
+            cache = {}
+            object.__setattr__(self, "_ejec_by_contrato", cache)
+        if id_contrato not in cache:
+            cache[id_contrato] = self.client.get_ejecucion(id_contrato)
+        return cache[id_contrato]
+
+    def suspensiones_de(self, id_contrato: str) -> list[dict]:
+        """Suspensiones (u99c-7mfm) para ``id_contrato``. Memoized."""
+        cache = getattr(self, "_susp_by_contrato", None)
+        if cache is None:
+            cache = {}
+            object.__setattr__(self, "_susp_by_contrato", cache)
+        if id_contrato not in cache:
+            cache[id_contrato] = self.client.get_suspensiones(id_contrato)
+        return cache[id_contrato]
+
+    def mods_proceso(self) -> list[dict]:
+        """Modificaciones al proceso (e2u2-swiw). Memoized."""
+        cached = getattr(self, "_mods_proceso", None)
+        if cached is not None:
+            return cached
+        proceso = self.proceso()
+        portfolio_id = (
+            str(proceso.get("id_del_portafolio")) if proceso else None
+        ) or ""
+        rows = (
+            self.client.get_mod_procesos(portfolio_id) if portfolio_id else []
+        )
+        object.__setattr__(self, "_mods_proceso", rows)
+        return rows
 
 
 @dataclass

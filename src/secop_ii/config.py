@@ -16,6 +16,60 @@ DATASET_MOD_CONTRATOS = "u8cx-r425"  # Modificaciones a contratos (valor + días
 # 3 datasets cubren ventanas temporales distintas; consultamos los 3 y unimos.
 # URLs en ``url_descarga_documento`` son descargables HTTP directo, sin captcha.
 DATASETS_ARCHIVO = ("dmgg-8hin", "3skv-9na7", "kgcd-kt7i")
+
+# ----- Datasets adicionales (descubrimiento marzo 2026) -----
+# Todos llavean por ``CO1.PCCNTR.*`` excepto e2u2-swiw que llavea por
+# proceso/portafolio. La cobertura real bajo FEAB (10 contratos sample,
+# verificado en investigación de paso 2):
+#   - gjp9-cutm garantias: 5/10  (alto — la Dra. registra pólizas a mano)
+#   - ibyt-yi2f facturas:  5/10  (alto — pagos del contrato)
+#   - mfmm-jqmq ejecucion: 0/10  (la entidad no carga avance programado;
+#                                 cuando aparezca es crítico)
+#   - u99c-7mfm suspensiones: 0/10 (raro pero crítico cuando ocurre)
+#   - e2u2-swiw mod procesos: por portafolio (no por contrato)
+DATASET_GARANTIAS = "gjp9-cutm"
+DATASET_EJECUCION = "mfmm-jqmq"
+DATASET_SUSPENSIONES = "u99c-7mfm"
+DATASET_FACTURAS = "ibyt-yi2f"
+DATASET_MOD_PROCESOS = "e2u2-swiw"
+
+FIELD_GAR_CONTRATO = "id_contrato"
+FIELD_GAR_ASEGURADORA = "aseguradora"
+FIELD_GAR_TIPO = "tipopoliza"
+FIELD_GAR_SUBTIPO = "subtipopoliza"
+FIELD_GAR_ESTADO = "estado"
+FIELD_GAR_FECHA_FIN = "fechafinpoliza"
+FIELD_GAR_NUMERO = "numeropoliza"
+FIELD_GAR_VALOR = "valor"
+
+FIELD_EJEC_CONTRATO = "identificadorcontrato"
+FIELD_EJEC_AVANCE_REAL = "porcentaje_de_avance_real"
+FIELD_EJEC_AVANCE_ESP = "porcentajedeavanceesperado"
+FIELD_EJEC_ENTREGA_REAL = "fechadeentregareal"
+FIELD_EJEC_ENTREGA_ESP = "fechadeentregaesperada"
+FIELD_EJEC_ESTADO = "estado_del_contrato"
+
+FIELD_SUSP_CONTRATO = "id_contrato"
+FIELD_SUSP_FECHA_CREACION = "fecha_de_creacion"
+FIELD_SUSP_FECHA_APROB = "fecha_de_aprobacion"
+FIELD_SUSP_FECHA_FIN = "fecha_de_fin_del_contrato"
+FIELD_SUSP_TIPO = "tipo"
+FIELD_SUSP_PROPOSITO = "proposito_de_la_modificacion"
+
+FIELD_FACT_CONTRATO = "id_contrato"
+FIELD_FACT_NUMERO = "numero_de_factura"
+FIELD_FACT_FECHA = "fecha_factura"
+FIELD_FACT_VALOR = "valor_a_pagar"
+FIELD_FACT_VALOR_NETO = "valor_neto"
+FIELD_FACT_ESTADO = "estado"
+FIELD_FACT_PAGADO = "pago_confirmado"
+FIELD_FACT_FECHA_ENTREGA = "fecha_de_entrega"
+FIELD_FACT_NOTAS = "notas"
+
+FIELD_MODP_PORTAFOLIO = "portafolio"
+FIELD_MODP_PROCESO = "proceso"
+FIELD_MODP_ULTIMA = "ultima_modificacion"
+FIELD_MODP_DESC = "descripcion_proceso"
 FIELD_ARCHIVO_PROCESO = "proceso"  # contiene CO1.BDOS.*
 FIELD_ARCHIVO_NOMBRE = "nombre_archivo"
 FIELD_ARCHIVO_EXT = "extensi_n"

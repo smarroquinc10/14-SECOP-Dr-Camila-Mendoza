@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* shadcn/ui design tokens — institutional FGN palette mapped to HSL. */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 4%;
+    --card: 60 12% 98%;
+    --card-foreground: 0 0% 4%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 4%;
+    /* Primary = burgundy / Fiscalía red */
+    --primary: 348 56% 28%;
+    --primary-foreground: 0 0% 100%;
+    /* Secondary = navy ink */
+    --secondary: 224 60% 14%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 60 6% 92%;
+    --muted-foreground: 30 6% 40%;
+    --accent: 39 65% 32%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 70% 35%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 36 22% 88%;
+    --input: 36 22% 88%;
+    --ring: 348 56% 28%;
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
+  }
+  ::selection { background: hsl(var(--primary)); color: white; }
+}
+
+/* ---- Institutional flourishes (NY law-firm vibe) -------------------- */
+
+.serif { font-family: var(--font-serif), Georgia, serif; }
+.eyebrow {
+  @apply text-[11px] font-semibold uppercase tracking-[0.2em] text-burgundy;
+}
+.rule {
+  @apply h-px bg-rule w-full;
+}
+
+/* Custom scrollbar — slim and quiet */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted));
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.4); }
+
+/* Table polish */
+.table-cell-pad { @apply px-3 py-2 text-sm; }

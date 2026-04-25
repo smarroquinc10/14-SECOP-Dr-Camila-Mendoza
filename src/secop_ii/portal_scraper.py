@@ -342,6 +342,16 @@ class PortalScraper:
         except Exception:  # pragma: no cover
             pass
 
+        # Deep dive: expand every collapsed accordion / click every tab so
+        # the DOM exposes documents that only render on demand. Vortal uses
+        # a handful of patterns — we try them all and silently skip the ones
+        # that don't exist on a particular page. Runs once; best-effort.
+        try:
+            _expand_all_sections(page)
+            page.wait_for_timeout(1500)
+        except Exception as exc:  # pragma: no cover
+            log.debug("expand_all_sections fallo: %s", exc)
+
         html = page.content()
 
         # Persist raw HTML — perpetual audit trail. If we ever extract a new
@@ -596,6 +606,65 @@ def _transcribe_audio(mp3_url: str) -> str | None:
 # ------------------------------------------------------------------
 _TRANSLATOR_JS = re.compile(r"translator\.loadFile|loadFileAndTranslate")
 _NOISE_LABELS = {"si", "no", "*", ""}  # radio button labels and empty markers
+
+
+def _expand_all_sections(page) -> None:  # pragma: no cover — needs a live Vortal page
+    """Click every collapsed element so hidden documents become visible.
+
+    Vortal (the CMS behind SECOP II) uses several patterns for collapsed
+    sections — accordions, tree branches, tabs. We try each pattern in
+    turn, clicking every visible match and giving the page a beat to
+    render before moving on. Any pattern that doesn't exist on this
+    particular page is silently skipped.
+
+    We cap the number of clicks per pattern at ``_MAX_CLICKS`` so a
+    pathological page with hundreds of elements can't stall the scrape.
+    """
+    _MAX_CLICKS = 40
+    selectors = [
+        # Vortal accordions
+        "div.vrt-accordion-header:not(.vrt-accordion-open)",
+        "div.vrt-accordion-header.collapsed",
+        ".vrt-accordion .vrt-accordion-header",
+        # ARIA collapsed panels
+        "[aria-expanded='false']",
+        # Treeview expand nodes
+        "span.vrt-tree-expand-node",
+        "img[src*='ExpandNode']",
+        # Tabs
+        ".vrt-tab:not(.vrt-tab-selected)",
+        "li[role='tab']",
+        # "Show more" / Ver más
+        "a.vrt-show-more",
+        "a[onclick*='ShowMore']",
+        "a[onclick*='showMore']",
+        # Generic toggle links
+        "a[onclick*='Expand']",
+        "a[onclick*='expand']",
+        "a[onclick*='Toggle']",
+        "a[onclick*='toggle']",
+        # "+" image toggles Vortal uses
+        "img[src*='plus']",
+        "img[alt*='Expand']",
+    ]
+
+    for sel in selectors:
+        try:
+            locator = page.locator(sel)
+            count = min(locator.count(), _MAX_CLICKS)
+        except Exception:
+            continue
+        for i in range(count):
+            try:
+                el = locator.nth(i)
+                if not el.is_visible():
+                    continue
+                el.click(timeout=1500)
+                page.wait_for_timeout(250)
+            except Exception:
+                continue  # element moved / stale / not clickable — skip
+        if count:
+            log.debug("Expandidos %d elementos con selector %s", count, sel)
 
 
 def _normalize_label(text: str) -> str:
