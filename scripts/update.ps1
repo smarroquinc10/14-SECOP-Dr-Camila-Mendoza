@@ -40,19 +40,12 @@ Write-Host ""
 Write-Host "=== Update Dra Cami Contractual ===" -ForegroundColor Cyan
 Write-Host ""
 
-# 1. Verificar que estamos en main (o que el branch va a triggerar el workflow)
-$branch = (& git -C $RepoRoot rev-parse --abbrev-ref HEAD).Trim()
+# 1. Verificar branch — solo informativo, no bloqueante.
+$branch = (& git -C $RepoRoot rev-parse --abbrev-ref HEAD 2>$null).Trim()
 Write-Host "Branch actual: $branch"
-if ($branch -ne "main") {
-    $resp = Read-Host "No est�s en 'main'. �Push a main desde este branch igual? (s/N)"
-    if ($resp -ne "s" -and $resp -ne "S") {
-        Write-Host "Abortando." -ForegroundColor Red
-        exit 1
-    }
-}
 
-# 2. Ver qu� hay para commitear
-$status = & git -C $RepoRoot status --porcelain
+# 2. Ver qu� hay para commitear (sin pasar por pipeline raro de cmd.exe)
+$status = & git -C $RepoRoot status --porcelain 2>$null
 if (-not $status) {
     Write-Host "No hay cambios. Nada para hacer." -ForegroundColor Yellow
     exit 0
@@ -60,25 +53,34 @@ if (-not $status) {
 
 Write-Host ""
 Write-Host "Cambios a commitear:" -ForegroundColor Yellow
-& git -C $RepoRoot status --short
+$status -split "`n" | ForEach-Object {
+    if ($_) { Write-Host "  $_" }
+}
 
 Write-Host ""
 Write-Host "Commit + push..."
 
-# 3. Stage + commit
-& git -C $RepoRoot add -A
+# 3. Stage + commit (todos los archivos, incluso untracked)
+& git -C $RepoRoot add -A 2>&1 | Out-Null
 if ($LASTEXITCODE -ne 0) { throw "git add fall�" }
 
-& git -C $RepoRoot commit -m $Message
+& git -C $RepoRoot commit -m $Message 2>&1 | Out-Null
 if ($LASTEXITCODE -ne 0) { throw "git commit fall�" }
 
-# 4. Push (al branch actual; si no es main, igual el workflow Pages
-#    triggerea para `claude/**` por la config en deploy-pages.yml)
-& git -C $RepoRoot push
+# 4. Push al branch actual + a main (para triggerar deploy-pages)
+& git -C $RepoRoot push 2>&1 | Out-Null
 if ($LASTEXITCODE -ne 0) {
-    # Si fall�, intent� con upstream
-    & git -C $RepoRoot push --set-upstream origin $branch
+    & git -C $RepoRoot push --set-upstream origin $branch 2>&1 | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "git push fall�" }
+}
+# Tambi�n pusheamos a main para que Pages deploye (Pages solo deploya
+# desde main por default). Si ya estamos en main, este push es no-op.
+if ($branch -ne "main") {
+    Write-Host "Tambi�n pusheo a main para triggerar Pages deploy..."
+    & git -C $RepoRoot push origin "${branch}:main" 2>&1 | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "  push a main fall� — probablemente conflicto. Hac� git pull origin main + retry." -ForegroundColor Yellow
+    }
 }
 
 Write-Host ""
