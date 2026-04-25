@@ -269,12 +269,32 @@ export async function getWatched(url: string): Promise<WatchedItemRow | undefine
   return get<WatchedItemRow>("watch_list", url);
 }
 
+/** Valida que el URL sea http(s) y bien formado. Bloquea esquemas
+ *  peligrosos (javascript:, data:, file:, vbscript:) que renderizados
+ *  como `href` ejecutarían código en el browser de la Dra (self-XSS).
+ *  No exigimos un dominio específico — la Dra a veces pega URLs de
+ *  community.secop, www.secop, contratos.gov.co, etc. */
+function assertSafeUrl(url: string): void {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new Error("URL inválida. Pegá un link completo que empiece con https://");
+  }
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+    throw new Error(
+      `Esquema "${parsed.protocol}" no permitido. Solo aceptamos URLs http:// o https://.`,
+    );
+  }
+}
+
 export async function addWatched(input: {
   url: string;
   vigencia: string;
   sheet?: string;
   note?: string | null;
 }): Promise<WatchedItemRow> {
+  assertSafeUrl(input.url);
   const existing = await get<WatchedItemRow>("watch_list", input.url);
   if (existing) {
     throw new Error("Esa URL ya está en tu lista.");
@@ -309,6 +329,8 @@ export async function editWatched(
   newUrl: string,
   note?: string | null
 ): Promise<WatchedItemRow> {
+  // Mismo check que `addWatched`: bloquea esquemas no-http(s).
+  assertSafeUrl(newUrl);
   const existing = await get<WatchedItemRow>("watch_list", oldUrl);
   if (!existing) throw new Error("No encontré ese URL en tu lista.");
   if (oldUrl === newUrl && (note ?? null) === existing.note) {
