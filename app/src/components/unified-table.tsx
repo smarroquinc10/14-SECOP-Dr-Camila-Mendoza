@@ -371,18 +371,19 @@ export function buildUnifiedRows(
       valor = parsePortalValor(portalSnap.fields.valor_total);
     }
 
-    // Notas: notas computadas del SECOP API (cuando hay contrato).
-    // Si no hay contrato y la Dra escribió una observación con palabras
-    // tipo "modificatorio" o "prórroga", agregamos un prefijo claro
-    // "(Excel)" para que la Dra distinga lo que viene de su nota
-    // manual de lo que viene del SECOP.
-    let notas: string | null = (contract?._notas as string) ?? null;
-    if (!notas && w.obs_brief) {
-      notas = `(Excel) ${w.obs_brief}`;
-    } else if (notas && w.obs_brief && w.is_modificado_excel) {
-      // Append the Dra's note to the SECOP notes for context.
-      notas = `${notas} · (Excel) ${w.obs_brief}`;
-    }
+    // Notas: la regla cardinal del CLAUDE.md dice que las observaciones
+    // manuales de la Dra (`obs_brief`) se muestran SÓLO en el modal de
+    // detalle, NUNCA en la tabla principal. Antes este bloque mezclaba
+    // obs_brief con prefijo "(Excel)" en la columna Modificatorios — lo
+    // cual era doble violación: (1) leakeaba observación manual al main
+    // table, (2) etiquetaba como "(Excel)" data que en HTML-pure viene
+    // de IndexedDB (no del Excel original).
+    //
+    // En HTML-pure el SECOP API tampoco devuelve `_notas` (es un campo
+    // computado por el FastAPI legacy). Por eso siempre queda null acá
+    // y la celda Modificatorios muestra "Sin modificatorios" o
+    // "Modificado +N días" según `dias_adicionados` del API.
+    const notas: string | null = null;
 
     rows.push({
       key: contract?.id_contrato ?? w.url ?? `${w.process_id ?? "noid"}-${rows.length}`,
