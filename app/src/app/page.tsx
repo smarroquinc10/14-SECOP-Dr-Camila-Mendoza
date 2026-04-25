@@ -379,6 +379,15 @@ export default function HomePage() {
               <span className="font-mono text-ink-soft">
                 {verifyProgress.processed} / {verifyProgress.total} ·{" "}
                 {verifyProgress.percent}%
+                {verifyProgress.elapsed_seconds != null && (
+                  <>
+                    {" · "}
+                    {verifyProgress.elapsed_seconds < 60
+                      ? `${Math.round(verifyProgress.elapsed_seconds)}s`
+                      : `${Math.floor(verifyProgress.elapsed_seconds / 60)}m ${Math.round(verifyProgress.elapsed_seconds % 60)}s`}{" "}
+                    transcurrido
+                  </>
+                )}
                 {verifyProgress.eta_seconds != null &&
                   verifyProgress.running && (
                     <>
@@ -386,7 +395,7 @@ export default function HomePage() {
                       ETA{" "}
                       {verifyProgress.eta_seconds < 60
                         ? `${Math.round(verifyProgress.eta_seconds)}s`
-                        : `${Math.round(verifyProgress.eta_seconds / 60)}m`}
+                        : `${Math.floor(verifyProgress.eta_seconds / 60)}m ${Math.round(verifyProgress.eta_seconds % 60)}s`}
                     </>
                   )}
               </span>

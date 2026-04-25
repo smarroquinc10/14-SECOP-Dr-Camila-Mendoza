@@ -1568,17 +1568,21 @@ async def verify_progress() -> dict[str, Any]:
         # Parse the timestamp out of the filename: watch_verify_YYYYMMDD_HHMMSS.jsonl
         import re as _re
         m = _re.search(r"_(\d{8}_\d{6})\.", latest.name)
+        elapsed = None
+        eta = None
         if m:
             started_at_str = m.group(1)
             from datetime import datetime as _dt
             started_dt = _dt.strptime(started_at_str, "%Y%m%d_%H%M%S")
             last_line_ts = stat.st_mtime
-            elapsed = stat.st_mtime - started_dt.timestamp()
-            rate = processed / elapsed if elapsed > 0 else 0
+            # `elapsed` measured against NOW so the UI shows real-time
+            # elapsed even before any line lands. `rate` uses mtime so
+            # we don't divide by inflated wall time.
+            wall_elapsed = max(0, now - started_dt.timestamp())
+            elapsed = wall_elapsed
+            mtime_elapsed = stat.st_mtime - started_dt.timestamp()
+            rate = processed / mtime_elapsed if mtime_elapsed > 0 else 0
             eta = (total - processed) / rate if rate > 0 else None
-        else:
-            elapsed = None
-            eta = None
     except Exception as exc:
         log.warning("verify-progress read failed: %s", exc)
         eta = None
@@ -1593,6 +1597,7 @@ async def verify_progress() -> dict[str, Any]:
         "total": total,
         "percent": round(100 * processed / total, 1) if total else 0.0,
         "started_at": started_at_str,
+        "elapsed_seconds": round(elapsed, 1) if elapsed else None,
         "last_update_age_seconds": round(age, 1),
         "eta_seconds": round(eta, 1) if eta else None,
         "report_path": str(latest),

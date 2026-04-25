@@ -259,6 +259,7 @@ export const api = {
       total: number;
       percent: number;
       started_at: string | null;
+      elapsed_seconds: number | null;
       last_update_age_seconds: number | null;
       eta_seconds: number | null;
       report_path: string | null;
