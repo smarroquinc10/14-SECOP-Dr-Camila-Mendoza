@@ -58,6 +58,14 @@ export default function HomePage() {
     { refreshInterval: 30_000 }
   );
 
+  // Verify progress: poll every 3s while a verify_watch_list.py run is
+  // active, every 30s otherwise (in case the user kicks one off via CLI).
+  const { data: verifyProgress, mutate: reloadVerifyProgress } = useSWR(
+    "verify-progress",
+    api.verifyProgress,
+    { refreshInterval: 3_000 }
+  );
+
   const isLoading = loadingContracts || loadingWatch;
 
   // ---- Filter state -----------------------------------------------------
@@ -169,11 +177,16 @@ export default function HomePage() {
   const [lastRefresh, setLastRefresh] = React.useState<string | null>(null);
 
   async function handleRefresh() {
+    // Trigger the watch-list verify (re-checks every URL against SECOP).
+    // Returns immediately; the JSONL writer pushes progress that the
+    // verify-progress polling picks up.
     setRefreshing(true);
     try {
-      await api.refresh();
-      await new Promise((r) => setTimeout(r, 2500));
-      await Promise.all([reloadContracts(), reloadUltActualiz(), reloadWatch()]);
+      await api.verifyWatch();
+      // Wait briefly for the spawned process to start writing the JSONL,
+      // then refresh related data.
+      await new Promise((r) => setTimeout(r, 1500));
+      await Promise.all([reloadVerifyProgress(), reloadUltActualiz()]);
       setLastRefresh(new Date().toISOString());
     } catch (err) {
       console.error(err);
@@ -342,6 +355,60 @@ export default function HomePage() {
           </a>
         )}
       </div>
+
+      {/* Verify progress bar — only visible while a refresh is in flight,
+          OR for ~30s after a completed run so the Dra sees the result. */}
+      {verifyProgress && (verifyProgress.running ||
+        (verifyProgress.processed > 0 &&
+          (verifyProgress.last_update_age_seconds ?? 999) < 30)) && (
+        <div className="mx-auto max-w-7xl px-8 mb-6">
+          <div
+            className={cn(
+              "border rounded-lg p-4",
+              verifyProgress.running
+                ? "border-burgundy/30 bg-burgundy/5"
+                : "border-emerald-300 bg-emerald-50"
+            )}
+          >
+            <div className="flex items-center justify-between text-xs mb-2">
+              <span className="font-medium text-ink">
+                {verifyProgress.running
+                  ? "Refrescando contra SECOP…"
+                  : "Refresco completado"}
+              </span>
+              <span className="font-mono text-ink-soft">
+                {verifyProgress.processed} / {verifyProgress.total} ·{" "}
+                {verifyProgress.percent}%
+                {verifyProgress.eta_seconds != null &&
+                  verifyProgress.running && (
+                    <>
+                      {" · "}
+                      ETA{" "}
+                      {verifyProgress.eta_seconds < 60
+                        ? `${Math.round(verifyProgress.eta_seconds)}s`
+                        : `${Math.round(verifyProgress.eta_seconds / 60)}m`}
+                    </>
+                  )}
+              </span>
+            </div>
+            <div className="h-2 bg-stone-100 rounded-full overflow-hidden">
+              <div
+                className={cn(
+                  "h-full transition-all duration-300 rounded-full",
+                  verifyProgress.running ? "bg-burgundy" : "bg-emerald-500"
+                )}
+                style={{ width: `${verifyProgress.percent}%` }}
+              />
+            </div>
+            {!verifyProgress.running && verifyProgress.processed > 0 && (
+              <div className="text-[11px] text-ink-soft mt-2 italic">
+                Cada link se consultó en datos.gov.co. Los notice_uid
+                se actualizaron en tu lista.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Modificatorios summary panel — context first */}
       <div className="mx-auto max-w-7xl px-8 mb-6">
