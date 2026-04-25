@@ -24,6 +24,7 @@ from secop_ii.excel_io import (
 from secop_ii.extractors import FieldExtractor, REGISTRY, get_extractor
 from secop_ii.extractors.base import ExtractionResult, ProcessContext
 from secop_ii.extractors.modificatorios import COL_DETALLE
+from secop_ii.discrepancies import COL_DISCREPANCIAS, detect_discrepancies
 from secop_ii.observaciones import (
     OUTPUT_COLUMNS as OBS_OUTPUT_COLUMNS,
     detect_observaciones_column,
@@ -138,6 +139,9 @@ def process_workbook(
     # Only add the OBS columns if we actually found the source column.
     if obs_col is not None:
         output_columns.extend(OBS_OUTPUT_COLUMNS)
+    # API ↔ Portal cross-check column only makes sense when both sides ran.
+    if mirror_portal:
+        output_columns.append(COL_DISCREPANCIAS)
     column_map = ensure_columns(ws, output_columns, header_row=header_row)
 
     client = SecopClient(app_token=app_token, rate_per_second=rate_per_second)
@@ -261,6 +265,12 @@ def _process_one_row(
     # extra context next to the SECOP API data (API is authoritative;
     # these are the Dra.'s hand-noted FEAB admin markers).
     combined_values.update(obs_values)
+    # Audit column: detected discrepancies between API and Portal versions
+    # of the same field. Only meaningful when the portal extractor ran.
+    if COL_DISCREPANCIAS in column_map:
+        combined_values[COL_DISCREPANCIAS] = (
+            detect_discrepancies(combined_values) or "ninguna"
+        )
     write_row(ws, row_idx, combined_values, column_map)
 
     return RowReport(

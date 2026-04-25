@@ -38,11 +38,13 @@ from secop_ii.config import (
     DATASET_MOD_CONTRATOS,
     DATASET_PROCESOS,
     DATASET_UBICACIONES,
+    DATASETS_ARCHIVO,
     DEFAULT_PAGE_SIZE,
     DEFAULT_RATE_NO_TOKEN,
     DEFAULT_RATE_WITH_TOKEN,
     DEFAULT_TIMEOUT_S,
     FIELD_ADICION_CONTRATO,
+    FIELD_ARCHIVO_PROCESO,
     FIELD_CONTRATO_PROCESO,
     FIELD_CONTRATO_URL,
     FIELD_MODCTR_CONTRATO,
@@ -222,6 +224,43 @@ class SecopClient:
             where=f"{FIELD_UBIC_CONTRATO}='{_escape(id_contrato)}'",
             limit=DEFAULT_PAGE_SIZE,
         )
+
+    def get_archivos(self, portfolio_id: str) -> list[dict]:
+        """Return all published documents for a portfolio (CO1.BDOS.*).
+
+        Concatenates the three SECOP II archive datasets (2022 historic,
+        2023 historic, 2025+) and de-duplicates by ``url_descarga_documento``
+        — different datasets can share rows for the same document. URLs go
+        directly to ``Public/Archive/RetrieveFile/Index?DocumentId=N`` which
+        downloads via plain HTTP (no captcha, no Chrome).
+        """
+        seen_urls: set[str] = set()
+        out: list[dict] = []
+        for ds in DATASETS_ARCHIVO:
+            try:
+                rows = self.query(
+                    ds,
+                    where=f"{FIELD_ARCHIVO_PROCESO}='{_escape(portfolio_id)}'",
+                    limit=DEFAULT_PAGE_SIZE,
+                )
+            except SocrataError as exc:
+                log.warning("archivo dataset %s falló: %s", ds, exc)
+                continue
+            for row in rows:
+                url_field = row.get("url_descarga_documento") or {}
+                if isinstance(url_field, dict):
+                    url = url_field.get("url", "")
+                else:
+                    url = str(url_field)
+                key = url or row.get("nombre_archivo", "")
+                if key in seen_urls:
+                    continue
+                seen_urls.add(key)
+                # Stash the source dataset for audit
+                row["_dataset"] = ds
+                row["_url_normalized"] = url
+                out.append(row)
+        return out
 
     # ------------------------------------------------------------------
     # Raw query

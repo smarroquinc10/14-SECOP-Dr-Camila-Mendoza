@@ -21,6 +21,7 @@ doesn't re-visit contracts that already succeeded.
 
 from __future__ import annotations
 
+import gzip
 import io
 import json
 import logging
@@ -36,6 +37,19 @@ from typing import Any
 
 import requests
 from bs4 import BeautifulSoup, Tag
+
+# Critical fields that prove the OpportunityDetail page rendered fully. If any
+# are empty after a scrape, we retry once before giving up — guards against
+# silent partial captures (page not fully loaded, captcha-then-redirect race,
+# etc.). These map to keys in ``_LABEL_TO_KEY``.
+_CRITICAL_FIELDS = ("titulo", "tipo_proceso", "numero_proceso")
+
+# Scrape status enum (written to "Portal: Estado scraping" column).
+STATUS_OK_COMPLETE = "ok_completo"
+STATUS_OK_PARTIAL = "ok_parcial"
+STATUS_CAPTCHA_BLOCKED = "bloqueado_captcha"
+STATUS_NETWORK_ERROR = "error_red"
+STATUS_NOT_AVAILABLE = "no_disponible"
 
 # patchright is a drop-in Playwright fork that strips the "Chrome is being
 # controlled by automated test software" banner and hides the automation
@@ -110,6 +124,12 @@ class PortalData:
     raw_length: int
     notificaciones: list[dict[str, str]] = field(default_factory=list)
     all_labels: dict[str, str] = field(default_factory=dict)  # full dump for audit
+    status: str = STATUS_OK_COMPLETE  # see STATUS_* constants
+    missing_fields: list[str] = field(default_factory=list)  # critical fields that came up empty
+    scraped_at: str = ""  # ISO timestamp
+
+    def is_complete(self) -> bool:
+        return self.status == STATUS_OK_COMPLETE and not self.missing_fields
 
     def as_flat(self) -> dict[str, Any]:
         out: dict[str, Any] = {f"portal_{k}": v for k, v in self.fields.items()}
@@ -133,6 +153,11 @@ class PortalScraper:
     )
     cache_path: Path = field(
         default_factory=lambda: Path(".cache") / "portal_opportunity.json"
+    )
+    # Raw-HTML archive: gzipped per NTC, lets us re-extract any field later
+    # without revisiting the portal. ~50 KB per process compressed.
+    html_archive_dir: Path = field(
+        default_factory=lambda: Path(".cache") / "portal_html"
     )
     captcha_timeout_s: int = 180
     page_timeout_s: int = 45
@@ -180,11 +205,21 @@ class PortalScraper:
     # Public
     # ------------------------------------------------------------------
     def fetch(self, notice_uid: str) -> PortalData | None:
-        """Return cached or freshly scraped data for ``notice_uid``."""
+        """Return cached or freshly scraped data for ``notice_uid``.
+
+        Cache hits are returned only if the previous scrape was complete.
+        Partial/failed cached entries are re-attempted (so a flaky earlier
+        run doesn't permanently poison the cache).
+        """
         if not notice_uid:
             return None
         if notice_uid in self._cache:
-            return self._hydrate(notice_uid, self._cache[notice_uid])
+            cached = self._hydrate(notice_uid, self._cache[notice_uid])
+            if cached.is_complete():
+                return cached
+            log.info(
+                "Cache para %s estaba %s — reintentando", notice_uid, cached.status
+            )
         if self._browser is None:
             raise RuntimeError("PortalScraper must be used as a context manager")
 
@@ -212,6 +247,9 @@ class PortalScraper:
                 "notificaciones": data.notificaciones,
                 "all_labels": data.all_labels,
                 "raw_length": data.raw_length,
+                "status": data.status,
+                "missing_fields": data.missing_fields,
+                "scraped_at": data.scraped_at,
             }
             self._flush_cache()
         return data
@@ -233,7 +271,13 @@ class PortalScraper:
                 log.warning("Timeout abriendo %s (intento %d)", notice_uid, attempt + 1)
         else:
             log.warning("No pude abrir %s: %s", notice_uid, last_err)
-            return None
+            return PortalData(
+                notice_uid=notice_uid,
+                fields={},
+                documents=[],
+                raw_length=0,
+                status=STATUS_NETWORK_ERROR,
+            )
 
         # Handle captcha. Cascade:
         #   1. auto-click the "No soy un robot" checkbox
@@ -299,9 +343,38 @@ class PortalScraper:
             pass
 
         html = page.content()
+
+        # Persist raw HTML — perpetual audit trail. If we ever extract a new
+        # field, we re-process from disk without revisiting the portal.
+        self._archive_html(notice_uid, html)
+
         all_labels, fields = _extract_fields(html)
         documents = _extract_documents(html)
         notificaciones = _extract_notificaciones(html)
+
+        # Validate critical fields. If any are missing the page rendered
+        # incompletely (race with captcha redirect, JS still loading, etc.).
+        missing = [k for k in _CRITICAL_FIELDS if not fields.get(k)]
+
+        # If incomplete, give the page another 5 s and re-extract — handles
+        # the common "JS hadn't finished filling labels yet" race.
+        if missing:
+            log.info(
+                "%s: faltan %s — esperando 5s para re-extraer", notice_uid, missing
+            )
+            try:
+                page.wait_for_timeout(5000)
+                html = page.content()
+                self._archive_html(notice_uid, html)
+                all_labels, fields = _extract_fields(html)
+                documents = _extract_documents(html)
+                notificaciones = _extract_notificaciones(html)
+                missing = [k for k in _CRITICAL_FIELDS if not fields.get(k)]
+            except Exception as exc:  # pragma: no cover
+                log.warning("Re-extract fallo para %s: %s", notice_uid, exc)
+
+        from datetime import datetime
+        status = STATUS_OK_COMPLETE if not missing else STATUS_OK_PARTIAL
         return PortalData(
             notice_uid=notice_uid,
             fields=fields,
@@ -309,6 +382,9 @@ class PortalScraper:
             notificaciones=notificaciones,
             all_labels=all_labels,
             raw_length=len(html),
+            status=status,
+            missing_fields=missing,
+            scraped_at=datetime.utcnow().isoformat(timespec="seconds"),
         )
 
     def _hydrate(self, notice_uid: str, raw: dict) -> PortalData:
@@ -319,7 +395,20 @@ class PortalScraper:
             notificaciones=raw.get("notificaciones", []),
             all_labels=raw.get("all_labels", {}),
             raw_length=raw.get("raw_length", 0),
+            status=raw.get("status", STATUS_OK_COMPLETE),
+            missing_fields=raw.get("missing_fields", []),
+            scraped_at=raw.get("scraped_at", ""),
         )
+
+    def _archive_html(self, notice_uid: str, html: str) -> None:
+        """Compress + persist HTML for ``notice_uid`` (overwrites previous copy)."""
+        try:
+            self.html_archive_dir.mkdir(parents=True, exist_ok=True)
+            target = self.html_archive_dir / f"{notice_uid}.html.gz"
+            with gzip.open(target, "wb") as fh:
+                fh.write(html.encode("utf-8"))
+        except OSError as exc:
+            log.warning("No pude guardar snapshot HTML %s: %s", notice_uid, exc)
 
     def _load_cache(self) -> None:
         if self._cache_loaded:

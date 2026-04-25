@@ -20,7 +20,13 @@ from typing import Any
 from secop_ii.extractors.base import ExtractionResult, ProcessContext
 from secop_ii.portal_scraper import PortalData, PortalScraper
 
+COL_PRECIO_EST = "Portal: Precio estimado"
 COL_NUMERO = "Portal: Número del proceso"
+COL_TITULO = "Portal: Título"
+COL_FASE = "Portal: Fase"
+COL_ESTADO = "Portal: Estado"
+COL_DESCRIPCION = "Portal: Descripción"
+COL_TIPO_PROCESO = "Portal: Tipo proceso"
 COL_TIPO_CONTRATO = "Portal: Tipo contrato"
 COL_JUSTIFICACION = "Portal: Justificación modalidad"
 COL_DURACION = "Portal: Duración contrato"
@@ -34,6 +40,7 @@ COL_MODULO_PUB = "Portal: Módulo publicitario"
 COL_FECHA_FIRMA = "Portal: Fecha firma contrato"
 COL_FECHA_INICIO = "Portal: Fecha inicio ejecución"
 COL_PLAZO = "Portal: Plazo ejecución contrato"
+COL_FECHA_TERM = "Portal: Fecha terminación contrato"
 COL_FECHA_PUB = "Portal: Fecha publicación"
 COL_DESTINO_GASTO = "Portal: Destinación del gasto"
 COL_VALOR_TOTAL = "Portal: Valor total"
@@ -48,10 +55,19 @@ COL_NOTIFS_N = "Portal: # notificaciones"
 COL_DOCUMENTOS = "Portal: Documentos adjuntos"
 COL_DOCUMENTOS_N = "Portal: # documentos"
 COL_FUENTE_PORTAL = "Portal: Estado scraping"
+COL_CAMPOS_FALTAN = "Portal: Campos faltantes"  # critical-field audit
+COL_SCRAPED_AT = "Portal: Última verificación"
 
-# Maps `PortalData.fields` keys -> Excel column names.
+# Maps `PortalData.fields` keys -> Excel column names. Order = column order
+# in the Excel (left to right after the API columns).
 _FIELD_TO_COLUMN = {
+    "precio_estimado": COL_PRECIO_EST,
     "numero_proceso": COL_NUMERO,
+    "titulo": COL_TITULO,
+    "fase": COL_FASE,
+    "estado": COL_ESTADO,
+    "descripcion": COL_DESCRIPCION,
+    "tipo_proceso": COL_TIPO_PROCESO,
     "tipo_contrato": COL_TIPO_CONTRATO,
     "justificacion_modalidad": COL_JUSTIFICACION,
     "duracion_contrato": COL_DURACION,
@@ -65,7 +81,7 @@ _FIELD_TO_COLUMN = {
     "fecha_firma_contrato": COL_FECHA_FIRMA,
     "fecha_inicio_ejecucion": COL_FECHA_INICIO,
     "plazo_ejecucion": COL_PLAZO,
-    "fecha_terminacion": "Portal: Fecha terminación contrato",
+    "fecha_terminacion": COL_FECHA_TERM,
     "fecha_publicacion": COL_FECHA_PUB,
     "destinacion_gasto": COL_DESTINO_GASTO,
     "valor_total": COL_VALOR_TOTAL,
@@ -90,6 +106,8 @@ class PortalExtractor:
         COL_DOCUMENTOS,
         COL_DOCUMENTOS_N,
         COL_FUENTE_PORTAL,
+        COL_CAMPOS_FALTAN,
+        COL_SCRAPED_AT,
     )
 
     def extract(self, ctx: ProcessContext) -> ExtractionResult:
@@ -148,6 +166,8 @@ def _empty(estado: str) -> dict[str, Any]:
     base[COL_DOCUMENTOS] = ""
     base[COL_DOCUMENTOS_N] = ""
     base[COL_FUENTE_PORTAL] = estado
+    base[COL_CAMPOS_FALTAN] = ""
+    base[COL_SCRAPED_AT] = ""
     return base
 
 
@@ -183,7 +203,9 @@ def _to_columns(data: PortalData) -> dict[str, Any]:
         d.get("name", "") for d in data.documents[:10]
     )[:500]
     out[COL_DOCUMENTOS_N] = len(data.documents)
-    out[COL_FUENTE_PORTAL] = "ok"
+    out[COL_FUENTE_PORTAL] = data.status
+    out[COL_CAMPOS_FALTAN] = ", ".join(data.missing_fields) if data.missing_fields else ""
+    out[COL_SCRAPED_AT] = data.scraped_at
     return out
 
 

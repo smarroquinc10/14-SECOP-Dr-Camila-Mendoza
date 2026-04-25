@@ -86,6 +86,15 @@ class _FakeClient:
     def get_adiciones(self, id_contrato):
         return self._adiciones.get(id_contrato, [])
 
+    def get_modificaciones_ricas(self, id_contrato):
+        return []
+
+    def get_ubicaciones(self, id_contrato):
+        return []
+
+    def get_archivos(self, portfolio_id):
+        return []
+
     def build_query_url(self, dataset_id, *, where=None, limit=10):
         return (
             f"https://www.datos.gov.co/resource/{dataset_id}.json?"

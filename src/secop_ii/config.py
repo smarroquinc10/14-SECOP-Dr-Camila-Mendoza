@@ -12,6 +12,17 @@ DATASET_ADICIONES = "cb9c-h8sn"
 # con valor y fecha de aprobación reales.
 DATASET_UBICACIONES = "wwhe-4sq8"  # Ubicaciones Adicionales (dirección por contrato)
 DATASET_MOD_CONTRATOS = "u8cx-r425"  # Modificaciones a contratos (valor + días + descripción)
+# Documentos publicados (PDFs, etc.) — keyed por id_del_portafolio (CO1.BDOS.*).
+# 3 datasets cubren ventanas temporales distintas; consultamos los 3 y unimos.
+# URLs en ``url_descarga_documento`` son descargables HTTP directo, sin captcha.
+DATASETS_ARCHIVO = ("dmgg-8hin", "3skv-9na7", "kgcd-kt7i")
+FIELD_ARCHIVO_PROCESO = "proceso"  # contiene CO1.BDOS.*
+FIELD_ARCHIVO_NOMBRE = "nombre_archivo"
+FIELD_ARCHIVO_EXT = "extensi_n"
+FIELD_ARCHIVO_TAMANO = "tamanno_archivo"
+FIELD_ARCHIVO_FECHA = "fecha_carga"
+FIELD_ARCHIVO_URL = "url_descarga_documento"
+FIELD_ARCHIVO_DESCRIPCION = "descripci_n"
 
 FIELD_UBIC_CONTRATO = "id_contrato"
 FIELD_UBIC_DIRECCION = "direcci_n"
