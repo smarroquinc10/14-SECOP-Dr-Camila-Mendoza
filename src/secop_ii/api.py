@@ -376,9 +376,21 @@ _WATCH_LOCK = __import__("threading").Lock()
 
 
 class WatchedItem(BaseModel):
+    """One unique SECOP process the Dra is tracking.
+
+    The same process can appear on multiple Excel sheets (e.g. a
+    plurianual contract that shows up in FEAB 2024 and FEAB 2025).
+    To avoid hiding that fact while also avoiding duplicate rows,
+    each item carries a list of every (sheet, vigencia) pair where
+    its URL was seen. The UI filter by sheet returns the same count
+    the Dra sees in Excel — no data is eaten, no row is invented.
+    """
     url: str
     process_id: str | None = None
     notice_uid: str | None = None
+    sheets: list[str] = Field(default_factory=list)
+    vigencias: list[str] = Field(default_factory=list)
+    appearances: list[dict[str, str | None]] = Field(default_factory=list)
     added_at: str
     note: str | None = None
 
@@ -510,9 +522,58 @@ def _find_link_column(ws) -> tuple[int, int] | None:
     return None
 
 
+def _find_vigencia_column(ws, header_row: int) -> int | None:
+    """Return the 1-indexed column that holds the VIGENCIA value, or None.
+
+    The Dra's format uses ``"3.VIGENCIA"`` as the canonical header, but
+    different sheets put it in different physical columns (col 2 in
+    FEAB 2026/2025/2024/2023/2022, col 3 in FEAB 2018-2021). We match
+    by header text, not column index — that way the columns can shift
+    without breaking the importer.
+
+    Skips headers that *contain* "VIGENCIA" but mean something else
+    (e.g. "VALOR VIGENCIA ACTUAL", "Garantía vigencia desde"): we
+    require the header to start with a digit-and-dot prefix followed
+    by VIGENCIA, OR to equal "VIGENCIA" alone.
+    """
+    try:
+        row = next(ws.iter_rows(min_row=header_row, max_row=header_row,
+                                values_only=True))
+    except StopIteration:
+        return None
+    for i, v in enumerate(row, start=1):
+        if v is None:
+            continue
+        text = str(v).strip().upper()
+        # Match "3.VIGENCIA", "3 VIGENCIA", "VIGENCIA" — but not
+        # "VALOR VIGENCIA ACTUAL" or "VIGENCIA FUTURA".
+        if text == "VIGENCIA":
+            return i
+        # Strip leading digits + punctuation
+        head = text.lstrip("0123456789. ")
+        if head == "VIGENCIA":
+            return i
+    return None
+
+
+def _vigencia_from_sheet_name(sheet_name: str) -> str | None:
+    """Best-effort fallback: derive vigencia from a sheet name like
+    ``"FEAB 2024"`` → ``"2024"``. Returns None for ranges like
+    ``"FEAB 2018-2021"`` (those rows always have an explicit per-row
+    vigencia in the Excel column)."""
+    import re
+    m = re.search(r"\b(\d{4})\s*$", sheet_name.strip())
+    return m.group(1) if m else None
+
+
 def _import_workbook_urls(workbook_path: Path) -> dict[str, Any]:
-    """Synchronous worker: read every sheet, dedup SECOP URLs by
-    process_id, append new ones to the watch list, return a report.
+    """Synchronous worker: read every sheet, MERGE per-URL appearances
+    into one item per unique URL/process_id, return a report.
+
+    Mirror semantics: every (sheet, row) where a SECOP URL appears in
+    the Excel is recorded as an "appearance". A URL that shows up on
+    3 sheets has 3 appearances on a single watch item — the UI filter
+    by sheet shows it once for each sheet, matching the Excel exactly.
     """
     from openpyxl import load_workbook
 
@@ -521,37 +582,48 @@ def _import_workbook_urls(workbook_path: Path) -> dict[str, Any]:
 
     wb = load_workbook(workbook_path, data_only=True, read_only=True)
 
-    # Build a lookup of (process_id, url) already in the watch list so
-    # we don't append duplicates.
     with _WATCH_LOCK:
         existing = _load_watched()
-        existing_pids = {it.get("process_id") for it in existing
-                        if it.get("process_id")}
-        existing_urls = {it.get("url") for it in existing if it.get("url")}
+
+        # Build O(1) lookups so we can merge by process_id or by URL.
+        by_pid: dict[str, dict[str, Any]] = {}
+        by_url: dict[str, dict[str, Any]] = {}
+        for it in existing:
+            pid = it.get("process_id")
+            url = it.get("url")
+            if pid:
+                by_pid[pid] = it
+            if url:
+                by_url[url] = it
+            # Backfill the new schema for legacy items missing the lists
+            it.setdefault("sheets", [])
+            it.setdefault("vigencias", [])
+            it.setdefault("appearances", [])
 
         per_sheet: dict[str, dict[str, int]] = {}
-        added: list[dict[str, Any]] = []
-        skipped_dupe = 0
-        skipped_invalid = 0
+        new_items_count = 0
+        merged_count = 0
+        already_recorded = 0  # appearance already on file (idempotent re-runs)
         errors: list[str] = []
-        seen_in_run_pids: set[str] = set()
-        seen_in_run_urls: set[str] = set()
 
         for sheet_name in wb.sheetnames:
             ws = wb[sheet_name]
             link_loc = _find_link_column(ws)
             if not link_loc:
-                per_sheet[sheet_name] = {"found": 0, "added": 0,
-                                        "skipped_dupe": 0,
-                                        "skipped_invalid": 0,
+                per_sheet[sheet_name] = {"found": 0, "added_new": 0,
+                                        "merged": 0, "already_recorded": 0,
                                         "no_link_col": 1}
                 continue
             header_row, link_col = link_loc
-            stats = {"found": 0, "added": 0, "skipped_dupe": 0,
-                    "skipped_invalid": 0, "no_link_col": 0}
+            vig_col = _find_vigencia_column(ws, header_row)
+            sheet_fallback_vig = _vigencia_from_sheet_name(sheet_name)
+            stats = {"found": 0, "added_new": 0, "merged": 0,
+                    "already_recorded": 0, "no_link_col": 0}
 
-            for row in ws.iter_rows(min_row=header_row + 1,
-                                    values_only=True):
+            for excel_row_idx, row in enumerate(
+                ws.iter_rows(min_row=header_row + 1, values_only=True),
+                start=header_row + 1,
+            ):
                 if not row or len(row) < link_col:
                     continue
                 v = row[link_col - 1]
@@ -562,67 +634,99 @@ def _import_workbook_urls(workbook_path: Path) -> dict[str, Any]:
                     continue
                 stats["found"] += 1
 
-                # Try parsing for a stable dedup key
+                # Read VIGENCIA per-row (Excel column 3.VIGENCIA) with
+                # fallback to the sheet name year.
+                vigencia: str | None = None
+                if vig_col is not None and len(row) >= vig_col:
+                    rv = row[vig_col - 1]
+                    if rv is not None:
+                        if isinstance(rv, (int, float)):
+                            vigencia = str(int(rv))
+                        else:
+                            vigencia = str(rv).strip() or None
+                if not vigencia:
+                    vigencia = sheet_fallback_vig
+
                 process_id = None
-                notice_uid = None
                 try:
                     ref = parse_secop_url(url)
                     process_id = ref.process_id
                 except InvalidSecopUrlError:
                     pass
 
-                # Dedup against existing list AND within this run
-                if process_id and (
-                    process_id in existing_pids
-                    or process_id in seen_in_run_pids
-                ):
-                    stats["skipped_dupe"] += 1
-                    skipped_dupe += 1
-                    continue
-                if url in existing_urls or url in seen_in_run_urls:
-                    stats["skipped_dupe"] += 1
-                    skipped_dupe += 1
-                    continue
-                if not process_id and "secop.gov.co" not in url.lower():
-                    stats["skipped_invalid"] += 1
-                    skipped_invalid += 1
-                    continue
-
-                # Try to resolve notice_uid (best-effort, don't fail import)
-                if process_id:
-                    try:
-                        notice_uid = _client.resolve_notice_uid(
-                            process_id, url=url
-                        )
-                    except Exception:
-                        notice_uid = None
-
-                new_item = {
+                appearance = {
+                    "sheet": sheet_name,
+                    "vigencia": vigencia,
+                    "row": excel_row_idx,
                     "url": url,
-                    "process_id": process_id,
-                    "notice_uid": notice_uid,
-                    "added_at": datetime.now(timezone.utc)
-                                       .isoformat(timespec="seconds"),
-                    "note": f"Importado de Excel · hoja {sheet_name}",
                 }
-                added.append(new_item)
-                if process_id:
-                    seen_in_run_pids.add(process_id)
-                seen_in_run_urls.add(url)
-                stats["added"] += 1
+
+                # Find a matching existing item by process_id, then URL
+                target = None
+                if process_id and process_id in by_pid:
+                    target = by_pid[process_id]
+                elif url in by_url:
+                    target = by_url[url]
+
+                if target is None:
+                    # New unique process
+                    target = {
+                        "url": url,
+                        "process_id": process_id,
+                        "notice_uid": None,
+                        "sheets": [],
+                        "vigencias": [],
+                        "appearances": [],
+                        "added_at": datetime.now(timezone.utc)
+                                           .isoformat(timespec="seconds"),
+                        "note": f"Importado de Excel · primera vista en "
+                                f"{sheet_name}",
+                    }
+                    existing.append(target)
+                    if process_id:
+                        by_pid[process_id] = target
+                    by_url[url] = target
+                    new_items_count += 1
+                    stats["added_new"] += 1
+                else:
+                    # Merge: already known process. Did we already see
+                    # THIS exact (sheet, row, url) appearance?
+                    already_seen = any(
+                        a.get("sheet") == sheet_name
+                        and a.get("row") == excel_row_idx
+                        and a.get("url") == url
+                        for a in target.get("appearances", [])
+                    )
+                    if already_seen:
+                        already_recorded += 1
+                        stats["already_recorded"] += 1
+                        continue
+                    merged_count += 1
+                    stats["merged"] += 1
+
+                # Record the appearance, keep sheets/vigencias unique
+                target.setdefault("appearances", []).append(appearance)
+                if sheet_name not in target.setdefault("sheets", []):
+                    target["sheets"].append(sheet_name)
+                if vigencia and vigencia not in target.setdefault(
+                    "vigencias", []
+                ):
+                    target["vigencias"].append(vigencia)
 
             per_sheet[sheet_name] = stats
 
-        if added:
-            existing.extend(added)
-            _save_watched(existing)
+        _save_watched(existing)
 
         return {
-            "added": len(added),
-            "skipped_dupe": skipped_dupe,
-            "skipped_invalid": skipped_invalid,
+            "added_new": new_items_count,
+            "merged": merged_count,
+            "already_recorded": already_recorded,
+            "skipped_invalid": 0,
             "errors": errors,
-            "total": len(existing),
+            "total_unique": len(existing),
+            "total_appearances": sum(
+                len(it.get("appearances", [])) for it in existing
+            ),
             "per_sheet": per_sheet,
             "workbook": str(workbook_path),
         }

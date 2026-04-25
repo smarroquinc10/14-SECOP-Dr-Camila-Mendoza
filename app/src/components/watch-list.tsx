@@ -6,7 +6,7 @@ import { ExternalLink, FileSpreadsheet, Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { api, type WatchedItem } from "@/lib/api";
+import { api, type WatchedItem, type WatchedAppearance } from "@/lib/api";
 import { cn, fmtDate } from "@/lib/utils";
 
 /**
@@ -70,22 +70,22 @@ export function WatchListPanel({
     setImporting(true);
     setFeedback({
       kind: "info",
-      text: "Leyendo el Excel y deduplicando contra tu lista…",
+      text: "Leyendo el Excel y mergeando apariciones por hoja…",
     });
     try {
       const res = await api.watchImportFromExcel();
       const sheetSummary = Object.entries(res.per_sheet)
-        .map(([name, s]) => `${name}: +${s.added}`)
+        .map(([name, s]) => `${name}: ${s.found}`)
         .join(" · ");
-      if (res.added > 0) {
+      if (res.added_new > 0 || res.merged > 0) {
         setFeedback({
           kind: "ok",
-          text: `Importadas ${res.added} URLs nuevas · ${res.skipped_dupe} duplicadas · ${sheetSummary}`,
+          text: `${res.total_unique} procesos únicos (${res.total_appearances} apariciones) · ${res.added_new} nuevos · ${res.merged} mergeados · ${sheetSummary}`,
         });
-      } else if (res.skipped_dupe > 0) {
+      } else if (res.already_recorded > 0) {
         setFeedback({
           kind: "info",
-          text: `Nada nuevo. ${res.skipped_dupe} URLs ya estaban en tu lista (${sheetSummary}).`,
+          text: `Ya estaba todo. ${res.already_recorded} apariciones idénticas, ${res.total_unique} procesos únicos · ${sheetSummary}`,
         });
       } else {
         setFeedback({
@@ -189,56 +189,210 @@ export function WatchListPanel({
             Tu lista está vacía. Pega una URL del SECOP arriba para empezar.
           </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-background text-[11px] uppercase tracking-wider text-ink-soft">
-              <tr>
-                <th className="text-left px-4 py-2">Proceso</th>
-                <th className="text-left px-4 py-2">Notice UID</th>
-                <th className="text-left px-4 py-2">Agregado</th>
-                <th className="text-left px-4 py-2 w-20">SECOP</th>
-                <th className="text-right px-4 py-2 w-16"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.items.map((it) => (
-                <tr
-                  key={it.url}
-                  className="border-t border-rule/60 hover:bg-background"
-                >
-                  <td className="px-4 py-2 font-mono text-xs">
-                    {it.process_id ? (
-                      <button
-                        onClick={() => onPickProcessId(it.process_id!)}
-                        className="text-burgundy hover:underline"
-                      >
-                        {it.process_id}
-                      </button>
-                    ) : (
-                      <span className="text-ink-soft">URL personalizada</span>
-                    )}
-                    {it.note && (
-                      <div className="text-[10px] text-ink-soft mt-0.5 italic">
-                        {it.note}
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-4 py-2 font-mono text-xs text-ink-soft">
-                    {it.notice_uid ?? "—"}
-                  </td>
-                  <td className="px-4 py-2 font-mono text-xs text-ink-soft">
-                    {fmtDate(it.added_at)}
-                  </td>
-                  <td className="px-4 py-2">
-                    <a
-                      href={it.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1 text-xs text-burgundy hover:underline"
+          <FilteredWatchTable
+            items={data.items}
+            onPickProcessId={onPickProcessId}
+            handleRemove={handleRemove}
+            busy={busy}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+/**
+ * Watch list table with sheet filter pills above. Filter by sheet
+ * (FEAB 2026, FEAB 2025, …): the count next to each pill is the
+ * number of processes that appeared in that sheet of the Excel —
+ * matching the Dra's view exactly. A process that appears on 3
+ * sheets is one row in the watch list but contributes to all 3
+ * sheet counts (no data eaten, no duplicates invented).
+ */
+function FilteredWatchTable({
+  items,
+  onPickProcessId,
+  handleRemove,
+  busy,
+}: {
+  items: WatchedItem[];
+  onPickProcessId: (id: string) => void;
+  handleRemove: (it: WatchedItem) => void;
+  busy: boolean;
+}) {
+  const [sheetFilter, setSheetFilter] = React.useState<string | null>(null);
+
+  // Count APPEARANCES per sheet (matches Excel row counts exactly).
+  // A process that's in 2 rows of FEAB 2024 contributes 2 to "FEAB 2024",
+  // mirroring what the Dra sees if she opens that sheet.
+  const sheetCounts = React.useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const it of items) {
+      const apps = it.appearances ?? [];
+      if (apps.length === 0) {
+        const sheets = it.sheets?.length ? it.sheets : ["(sin hoja)"];
+        for (const s of sheets) counts.set(s, (counts.get(s) ?? 0) + 1);
+      } else {
+        for (const a of apps) {
+          counts.set(a.sheet, (counts.get(a.sheet) ?? 0) + 1);
+        }
+      }
+    }
+    return Array.from(counts.entries()).sort((a, b) => {
+      if (a[0] === "(sin hoja)") return 1;
+      if (b[0] === "(sin hoja)") return -1;
+      return b[0].localeCompare(a[0]);
+    });
+  }, [items]);
+
+  // Total apariciones (sum of all sheet counts).
+  const totalAppearances = React.useMemo(
+    () => sheetCounts.reduce((sum, [, c]) => sum + c, 0),
+    [sheetCounts]
+  );
+
+  // Filtered rows: when no filter, show one row per UNIQUE item (491).
+  // When filtering by a sheet, expand to one row per APPEARANCE in that
+  // sheet — this is the "espejo del Excel" mode the Dra wants.
+  type Row = { item: WatchedItem; appearance: WatchedAppearance | null };
+  const filtered: Row[] = React.useMemo(() => {
+    if (!sheetFilter) {
+      return items.map((it) => ({ item: it, appearance: null }));
+    }
+    const out: Row[] = [];
+    for (const it of items) {
+      const apps = it.appearances ?? [];
+      if (apps.length === 0) {
+        const sheets = it.sheets?.length ? it.sheets : ["(sin hoja)"];
+        if (sheets.includes(sheetFilter)) {
+          out.push({ item: it, appearance: null });
+        }
+      } else {
+        for (const a of apps) {
+          if (a.sheet === sheetFilter) {
+            out.push({ item: it, appearance: a });
+          }
+        }
+      }
+    }
+    return out;
+  }, [items, sheetFilter]);
+
+  return (
+    <>
+      <div className="px-5 py-3 border-b border-rule/60 flex items-center gap-2 flex-wrap">
+        <span className="text-[11px] uppercase tracking-wider text-ink-soft mr-1">
+          Hoja Excel:
+        </span>
+        <button
+          onClick={() => setSheetFilter(null)}
+          className={cn(
+            "text-xs px-2.5 py-1 rounded-full border transition-colors",
+            sheetFilter === null
+              ? "bg-burgundy text-white border-burgundy"
+              : "bg-background border-rule hover:border-burgundy/50"
+          )}
+          title={`${items.length} procesos únicos · ${totalAppearances} apariciones en el Excel`}
+        >
+          Todas{" "}
+          <span className="text-[10px] opacity-70">
+            ({items.length} únicos)
+          </span>
+        </button>
+        {sheetCounts.map(([sheet, count]) => (
+          <button
+            key={sheet}
+            onClick={() => setSheetFilter(sheet)}
+            className={cn(
+              "text-xs px-2.5 py-1 rounded-full border transition-colors",
+              sheetFilter === sheet
+                ? "bg-burgundy text-white border-burgundy"
+                : "bg-background border-rule hover:border-burgundy/50"
+            )}
+            title={`${count} proceso${count === 1 ? "" : "s"} en la hoja ${sheet}`}
+          >
+            {sheet} <span className="text-[10px] opacity-70">({count})</span>
+          </button>
+        ))}
+      </div>
+
+      <table className="w-full text-sm">
+        <thead className="bg-background text-[11px] uppercase tracking-wider text-ink-soft">
+          <tr>
+            <th className="text-left px-4 py-2 w-24">Vigencia</th>
+            <th className="text-left px-4 py-2">Proceso</th>
+            <th className="text-left px-4 py-2">Notice UID</th>
+            <th className="text-left px-4 py-2 w-32">Hojas</th>
+            <th className="text-left px-4 py-2 w-20">SECOP</th>
+            <th className="text-right px-4 py-2 w-16"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {filtered.map(({ item: it, appearance: a }, rowIdx) => {
+            // When viewing a sheet, show the per-row vigencia/url/row
+            // from THAT appearance. When viewing all, show the
+            // aggregate (vigencias.join + sheets.join).
+            const vigencia = a ? a.vigencia : it.vigencias?.join(", ");
+            const sheetsLabel = a ? a.sheet : it.sheets?.join(", ");
+            const url = a ? a.url : it.url;
+            const key = a ? `${it.url}#${a.sheet}#${a.row}` : it.url;
+            return (
+              <tr
+                key={key}
+                className="border-t border-rule/60 hover:bg-background"
+              >
+                <td className="px-4 py-2 font-mono text-xs">
+                  {vigencia ? (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-burgundy/10 text-burgundy">
+                      {vigencia}
+                    </span>
+                  ) : (
+                    <span className="text-ink-soft/50">—</span>
+                  )}
+                </td>
+                <td className="px-4 py-2 font-mono text-xs">
+                  {it.process_id ? (
+                    <button
+                      onClick={() => onPickProcessId(it.process_id!)}
+                      className="text-burgundy hover:underline"
                     >
-                      Abrir <ExternalLink className="h-3 w-3" />
-                    </a>
-                  </td>
-                  <td className="px-4 py-2 text-right">
+                      {it.process_id}
+                    </button>
+                  ) : (
+                    <span className="text-ink-soft">URL personalizada</span>
+                  )}
+                  {a && (
+                    <span className="block text-[10px] text-ink-soft mt-0.5 italic">
+                      fila {a.row} de {a.sheet}
+                    </span>
+                  )}
+                </td>
+                <td className="px-4 py-2 font-mono text-xs text-ink-soft">
+                  {it.notice_uid ?? "—"}
+                </td>
+                <td className="px-4 py-2 text-[11px] text-ink-soft">
+                  {sheetsLabel ?? "—"}
+                  {!a &&
+                    it.appearances &&
+                    it.appearances.length > 1 && (
+                      <span className="block text-[10px] italic mt-0.5">
+                        {it.appearances.length} apariciones
+                      </span>
+                    )}
+                </td>
+                <td className="px-4 py-2">
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-burgundy hover:underline"
+                  >
+                    Abrir <ExternalLink className="h-3 w-3" />
+                  </a>
+                </td>
+                <td className="px-4 py-2 text-right">
+                  {!a && (
                     <button
                       onClick={() => handleRemove(it)}
                       disabled={busy}
@@ -247,13 +401,23 @@ export function WatchListPanel({
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-    </div>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+          {filtered.length === 0 && (
+            <tr>
+              <td
+                colSpan={6}
+                className="px-4 py-6 text-center text-xs text-ink-soft italic"
+              >
+                No hay procesos en esta hoja.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </>
   );
 }

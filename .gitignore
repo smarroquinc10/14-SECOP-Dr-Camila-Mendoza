@@ -62,3 +62,9 @@ detalles_test/
 AUDITORIA_*.md
 AUDITORIA_*.xlsx
 INVESTIGACION_*.md
+
+# Claude Code local settings (may include tokens)
+.claude/
+
+# TypeScript incremental build cache
+*.tsbuildinfo

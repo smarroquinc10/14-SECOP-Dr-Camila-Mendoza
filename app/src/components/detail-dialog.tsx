@@ -207,7 +207,10 @@ export function DetailDialog({ contractId, open, onOpenChange }: Props) {
                     if (value === null || value === undefined || value === "") return null;
                     return [field, label, value] as const;
                   })
-                  .filter((r): r is readonly [string, string, unknown] => r !== null);
+                  .filter(
+                    (r): r is readonly [string, string, NonNullable<unknown>] =>
+                      r !== null,
+                  );
                 if (!rows.length) return null;
                 return (
                   <section key={section.label}>

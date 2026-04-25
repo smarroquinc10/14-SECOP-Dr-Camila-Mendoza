@@ -123,10 +123,20 @@ export interface ModSummary {
   items: ModItem[];
 }
 
+export interface WatchedAppearance {
+  sheet: string;
+  vigencia: string | null;
+  row: number;
+  url: string;
+}
+
 export interface WatchedItem {
   url: string;
   process_id: string | null;
   notice_uid: string | null;
+  sheets: string[];
+  vigencias: string[];
+  appearances: WatchedAppearance[];
   added_at: string;
   note: string | null;
 }
@@ -166,18 +176,20 @@ export const api = {
   },
   watchImportFromExcel: (workbook?: string) =>
     post<{
-      added: number;
-      skipped_dupe: number;
+      added_new: number;
+      merged: number;
+      already_recorded: number;
       skipped_invalid: number;
       errors: string[];
-      total: number;
+      total_unique: number;
+      total_appearances: number;
       per_sheet: Record<
         string,
         {
           found: number;
-          added: number;
-          skipped_dupe: number;
-          skipped_invalid: number;
+          added_new: number;
+          merged: number;
+          already_recorded: number;
           no_link_col: number;
         }
       >;

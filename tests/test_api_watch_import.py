@@ -93,46 +93,71 @@ class TestWatchImportFromExcel:
         assert res.status_code == 200
         body = res.json()
 
-        # 4 unique SECOP URLs across the 3 sheets:
-        #   NTC.1111111 (sheets 1+2 → counts as 1)
+        # 4 unique SECOP processes across the 3 sheets:
+        #   NTC.1111111 (sheets 1+2 → 1 unique item, 2 appearances)
         #   NTC.2222222 (sheet 1)
         #   NTC.3333333 (sheet 2)
         #   NTC.4444444 (sheet 3 — row-4 headers)
-        assert body["added"] == 4
-        assert body["skipped_dupe"] == 1   # the second NTC.1111111
-        assert body["total"] == 4
+        assert body["added_new"] == 4
+        assert body["merged"] == 1  # the cross-sheet 1111111 second hit
+        assert body["total_unique"] == 4
+        # Total appearances = sum of every (sheet, row) hit = 5
+        assert body["total_appearances"] == 5
 
-    def test_per_sheet_counts(self, client, fixture_workbook):
+    def test_per_sheet_counts_match_excel(self, client, fixture_workbook):
+        """The CARDINAL test: per-sheet counts must equal what the Dra
+        sees if she opens that sheet in Excel."""
         body = client.post("/watch/import-from-excel",
                           json={"workbook": str(fixture_workbook)}).json()
         per_sheet = body["per_sheet"]
 
-        # Sheet 1: 2 SECOP URLs found (NTC.1111111 + NTC.2222222),
-        # both new. The non-SECOP google URL never reaches stats[found].
+        # Sheet "FEAB 2026" has 2 SECOP URLs (1111111 + 2222222), both
+        # new the first time. found=2 mirrors what the Dra sees.
         assert per_sheet["FEAB 2026"]["found"] == 2
-        assert per_sheet["FEAB 2026"]["added"] == 2
+        assert per_sheet["FEAB 2026"]["added_new"] == 2
 
-        # Sheet 2: 2 found (NTC.1111111 dup + NTC.3333333 new)
+        # Sheet "FEAB 2025" has 2 SECOP URLs (1111111 dup-of-2026 +
+        # 3333333 new). Found=2, but added_new=1 + merged=1.
         assert per_sheet["FEAB 2025"]["found"] == 2
-        assert per_sheet["FEAB 2025"]["added"] == 1
-        assert per_sheet["FEAB 2025"]["skipped_dupe"] == 1
+        assert per_sheet["FEAB 2025"]["added_new"] == 1
+        assert per_sheet["FEAB 2025"]["merged"] == 1
 
-        # Sheet 3: row-4 layout, 1 SECOP URL
         assert per_sheet["FEAB 2018-2021"]["found"] == 1
-        assert per_sheet["FEAB 2018-2021"]["added"] == 1
+        assert per_sheet["FEAB 2018-2021"]["added_new"] == 1
 
-    def test_running_twice_dedups_against_existing(
+    def test_filter_by_sheet_returns_excel_count(
+            self, client, fixture_workbook):
+        """If the Dra filters by 'FEAB 2026', she should see exactly the
+        2 processes that are in that sheet — including the cross-sheet
+        one (1111111) that ALSO appears on FEAB 2025."""
+        client.post("/watch/import-from-excel",
+                   json={"workbook": str(fixture_workbook)})
+        items = client.get("/watch").json()["items"]
+        on_2026 = [it for it in items if "FEAB 2026" in it.get("sheets", [])]
+        on_2025 = [it for it in items if "FEAB 2025" in it.get("sheets", [])]
+        on_2018 = [it for it in items
+                  if "FEAB 2018-2021" in it.get("sheets", [])]
+        # These match the Excel exactly: 2, 2, 1.
+        assert len(on_2026) == 2
+        assert len(on_2025) == 2
+        assert len(on_2018) == 1
+
+    def test_running_twice_is_idempotent(
             self, client, fixture_workbook):
         first = client.post("/watch/import-from-excel",
                            json={"workbook": str(fixture_workbook)}).json()
-        assert first["added"] == 4
+        assert first["added_new"] == 4
+        assert first["total_appearances"] == 5
 
         second = client.post("/watch/import-from-excel",
                             json={"workbook": str(fixture_workbook)}).json()
-        # All 5 SECOP URL hits dedup against the existing watch list
-        assert second["added"] == 0
-        assert second["skipped_dupe"] >= 4
-        assert second["total"] == 4
+        # No new items, no new appearances — every (sheet, row, url)
+        # already on file gets counted as `already_recorded`.
+        assert second["added_new"] == 0
+        assert second["merged"] == 0
+        assert second["already_recorded"] == 5
+        assert second["total_unique"] == 4
+        assert second["total_appearances"] == 5
 
     def test_missing_workbook_returns_404(self, client, tmp_path):
         res = client.post("/watch/import-from-excel",
@@ -141,21 +166,17 @@ class TestWatchImportFromExcel:
 
     def test_default_workbook_used_when_omitted(
             self, client, monkeypatch, tmp_path, fixture_workbook):
-        # Point the default at our fixture
         from secop_ii import api as api_module
         monkeypatch.setattr(api_module, "_DEFAULT_WORKBOOK",
                            str(fixture_workbook))
         res = client.post("/watch/import-from-excel", json={})
         assert res.status_code == 200
-        assert res.json()["added"] == 4
+        assert res.json()["added_new"] == 4
 
     def test_persists_to_watched_urls_json(
             self, client, fixture_workbook, monkeypatch, tmp_path):
-        from secop_ii import api as api_module
         client.post("/watch/import-from-excel",
                    json={"workbook": str(fixture_workbook)})
-
-        # Re-read the watch endpoint and confirm the items are there
         items = client.get("/watch").json()["items"]
         assert len(items) == 4
         pids = {it["process_id"] for it in items}
