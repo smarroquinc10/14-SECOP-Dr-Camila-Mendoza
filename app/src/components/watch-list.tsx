@@ -322,6 +322,7 @@ function FilteredWatchTable({
           <tr>
             <th className="text-left px-4 py-2 w-24">Vigencia</th>
             <th className="text-left px-4 py-2">Proceso</th>
+            <th className="text-left px-4 py-2 w-32">Estado API</th>
             <th className="text-left px-4 py-2">Notice UID</th>
             <th className="text-left px-4 py-2 w-32">Hojas</th>
             <th className="text-left px-4 py-2 w-20">SECOP</th>
@@ -329,7 +330,7 @@ function FilteredWatchTable({
           </tr>
         </thead>
         <tbody>
-          {filtered.map(({ item: it, appearance: a }, rowIdx) => {
+          {filtered.map(({ item: it, appearance: a }) => {
             // When viewing a sheet, show the per-row vigencia/url/row
             // from THAT appearance. When viewing all, show the
             // aggregate (vigencias.join + sheets.join).
@@ -337,6 +338,35 @@ function FilteredWatchTable({
             const sheetsLabel = a ? a.sheet : it.sheets?.join(", ");
             const url = a ? a.url : it.url;
             const key = a ? `${it.url}#${a.sheet}#${a.row}` : it.url;
+
+            // Derive verify status from the persisted schema.
+            // The Dra needs to know at a glance which processes the
+            // public datos.gov.co API can confirm and which require
+            // manual review (e.g. portal scrape, archived NTCs).
+            const isDraft =
+              !!it.process_id &&
+              (it.process_id.startsWith("CO1.REQ.") ||
+                it.process_id.startsWith("CO1.BDOS."));
+            let statusLabel: string;
+            let statusClass: string;
+            let statusTitle: string;
+            if (it.notice_uid) {
+              statusLabel = "Verificado";
+              statusClass =
+                "bg-emerald-50 text-emerald-700 border-emerald-200";
+              statusTitle = `notice_uid resuelto contra datos.gov.co (${it.notice_uid})`;
+            } else if (isDraft) {
+              statusLabel = "Borrador SECOP";
+              statusClass = "bg-sky-50 text-sky-700 border-sky-200";
+              statusTitle =
+                "Proceso en preparación / borrador interno (CO1.REQ.* o CO1.BDOS.*). Aún no tiene notice_uid publicado.";
+            } else {
+              statusLabel = "No en API público";
+              statusClass = "bg-amber-50 text-amber-800 border-amber-200";
+              statusTitle =
+                "El process_id no aparece en datos.gov.co (proceso archivado o publicado solo en el portal web). Validá manualmente abriendo el link.";
+            }
+
             return (
               <tr
                 key={key}
@@ -367,6 +397,17 @@ function FilteredWatchTable({
                       fila {a.row} de {a.sheet}
                     </span>
                   )}
+                </td>
+                <td className="px-4 py-2">
+                  <span
+                    className={cn(
+                      "inline-flex items-center px-2 py-0.5 rounded text-[11px] border",
+                      statusClass
+                    )}
+                    title={statusTitle}
+                  >
+                    {statusLabel}
+                  </span>
                 </td>
                 <td className="px-4 py-2 font-mono text-xs text-ink-soft">
                   {it.notice_uid ?? "—"}
@@ -409,7 +450,7 @@ function FilteredWatchTable({
           {filtered.length === 0 && (
             <tr>
               <td
-                colSpan={6}
+                colSpan={7}
                 className="px-4 py-6 text-center text-xs text-ink-soft italic"
               >
                 No hay procesos en esta hoja.
