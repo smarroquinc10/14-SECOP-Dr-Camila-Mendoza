@@ -357,31 +357,38 @@ export default function HomePage() {
               />
             </div>
             <div>
-              <span className="eyebrow mb-2 block">Filtros rápidos</span>
+              <span className="eyebrow mb-2 block">Qué procesos mostrar</span>
               <div className="flex flex-col gap-2">
                 <label
-                  className="flex items-center gap-2 text-sm text-ink cursor-pointer h-9 px-3 border border-input rounded-md hover:bg-background"
-                  title="Solo procesos que la Dra registró en el Excel (491 únicos)"
+                  className="flex items-start gap-2 text-sm text-ink cursor-pointer px-3 py-2 border border-input rounded-md hover:bg-background"
+                  title="ON: solo los procesos que la Dra tiene registrados en el Excel (491 únicos). OFF: agrega también los contratos firmados que están en SECOP pero no aparecen en el Excel."
                 >
                   <input
                     type="checkbox"
                     checked={onlyMine}
                     onChange={(e) => setOnlyMine(e.target.checked)}
-                    className="rounded border-border"
+                    className="rounded border-border mt-0.5"
                   />
-                  Solo los procesos del Excel
+                  <span className="flex flex-col">
+                    <span>Solo los procesos del Excel</span>
+                    <span className="text-[10px] text-ink-soft">
+                      {onlyMine
+                        ? "viendo tu lista (491 procesos)"
+                        : "viendo todos los contratos del FEAB en SECOP"}
+                    </span>
+                  </span>
                 </label>
                 <label
-                  className="flex items-center gap-2 text-sm text-ink cursor-pointer h-9 px-3 border border-input rounded-md hover:bg-background"
-                  title="Solo contratos cuyo estado es 'Modificado' o tienen días adicionados"
+                  className="flex items-start gap-2 text-sm text-ink cursor-pointer px-3 py-2 border border-input rounded-md hover:bg-background"
+                  title="Solo contratos con estado 'Modificado' o con días adicionados"
                 >
                   <input
                     type="checkbox"
                     checked={onlyMod}
                     onChange={(e) => setOnlyMod(e.target.checked)}
-                    className="rounded border-border"
+                    className="rounded border-border mt-0.5"
                   />
-                  Solo contratos modificados
+                  <span>Solo contratos modificados</span>
                 </label>
               </div>
             </div>
