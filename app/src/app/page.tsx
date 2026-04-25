@@ -10,15 +10,21 @@ import {
   ShieldAlert,
 } from "lucide-react";
 
-import { ContractsTable } from "@/components/contracts-table";
 import { DetailDialog } from "@/components/detail-dialog";
 import { ModsPanel } from "@/components/mods-panel";
 import { SlicerPills } from "@/components/slicer-pills";
-import { WatchListPanel } from "@/components/watch-list";
-import { Badge } from "@/components/ui/badge";
+import {
+  buildUnifiedRows,
+  UnifiedTable,
+  type UnifiedRow,
+} from "@/components/unified-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { api, type Contract } from "@/lib/api";
+import {
+  api,
+  type Contract,
+  type WatchedItem,
+} from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 const TODAY = new Intl.DateTimeFormat("es-CO", {
@@ -33,9 +39,15 @@ export default function HomePage() {
   const { data: feab } = useSWR("feab", api.feab, { refreshInterval: 0 });
   const {
     data: contracts = [],
-    isLoading,
+    isLoading: loadingContracts,
     mutate: reloadContracts,
   } = useSWR<Contract[]>("contracts:500", () => api.contracts(500));
+  const {
+    data: watch,
+    isLoading: loadingWatch,
+    mutate: reloadWatch,
+  } = useSWR<{ items: WatchedItem[] }>("watch", api.watchList);
+  const watched = watch?.items ?? [];
   const { data: audit } = useSWR("audit:50", () => api.auditLog(50), {
     refreshInterval: 60_000,
   });
@@ -45,80 +57,110 @@ export default function HomePage() {
     { refreshInterval: 30_000 }
   );
 
+  const isLoading = loadingContracts || loadingWatch;
+
   // ---- Filter state -----------------------------------------------------
   const [search, setSearch] = React.useState("");
   const [years, setYears] = React.useState<string[]>([]);
   const [states, setStates] = React.useState<string[]>([]);
   const [modalities, setModalities] = React.useState<string[]>([]);
+  const [sheets, setSheets] = React.useState<string[]>([]);
   const [onlyMod, setOnlyMod] = React.useState(false);
+  const [onlyMine, setOnlyMine] = React.useState(true);
   const [selected, setSelected] = React.useState<string | null>(null);
 
-  // Distinct option sets (computed once per data change)
+  // ---- Build unified rows + busy/feedback state for actions -----------
+  const allRows = React.useMemo(
+    () => buildUnifiedRows(watched, contracts),
+    [watched, contracts]
+  );
+
+  const totalAppearances = React.useMemo(
+    () => watched.reduce((acc, w) => acc + (w.appearances?.length ?? 0), 0),
+    [watched]
+  );
+
+  // ---- Distinct option sets for slicers --------------------------------
   const yearOptions = React.useMemo(
     () =>
       Array.from(
         new Set(
-          contracts
-            .map((c) => (c.fecha_de_firma ?? "").slice(0, 4))
+          allRows
+            .flatMap((r) => [
+              ...r.vigencias,
+              r.fecha_firma ? r.fecha_firma.slice(0, 4) : "",
+            ])
             .filter(Boolean)
         )
       ).sort((a, b) => b.localeCompare(a)),
-    [contracts]
+    [allRows]
   );
   const stateOptions = React.useMemo(
     () =>
-      Array.from(
-        new Set(contracts.map((c) => c.estado_contrato ?? "").filter(Boolean))
-      ).sort(),
-    [contracts]
+      Array.from(new Set(allRows.map((r) => r.estado ?? "").filter(Boolean))).sort(),
+    [allRows]
   );
   const modalityOptions = React.useMemo(
     () =>
       Array.from(
-        new Set(
-          contracts.map((c) => c.modalidad_de_contratacion ?? "").filter(Boolean)
-        )
+        new Set(allRows.map((r) => r.modalidad ?? "").filter(Boolean))
       ).sort(),
-    [contracts]
+    [allRows]
   );
+  const sheetOptions = React.useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const r of allRows) {
+      for (const s of r.sheets) counts.set(s, (counts.get(s) ?? 0) + 1);
+    }
+    return Array.from(counts.keys()).sort((a, b) => b.localeCompare(a));
+  }, [allRows]);
 
   // ---- Apply filters ----------------------------------------------------
   const filtered = React.useMemo(() => {
-    return contracts.filter((c) => {
+    return allRows.filter((r) => {
+      if (onlyMine && !r.watched) return false;
       if (search) {
         const blob = (
-          (c.id_contrato ?? "") +
-          (c.objeto_del_contrato ?? "") +
-          (c.proveedor_adjudicado ?? "") +
-          (c.referencia_del_contrato ?? "")
+          (r.id_contrato ?? "") +
+          (r.process_id ?? "") +
+          (r.objeto ?? "") +
+          (r.proveedor ?? "")
         ).toLowerCase();
         if (!blob.includes(search.toLowerCase())) return false;
       }
-      if (years.length && !years.includes((c.fecha_de_firma ?? "").slice(0, 4)))
+      if (years.length) {
+        const rowYears = new Set([
+          ...r.vigencias,
+          r.fecha_firma ? r.fecha_firma.slice(0, 4) : "",
+        ]);
+        if (!years.some((y) => rowYears.has(y))) return false;
+      }
+      if (states.length && !states.includes(r.estado ?? "")) return false;
+      if (modalities.length && !modalities.includes(r.modalidad ?? ""))
         return false;
-      if (states.length && !states.includes(c.estado_contrato ?? "")) return false;
-      if (
-        modalities.length &&
-        !modalities.includes(c.modalidad_de_contratacion ?? "")
-      )
+      if (sheets.length && !sheets.some((s) => r.sheets.includes(s)))
         return false;
-      if (onlyMod && !(c.estado_contrato ?? "").toLowerCase().includes("modific"))
+      if (onlyMod && !(r.estado ?? "").toLowerCase().includes("modific"))
         return false;
       return true;
     });
-  }, [contracts, search, years, states, modalities, onlyMod]);
+  }, [allRows, search, years, states, modalities, sheets, onlyMod, onlyMine]);
 
-  // ---- Refresh ---------------------------------------------------------
+  // ---- Refresh + watch CRUD --------------------------------------------
   const [refreshing, setRefreshing] = React.useState(false);
+  const [busy, setBusy] = React.useState(false);
+  const [feedback, setFeedback] = React.useState<{
+    kind: "ok" | "info" | "error";
+    text: string;
+  } | null>(null);
   const [lastRefresh, setLastRefresh] = React.useState<string | null>(null);
 
   async function handleRefresh() {
     setRefreshing(true);
     try {
       await api.refresh();
-      // Wait a beat for the SECOP fetch to complete, then reload.
       await new Promise((r) => setTimeout(r, 2500));
-      await Promise.all([reloadContracts(), reloadUltActualiz()]);
+      await Promise.all([reloadContracts(), reloadUltActualiz(), reloadWatch()]);
       setLastRefresh(new Date().toISOString());
     } catch (err) {
       console.error(err);
@@ -127,20 +169,89 @@ export default function HomePage() {
     }
   }
 
+  async function handleAdd(url: string) {
+    setBusy(true);
+    setFeedback(null);
+    try {
+      const res = await api.watchAdd(url);
+      setFeedback(
+        res.added
+          ? { kind: "ok", text: `Agregado · ${res.item.process_id ?? "URL aceptada"}` }
+          : { kind: "info", text: res.reason ?? "Esa URL ya estaba en tu lista." }
+      );
+      await reloadWatch();
+    } catch (err) {
+      setFeedback({
+        kind: "error",
+        text: err instanceof Error ? err.message : "No pude agregar la URL.",
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleUpdate(oldUrl: string, newUrl: string) {
+    setBusy(true);
+    setFeedback(null);
+    try {
+      const res = await api.watchUpdate(oldUrl, newUrl);
+      setFeedback({
+        kind: "ok",
+        text: `Link actualizado · ${res.item.process_id ?? "URL aceptada"}`,
+      });
+      await reloadWatch();
+    } catch (err) {
+      setFeedback({
+        kind: "error",
+        text: err instanceof Error ? err.message : "No pude actualizar.",
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleRemove(url: string) {
+    setBusy(true);
+    setFeedback(null);
+    try {
+      await api.watchRemove(url);
+      setFeedback({ kind: "ok", text: "URL retirada de tu lista." });
+      await reloadWatch();
+    } catch (err) {
+      setFeedback({
+        kind: "error",
+        text: err instanceof Error ? err.message : "No pude eliminar.",
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function fmtTimestamp(iso: string | null | undefined): string {
     if (!iso) return "—";
     const d = new Date(iso);
     return new Intl.DateTimeFormat("es-CO", {
-      day: "2-digit", month: "short", year: "numeric",
-      hour: "2-digit", minute: "2-digit",
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     }).format(d);
   }
 
+  const pageFiltersActive =
+    !!search ||
+    years.length > 0 ||
+    states.length > 0 ||
+    modalities.length > 0 ||
+    sheets.length > 0 ||
+    onlyMod;
+
   return (
     <main className="min-h-screen bg-background">
-      {/* Top rule + header */}
       <div className="h-1 bg-secondary" />
 
+      {/* Header */}
       <div className="mx-auto max-w-7xl px-8 pt-12 pb-6">
         <div className="eyebrow mb-3">Auditoría · Gestión Contractual</div>
         <h1 className="serif text-5xl font-bold tracking-tight text-ink mb-2">
@@ -173,7 +284,8 @@ export default function HomePage() {
         {feab && (
           <div className="text-sm text-ink-soft">
             <span className="font-mono">{feab.contratos}</span> contratos ·{" "}
-            <span className="font-mono">{feab.procesos}</span> procesos
+            <span className="font-mono">{feab.procesos}</span> procesos ·{" "}
+            <span className="font-mono">{watched.length}</span> en seguimiento
           </div>
         )}
 
@@ -218,45 +330,50 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* Modificatorios summary panel — always at the top so the Dra
-          sees the most recent modification across her portfolio at a glance. */}
+      {/* Modificatorios summary panel — context first */}
       <div className="mx-auto max-w-7xl px-8 mb-6">
         <ModsPanel onPickContract={(id) => setSelected(id)} />
       </div>
 
-      {/* Mis procesos seguidos — manual watch list (add/remove SECOP URLs) */}
-      <div className="mx-auto max-w-7xl px-8 mb-6">
-        <WatchListPanel onPickProcessId={(id) => setSelected(id)} />
-      </div>
-
-      {/* Filters card */}
+      {/* FILTROS arriba — antes de la tabla unificada */}
       <div className="mx-auto max-w-7xl px-8 mb-6">
         <div className="border border-rule rounded-lg bg-surface p-5 space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2">
               <span className="eyebrow mb-2 block">Buscar</span>
               <Input
-                placeholder="Proveedor, objeto, código de contrato…"
+                placeholder="Proveedor, objeto, código…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
             <div>
               <span className="eyebrow mb-2 block">Marcas</span>
-              <label className="flex items-center gap-2 text-sm text-ink cursor-pointer h-10 px-3 border border-input rounded-md hover:bg-background">
-                <input
-                  type="checkbox"
-                  checked={onlyMod}
-                  onChange={(e) => setOnlyMod(e.target.checked)}
-                  className="rounded border-border"
-                />
-                Solo modificados
-              </label>
+              <div className="flex flex-col gap-2">
+                <label className="flex items-center gap-2 text-sm text-ink cursor-pointer h-9 px-3 border border-input rounded-md hover:bg-background">
+                  <input
+                    type="checkbox"
+                    checked={onlyMine}
+                    onChange={(e) => setOnlyMine(e.target.checked)}
+                    className="rounded border-border"
+                  />
+                  Solo mis procesos seguidos
+                </label>
+                <label className="flex items-center gap-2 text-sm text-ink cursor-pointer h-9 px-3 border border-input rounded-md hover:bg-background">
+                  <input
+                    type="checkbox"
+                    checked={onlyMod}
+                    onChange={(e) => setOnlyMod(e.target.checked)}
+                    className="rounded border-border"
+                  />
+                  Solo modificados
+                </label>
+              </div>
             </div>
           </div>
 
           <SlicerPills
-            label="Año de firma"
+            label="Vigencia / Año de firma"
             options={yearOptions}
             selected={years}
             onChange={setYears}
@@ -273,42 +390,78 @@ export default function HomePage() {
             selected={modalities}
             onChange={setModalities}
           />
+          {sheetOptions.length > 0 && (
+            <SlicerPills
+              label="Hoja Excel (donde la Dra registró el proceso)"
+              options={sheetOptions}
+              selected={sheets}
+              onChange={setSheets}
+            />
+          )}
+
+          {pageFiltersActive && (
+            <div className="flex justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSearch("");
+                  setYears([]);
+                  setStates([]);
+                  setModalities([]);
+                  setSheets([]);
+                  setOnlyMod(false);
+                }}
+              >
+                Limpiar filtros
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Table */}
+      {feedback && (
+        <div className="mx-auto max-w-7xl px-8 mb-4">
+          <div
+            className={cn(
+              "text-sm px-4 py-2 rounded-md border",
+              feedback.kind === "ok" &&
+                "bg-emerald-50 text-emerald-700 border-emerald-200",
+              feedback.kind === "info" &&
+                "bg-amber-50 text-amber-800 border-amber-200",
+              feedback.kind === "error" &&
+                "bg-rose-50 text-rose-700 border-rose-200"
+            )}
+          >
+            {feedback.text}
+          </div>
+        </div>
+      )}
+
+      {/* TABLA UNIFICADA */}
       <div className="mx-auto max-w-7xl px-8 pb-12">
         <div className="flex items-baseline justify-between mb-4">
           <h2 className="serif text-2xl font-semibold text-ink">
-            Inventario de contratos
+            {onlyMine ? "Mis procesos seguidos" : "Inventario completo"}
           </h2>
           <span className="text-xs text-ink-soft">
-            {filtered.length} de {contracts.length} mostrados
+            {filtered.length} de {allRows.length} mostrados
           </span>
         </div>
 
         {isLoading ? (
           <div className="flex items-center gap-2 py-16 text-ink-soft">
-            <Loader2 className="h-5 w-5 animate-spin" /> Consultando SECOP II…
+            <Loader2 className="h-5 w-5 animate-spin" /> Cargando datos…
           </div>
         ) : (
-          <ContractsTable
-            data={filtered}
-            onRowClick={(c) => setSelected(c.id_contrato ?? null)}
-            pageFiltersActive={
-              !!search ||
-              years.length > 0 ||
-              states.length > 0 ||
-              modalities.length > 0 ||
-              onlyMod
-            }
-            onResetAll={() => {
-              setSearch("");
-              setYears([]);
-              setStates([]);
-              setModalities([]);
-              setOnlyMod(false);
-            }}
+          <UnifiedTable
+            rows={filtered}
+            onPick={(id) => setSelected(id)}
+            onAdd={handleAdd}
+            onUpdate={handleUpdate}
+            onRemove={handleRemove}
+            busy={busy}
+            totalAppearances={totalAppearances}
           />
         )}
       </div>
@@ -322,10 +475,12 @@ export default function HomePage() {
       {/* Footer */}
       <div className="rule mx-auto max-w-7xl my-8" />
       <div className="mx-auto max-w-7xl px-8 pb-12 text-center text-xs text-ink-soft">
-        <span className="serif font-medium text-burgundy">Dra Cami Contractual</span>{" "}
+        <span className="serif font-medium text-burgundy">
+          Dra Cami Contractual
+        </span>{" "}
         · Datos oficiales:{" "}
-        <code className="font-mono">datos.gov.co / SECOP II</code>{" "}
-        · {new Date().toISOString().slice(0, 10)}
+        <code className="font-mono">datos.gov.co / SECOP II</code> ·{" "}
+        {new Date().toISOString().slice(0, 10)}
         {lastRefresh && (
           <span className="ml-3 text-emerald-700">
             <CheckCircle2 className="inline h-3 w-3 mr-1" />

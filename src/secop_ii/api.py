@@ -270,34 +270,123 @@ async def list_contracts(
     return out
 
 
-@app.get("/contracts/{id_contrato}", response_model=ProcessDetail)
-async def contract_detail(id_contrato: str) -> ProcessDetail:
-    """Full payload for a single contract: every SECOP dataset that
-    references it, plus FEAB derivations + confidence + audit hash."""
+@app.get("/contracts/{id_or_pid}", response_model=ProcessDetail)
+async def contract_detail(id_or_pid: str) -> ProcessDetail:
+    """Full payload for a single process. Accepts ANY identifier the UI
+    might pass — id_contrato (CO1.PCCNTR.X), notice_uid (CO1.NTC.X),
+    process_id (CO1.PPI.X / CO1.REQ.X). Resolves to the contract(s)
+    when they exist; returns proceso-only payload (with the Dra's
+    observaciones) when there is no contract signed yet.
+
+    Mirror semantics: nothing is invented. If neither contracts nor
+    proceso resolve, returns 404 honestly.
+    """
     loop = asyncio.get_event_loop()
 
     def _fetch() -> ProcessDetail:
-        contratos = _client.query(
-            "jbjy-vk9h", where=f"id_contrato='{_esc(id_contrato)}'", limit=10,
-        )
-        if not contratos:
-            raise HTTPException(404, f"contrato {id_contrato} no encontrado")
-        c = contratos[0]
-        portfolio = str(c.get("proceso_de_compra") or "")
-        url_field = c.get("urlproceso")
-        if isinstance(url_field, dict):
-            url_field = url_field.get("url") or ""
-        url = str(url_field or "")
+        ident = id_or_pid.strip()
 
-        # Resolve the proceso (parent) — by URL parsing or portfolio
+        # 1) Try as id_contrato (PCCNTR) — direct contract row.
+        contratos = _client.query(
+            "jbjy-vk9h", where=f"id_contrato='{_esc(ident)}'", limit=10,
+        )
+        # 2) If no match, try as proceso_de_compra (NTC / REQ at contract level).
+        if not contratos:
+            contratos = _client.query(
+                "jbjy-vk9h",
+                where=f"proceso_de_compra='{_esc(ident)}'",
+                limit=10,
+            )
+
+        # 3) Look up the watch-list entry to get the original URL.
+        watch_url = None
+        for it in _load_watched():
+            if it.get("process_id") == ident or it.get("url") == ident \
+                    or it.get("notice_uid") == ident:
+                watch_url = it.get("url")
+                break
+
+        # 4) Determine the URL we'll use for parsing.
+        if contratos:
+            c0 = contratos[0]
+            url_field = c0.get("urlproceso")
+            if isinstance(url_field, dict):
+                url_field = url_field.get("url") or ""
+            url = str(url_field or "") or (watch_url or "")
+        else:
+            url = watch_url or ""
+
+        # 5) Resolve proceso (parent). Try the URL parser first;
+        # if that fails, use the identifier directly when it looks
+        # like a process_id. Drafts (CO1.REQ.*) often have the
+        # process info even without a contract.
         proceso = None
         notice_uid = None
         try:
-            ref = parse_secop_url(url)
-            proceso = _client.get_proceso(ref.process_id, url=url)
-            notice_uid = _client.resolve_notice_uid(ref.process_id, url=url)
+            if url:
+                ref = parse_secop_url(url)
+                proceso = _client.get_proceso(ref.process_id, url=url)
+                notice_uid = _client.resolve_notice_uid(
+                    ref.process_id, url=url
+                )
+            elif ident.startswith(("CO1.PPI.", "CO1.NTC.", "CO1.REQ.")):
+                # Best effort lookup by ID alone
+                proceso = _client.get_proceso(ident)
+                notice_uid = _client.resolve_notice_uid(ident)
         except InvalidSecopUrlError:
             pass
+        except Exception as exc:
+            log.warning("proceso resolve failed: %s", exc)
+
+        # 6) Honest 404: if NEITHER a contract NOR a proceso resolved,
+        # we have nothing meaningful to show. (Observaciones alone are
+        # not enough — they may belong to an archived/draft process.)
+        if not contratos and not proceso:
+            # Last resort: if Excel has notes for this id, return a
+            # minimal payload with just the observaciones — better
+            # than 404 because the Dra's manual record exists.
+            obs_raw = _observaciones_for(
+                process_id=ident, proceso_de_compra=ident,
+                notice_uid=ident, contract_id=ident, url=url or None,
+            )
+            if not obs_raw:
+                raise HTTPException(
+                    404,
+                    f"{ident} no se encuentra en SECOP API ni hay "
+                    "observaciones en el Excel. Validá manualmente "
+                    "abriendo el link.",
+                )
+            return ProcessDetail(
+                notice_uid=None,
+                process_id=ident,
+                proceso=None,
+                contratos=[],
+                adiciones_by_contrato={},
+                garantias_by_contrato={},
+                pagos_by_contrato={},
+                ejecucion_by_contrato={},
+                suspensiones_by_contrato={},
+                mods_proceso=[],
+                feab_fills={},
+                feab_confidence={},
+                feab_sources={},
+                needs_review=[],
+                issues=[
+                    "El proceso no aparece en el API público de "
+                    "datos.gov.co. Las observaciones de abajo vienen "
+                    "del Excel master de la Dra.",
+                ],
+                observaciones_dra=[ObservacionDra(**e) for e in obs_raw],
+                secop_hash="",
+                code_version=_CODE_VERSION,
+                fetched_at=datetime.now(timezone.utc).isoformat(
+                    timespec="seconds"
+                ),
+            )
+
+        # Normal path: contracts (or proceso-only if no contracts)
+        c = contratos[0] if contratos else {}
+        portfolio = str(c.get("proceso_de_compra") or "")
 
         # All sub-datasets, gracefully degrading on errors per dataset
         def _safe_call(fn, *args, **kw):
@@ -351,7 +440,7 @@ async def contract_detail(id_contrato: str) -> ProcessDetail:
 
         return ProcessDetail(
             notice_uid=notice_uid,
-            process_id=(proceso or {}).get("id_del_proceso", id_contrato),
+            process_id=(proceso or {}).get("id_del_proceso", ident),
             proceso=proceso,
             contratos=contratos,
             adiciones_by_contrato=adis,
