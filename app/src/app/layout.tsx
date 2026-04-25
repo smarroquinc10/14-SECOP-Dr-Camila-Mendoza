@@ -21,9 +21,10 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Dra Cami Contractual",
+  title: "Sistema de Seguimiento Contratos FEAB · Dra Cami",
   description:
-    "Espejo automático del SECOP II · Fondo Especial para la Administración de Bienes · Fiscalía General de la Nación",
+    "Sistema de Seguimiento de Contratos SECOP II · FEAB Fondo Especial para la Administración de Bienes · Fiscalía General de la Nación",
+  icons: { icon: "/feab-logo.png" },
 };
 
 export default function RootLayout({

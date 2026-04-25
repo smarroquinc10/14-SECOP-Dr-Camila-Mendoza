@@ -1,8 +1,8 @@
 {
-  "name": "feab-erp",
+  "name": "dra-cami-contractual",
   "version": "1.0.0",
   "private": true,
-  "description": "ERP de Contratación — FEAB. Tablero institucional para la Dra. María Camila Mendoza Zubiría.",
+  "description": "Sistema de Seguimiento Contratos FEAB · Dra Cami — espejo automático del SECOP II para la Jefe de Gestión Contractual del FEAB, Fiscalía General de la Nación.",
   "scripts": {
     "dev": "next dev --port 3000",
     "build": "next build",

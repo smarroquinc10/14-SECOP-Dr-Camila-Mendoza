@@ -32,6 +32,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
+import subprocess
+import sys
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from dataclasses import asdict
@@ -546,19 +549,9 @@ async def watch_list() -> dict[str, Any]:
     """
     items = _load_watched()
     for it in items:
-        # Identifiers from Excel (NOT facts — these are how the Dra
-        # references the contract: numero_contrato = CONTRATO-FEAB-X-Y).
-        try:
-            data = _excel_data_for(
-                process_id=it.get("process_id"),
-                notice_uid=it.get("notice_uid"),
-                contract_id=None,
-                url=it.get("url"),
-            )
-        except Exception:
-            data = None
-        it["numero_contrato_excel"] = (data or {}).get("numero_contrato")
-
+        # Cardinal rule: del Excel SOLO se toma vigencia + link. NUNCA
+        # numero_contrato — ese es de SECOP (`referencia_del_contrato`).
+        # Si SECOP no lo expone, la UI muestra "—" honesto.
         # The Dra's own annotations (modificatorios, prórrogas, etc.).
         try:
             obs_raw = _observaciones_for(
@@ -1685,6 +1678,299 @@ async def verify_endpoint() -> dict[str, Any]:
         }
 
     return await loop.run_in_executor(_executor, _verify)
+
+
+# ---- Portal scraper integration --------------------------------------------
+# Para los procesos que el API público (datos.gov.co Socrata) no expone, el
+# scraper ``scripts/scrape_portal.py`` baja el HTML de la página
+# OpportunityDetail del portal SECOP y lo persiste en
+# ``.cache/portal_opportunity.json``. Estos endpoints exponen ese cache a la
+# UI sin atarla al filesystem y permiten lanzar el scraper como subprocess.
+
+_PORTAL_CACHE = Path(".cache") / "portal_opportunity.json"
+_PORTAL_PROGRESS = Path(".cache") / "portal_progress.jsonl"
+_INTEGRADO_CACHE = Path(".cache") / "secop_integrado.json"
+
+
+def _read_integrado_cache() -> dict[str, Any]:
+    """Carga el cache de SECOP Integrado (rpmr-utcd) — espejo de la
+    API pública sin captcha. Generado por ``scripts/sync_secop_integrado.py``.
+    """
+    if not _INTEGRADO_CACHE.exists():
+        return {"by_notice_uid": {}, "by_pccntr": {}, "synced_at": None, "total_rows": 0}
+    try:
+        import json as _json
+        return _json.loads(_INTEGRADO_CACHE.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        log.warning("integrado cache ilegible: %s", exc)
+        return {"by_notice_uid": {}, "by_pccntr": {}, "synced_at": None, "total_rows": 0}
+
+
+@app.get("/contract-integrado/{key}")
+async def contract_integrado(key: str) -> dict[str, Any]:
+    """Espejo del proceso en el dataset SECOP Integrado (rpmr-utcd).
+
+    ``key`` puede ser ``CO1.NTC.X`` (notice_uid) o ``CO1.PCCNTR.X``
+    (numero_del_contrato). El endpoint busca primero por notice_uid;
+    si no encuentra y la key es PCCNTR, busca por numero_del_contrato.
+
+    Devuelve los campos crudos del API público — NUNCA derivados del
+    Excel. Si el proceso no está en el dataset, ``available: false``.
+    """
+    cache = _read_integrado_cache()
+    by_uid = cache.get("by_notice_uid") or {}
+    by_pccntr = cache.get("by_pccntr") or {}
+
+    row = by_uid.get(key) or by_pccntr.get(key)
+    if not row:
+        return {
+            "available": False,
+            "key": key,
+            "synced_at": cache.get("synced_at"),
+        }
+    return {
+        "available": True,
+        "key": key,
+        "fields": row,
+        "synced_at": cache.get("synced_at"),
+        "source": "rpmr-utcd (SECOP Integrado)",
+    }
+
+
+@app.get("/integrado-bulk")
+async def integrado_bulk() -> dict[str, Any]:
+    """Mapa completo del cache Integrado para la tabla principal.
+
+    Devuelve un dict con campos summary por cada proceso, indexado tanto
+    por notice_uid como por numero_del_contrato (CO1.PCCNTR.X). Esto le
+    permite a la UI enriquecer CADA fila de la tabla sin un round-trip
+    por proceso.
+
+    Solo se exponen campos summary (no las 22 columnas completas del
+    dataset) — para eso está ``/contract-integrado/{key}``.
+    """
+    cache = _read_integrado_cache()
+    by_uid_full = cache.get("by_notice_uid") or {}
+    by_pccntr_full = cache.get("by_pccntr") or {}
+
+    SUMMARY_FIELDS = (
+        "estado_del_proceso",
+        "valor_contrato",
+        "nom_raz_social_contratista",
+        "fecha_de_firma_del_contrato",
+        "fecha_inicio_ejecuci_n",
+        "fecha_fin_ejecuci_n",
+        "modalidad_de_contrataci_n",
+        "tipo_de_contrato",
+        "numero_del_contrato",
+        "numero_de_proceso",
+        "objeto_a_contratar",
+        "url_contrato",
+    )
+
+    def _summary(row: dict[str, Any]) -> dict[str, Any]:
+        return {k: row.get(k) for k in SUMMARY_FIELDS if row.get(k)}
+
+    return {
+        "synced_at": cache.get("synced_at"),
+        "total_rows": cache.get("total_rows", 0),
+        "source": cache.get("source"),
+        "nit": cache.get("nit"),
+        "by_notice_uid": {k: _summary(v) for k, v in by_uid_full.items()},
+        "by_pccntr": {k: _summary(v) for k, v in by_pccntr_full.items()},
+    }
+
+
+@app.get("/integrado-summary")
+async def integrado_summary() -> dict[str, Any]:
+    """Resumen del cache Integrado: cuántos procesos, cuándo se sincronizó."""
+    cache = _read_integrado_cache()
+    return {
+        "synced_at": cache.get("synced_at"),
+        "total_rows": cache.get("total_rows", 0),
+        "by_notice_uid_count": len(cache.get("by_notice_uid") or {}),
+        "by_pccntr_count": len(cache.get("by_pccntr") or {}),
+        "source": cache.get("source"),
+        "nit": cache.get("nit"),
+    }
+
+
+@app.post("/integrado-sync")
+async def integrado_sync(payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Lanza ``scripts/sync_secop_integrado.py`` como subprocess."""
+    payload = payload or {}
+    cmd = [sys.executable, "scripts/sync_secop_integrado.py"]
+    if payload.get("nit"):
+        cmd += ["--nit", str(payload["nit"])]
+    proc = subprocess.Popen(
+        cmd,
+        cwd=str(Path(__file__).resolve().parent.parent.parent),
+        env={**os.environ, "PYTHONUNBUFFERED": "1"},
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    return {"started": True, "pid": proc.pid, "cmd": " ".join(cmd)}
+
+
+def _read_portal_cache() -> dict[str, Any]:
+    """Carga el cache compartido del scraper (idempotente, tolerante a corrupción)."""
+    if not _PORTAL_CACHE.exists():
+        return {}
+    try:
+        import json as _json
+        return _json.loads(_PORTAL_CACHE.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        log.warning("portal cache ilegible: %s", exc)
+        return {}
+
+
+@app.get("/contract-portal/{notice_uid}")
+async def contract_portal(notice_uid: str) -> dict[str, Any]:
+    """Snapshot del portal SECOP para ``notice_uid`` (CO1.NTC.X).
+
+    Devuelve TODOS los labels capturados (``all_labels``) además de los
+    curados (``fields``), porque cada proceso del SECOP expone campos
+    diferentes — la UI debe poder mostrar los específicos del proceso
+    abierto sin asumir un esquema fijo.
+
+    Si el proceso aún no fue scrapeado, retorna ``{available: false}``
+    para que la UI ofrezca el botón "Leer del portal".
+    """
+    cache = _read_portal_cache()
+    raw = cache.get(notice_uid)
+    if not raw:
+        return {"available": False, "notice_uid": notice_uid}
+
+    # `all_labels` es el dump completo (label_normalizado → valor). Lo
+    # exponemos tal cual y dejamos que el frontend ordene/filtre.
+    return {
+        "available": True,
+        "notice_uid": notice_uid,
+        "fields": raw.get("fields", {}),
+        "all_labels": raw.get("all_labels", {}),
+        "documents": raw.get("documents", []),
+        "notificaciones": raw.get("notificaciones", []),
+        "status": raw.get("status"),
+        "missing_fields": raw.get("missing_fields", []),
+        "scraped_at": raw.get("scraped_at"),
+        "raw_length": raw.get("raw_length"),
+    }
+
+
+@app.get("/portal-progress")
+async def portal_progress() -> dict[str, Any]:
+    """Estado de la corrida actual del scraper del portal.
+
+    Igual que ``/verify-progress`` pero leyendo
+    ``.cache/portal_progress.jsonl`` (que escribe ``scrape_portal.py``).
+    """
+    if not _PORTAL_PROGRESS.exists():
+        return {
+            "running": False, "processed": 0, "total": 0,
+            "percent": 0.0, "started_at": None,
+            "eta_seconds": None, "last_event": None,
+        }
+
+    import json as _json
+    import time as _time
+    stat = _PORTAL_PROGRESS.stat()
+    age = _time.time() - stat.st_mtime
+    total = 0
+    processed = 0
+    started_at: str | None = None
+    last_event: dict[str, Any] | None = None
+    started_mono: float | None = None
+
+    try:
+        with _PORTAL_PROGRESS.open("r", encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    payload = _json.loads(line)
+                except ValueError:
+                    continue
+                last_event = payload
+                ev = payload.get("event")
+                if ev == "start":
+                    total = int(payload.get("total") or 0)
+                    started_at = payload.get("started_at")
+                elif ev == "item":
+                    processed += 1
+                elif ev == "done":
+                    return {
+                        "running": False,
+                        "processed": int(payload.get("total", processed)),
+                        "total": int(payload.get("total", total)),
+                        "percent": 100.0,
+                        "started_at": started_at,
+                        "elapsed_seconds": payload.get("elapsed_seconds"),
+                        "eta_seconds": 0,
+                        "ok": payload.get("ok"),
+                        "partial": payload.get("partial"),
+                        "errored": payload.get("errored"),
+                        "last_event": payload,
+                    }
+    except OSError as exc:
+        log.warning("portal-progress read failed: %s", exc)
+
+    # ETA: usar avg time per processed item × pendientes
+    eta = None
+    elapsed = None
+    if started_at:
+        try:
+            from datetime import datetime as _dt
+            started_dt = _dt.fromisoformat(started_at.replace("Z", "+00:00"))
+            elapsed = max(0.0, _time.time() - started_dt.timestamp())
+            if processed > 0 and total > processed:
+                avg = elapsed / processed
+                eta = avg * (total - processed)
+        except (ValueError, TypeError):
+            pass
+
+    running = age < 90 and processed < total and total > 0
+    return {
+        "running": running,
+        "processed": processed,
+        "total": total,
+        "percent": round(100 * processed / total, 1) if total else 0.0,
+        "started_at": started_at,
+        "elapsed_seconds": round(elapsed, 1) if elapsed else None,
+        "last_update_age_seconds": round(age, 1),
+        "eta_seconds": round(eta, 1) if eta else None,
+        "last_event": last_event,
+    }
+
+
+@app.post("/portal-scrape")
+async def portal_scrape(payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Lanza ``scripts/scrape_portal.py`` como subprocess.
+
+    Body opcional:
+      ``{"uid": "CO1.NTC.X"}``     → un solo proceso (forzado)
+      ``{"limit": 10}``             → primeros N pendientes
+      ``{"force": true}``           → re-scrapea aunque haya cache OK
+      (sin body)                    → todos los pendientes
+    """
+    payload = payload or {}
+    cmd = [sys.executable, "scripts/scrape_portal.py"]
+    if payload.get("uid"):
+        cmd += ["--uid", str(payload["uid"])]
+    if payload.get("limit") is not None:
+        cmd += ["--limit", str(int(payload["limit"]))]
+    if payload.get("force"):
+        cmd.append("--force")
+
+    # Reset progress: la próxima corrida pisa el archivo (el script lo hace).
+    proc = subprocess.Popen(
+        cmd,
+        cwd=str(Path(__file__).resolve().parent.parent.parent),
+        env={**os.environ, "PYTHONUNBUFFERED": "1"},
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    return {"started": True, "pid": proc.pid, "cmd": " ".join(cmd)}
 
 
 # ---- Helpers ----------------------------------------------------------------

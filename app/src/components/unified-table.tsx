@@ -2,23 +2,69 @@
 
 import * as React from "react";
 import {
+  type Column,
+  type ColumnDef,
+  type ColumnFiltersState,
+  type SortingState,
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getSortedRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   Check,
   ExternalLink,
+  Filter,
   Pencil,
   Plus,
+  RotateCcw,
   Trash2,
   X as XIcon,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
-  api,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   type Contract,
+  type IntegradoSummary,
   type WatchedAppearance,
   type WatchedItem,
 } from "@/lib/api";
-import { cn, fmtDate, moneyCO } from "@/lib/utils";
+
+/** Mapa del bulk SECOP Integrado pasado por la página. */
+export interface IntegradoBulk {
+  by_notice_uid: Record<string, IntegradoSummary>;
+  by_pccntr: Record<string, IntegradoSummary>;
+  synced_at?: string | null;
+}
+import { cn, moneyCO } from "@/lib/utils";
+
+/* ──────────────── Excel-style filter types ─────────────────────────── */
+
+type FilterVal =
+  | { kind: "text"; q: string }
+  | { kind: "set"; values: string[] };
+
+function matchFilter(fv: FilterVal | undefined, value: string): boolean {
+  if (!fv) return true;
+  if (fv.kind === "set") {
+    if (fv.values.length === 0) return true;
+    return fv.values.includes(value);
+  }
+  const q = (fv.q ?? "").toLowerCase();
+  if (!q) return true;
+  return value.toLowerCase().includes(q);
+}
 
 /**
  * Unified row: one entry that may come from the watch list, the SECOP
@@ -58,6 +104,14 @@ export interface UnifiedRow {
 
   // Verify status taxonomy (derived)
   verifyStatus: "verificado" | "contrato_firmado" | "borrador" | "no_en_api";
+
+  // De qué fuente vienen los campos visibles (estado/valor/proveedor/...).
+  // - "api"        → SECOP API estandar (p6dx-8zbt / jbjy-vk9h vía /contracts)
+  // - "integrado"  → SECOP Integrado (rpmr-utcd) — fallback sin captcha
+  // - null         → ninguna fuente tuvo match; las celdas muestran "—" honesto
+  // La UI muestra un badge claro cuando data_source === "integrado"
+  // para que la procedencia NUNCA quede ambigua.
+  data_source: "api" | "integrado" | null;
 }
 
 
@@ -129,6 +183,7 @@ function classifyStatus(
 export function buildUnifiedRows(
   watched: WatchedItem[],
   contracts: Contract[],
+  integradoBulk?: IntegradoBulk | null,
 ): UnifiedRow[] {
   // Index contracts by every key we may match against
   const byIdContrato = new Map<string, Contract>();
@@ -139,6 +194,22 @@ export function buildUnifiedRows(
       byProceso.set(c.proceso_de_compra as string, c);
     }
   }
+
+  // Lookup helper: SECOP Integrado por notice_uid o PCCNTR. Devuelve
+  // un summary inmutable (no se modifica) o null si no hay match.
+  const lookupIntegrado = (
+    notice_uid: string | null,
+    process_id: string | null,
+  ): IntegradoSummary | null => {
+    if (!integradoBulk) return null;
+    if (notice_uid && integradoBulk.by_notice_uid[notice_uid]) {
+      return integradoBulk.by_notice_uid[notice_uid];
+    }
+    if (process_id && integradoBulk.by_pccntr[process_id]) {
+      return integradoBulk.by_pccntr[process_id];
+    }
+    return null;
+  };
 
   const usedContracts = new Set<string>();
   const rows: UnifiedRow[] = [];
@@ -154,8 +225,24 @@ export function buildUnifiedRows(
     }
     if (contract?.id_contrato) usedContracts.add(contract.id_contrato);
 
-    // Truth = SECOP. Excel only contributes vigencia + link. Every
-    // other field comes EXCLUSIVELY from the contracts/process dataset.
+    // Cascada de fuentes (regla cardinal: cada celda con su procedencia clara):
+    //   1. SECOP API contracts dataset  →  data_source = "api"
+    //   2. SECOP Integrado (rpmr-utcd)  →  data_source = "integrado"
+    //   3. ninguna  →  data_source = null, todos los campos null, UI muestra "—"
+    //
+    // NO se mergean: si el API tiene contract, ese gana entero; si no
+    // hay contract pero hay Integrado, Integrado llena; si no hay nada,
+    // todo queda null. La Dra siempre sabe de qué fuente viene cada fila.
+    const integ =
+      contract == null
+        ? lookupIntegrado(w.notice_uid, w.process_id)
+        : null;
+    const dataSource: UnifiedRow["data_source"] = contract
+      ? "api"
+      : integ
+      ? "integrado"
+      : null;
+
     const apiDias = parseInt(String(contract?.dias_adicionados ?? "0"), 10);
     const dias =
       Number.isFinite(apiDias) && apiDias > 0 ? apiDias : null;
@@ -164,10 +251,18 @@ export function buildUnifiedRows(
         .trim()
         .toLowerCase() === "si";
 
-    const valorRaw = contract?.valor_del_contrato;
-    const valor = valorRaw != null && valorRaw !== ""
-      ? Number(valorRaw)
-      : null;
+    // Valor: del API si hay contrato, sino del Integrado (si hay).
+    let valor: number | null = null;
+    if (contract) {
+      const valorRaw = contract.valor_del_contrato;
+      if (valorRaw != null && valorRaw !== "") {
+        const n = Number(valorRaw);
+        if (Number.isFinite(n)) valor = n;
+      }
+    } else if (integ?.valor_contrato) {
+      const n = Number(integ.valor_contrato);
+      if (Number.isFinite(n)) valor = n;
+    }
 
     // Notas: notas computadas del SECOP API (cuando hay contrato).
     // Si no hay contrato y la Dra escribió una observación con palabras
@@ -185,24 +280,39 @@ export function buildUnifiedRows(
     rows.push({
       key: contract?.id_contrato ?? w.url ?? `${w.process_id ?? "noid"}-${rows.length}`,
       process_id: w.process_id,
-      id_contrato: contract?.id_contrato ?? null,
+      id_contrato: contract?.id_contrato ?? integ?.numero_del_contrato ?? null,
       notice_uid: w.notice_uid ?? contract?.proceso_de_compra ?? null,
-      // numero_contrato: prefer SECOP's referencia_del_contrato; if
-      // not available (process not in API), fall back to the Dra's
-      // own numbering from her Excel (CONTRATO-FEAB-X-Y).
+      // numero_contrato: del API si hay (referencia_del_contrato); del
+      // Integrado si no hay (numero_de_proceso = CONTRATO-FEAB-XXXX o
+      // numero_del_contrato = CO1.PCCNTR.X). NUNCA del Excel.
       numero_contrato:
         (contract?.referencia_del_contrato as string) ??
-        w.numero_contrato_excel ??
+        integ?.numero_de_proceso ??
+        integ?.numero_del_contrato ??
         null,
       url: w.url,
-      objeto: (contract?.objeto_del_contrato as string) ?? null,
-      proveedor: (contract?.proveedor_adjudicado as string) ?? null,
-      valor: valor != null && Number.isFinite(valor) ? valor : null,
+      objeto:
+        (contract?.objeto_del_contrato as string) ??
+        integ?.objeto_a_contratar ??
+        null,
+      proveedor:
+        (contract?.proveedor_adjudicado as string) ??
+        integ?.nom_raz_social_contratista ??
+        null,
+      valor,
       fecha_firma:
-        ((contract?.fecha_de_firma as string) ?? "").slice(0, 10) || null,
-      estado: (contract?.estado_contrato as string) ?? null,
+        ((contract?.fecha_de_firma as string) ??
+          integ?.fecha_de_firma_del_contrato ??
+          "")
+          .slice(0, 10) || null,
+      estado:
+        (contract?.estado_contrato as string) ??
+        integ?.estado_del_proceso ??
+        null,
       modalidad:
-        (contract?.modalidad_de_contratacion as string) ?? null,
+        (contract?.modalidad_de_contratacion as string) ??
+        integ?.modalidad_de_contrataci_n ??
+        null,
       notas,
       dias_adicionados: dias,
       liquidado: liq,
@@ -213,6 +323,7 @@ export function buildUnifiedRows(
       watched: true,
       watch_url: w.url,
       verifyStatus: classifyStatus(w, contract),
+      data_source: dataSource,
     });
   }
 
@@ -247,6 +358,7 @@ export function buildUnifiedRows(
       watched: false,
       watch_url: null,
       verifyStatus: "contrato_firmado",
+      data_source: "api",
     });
   }
 
@@ -297,6 +409,17 @@ function StatusBadge({ status }: { status: UnifiedRow["verifyStatus"] }) {
 }
 
 
+/* ─────────────────────────────────────────────────────────────────────
+ * Unified table with Excel-style per-column sort + filter.
+ *
+ * The Dra works in Excel daily — she expects each column header to have
+ * a sort arrow and a filter dropdown with checkbox-list of values, just
+ * like Excel's auto-filter. We use TanStack Table for the data engine
+ * and a custom `ColumnHeader` for the popover UX.
+ *
+ * The cell renderers below are the SAME visual layout as before — only
+ * the engine wiring (sort/filter) changed.
+ * ──────────────────────────────────────────────────────────────────── */
 export function UnifiedTable({
   rows,
   onPick,
@@ -317,6 +440,388 @@ export function UnifiedTable({
   const [addUrl, setAddUrl] = React.useState("");
   const [editingKey, setEditingKey] = React.useState<string | null>(null);
   const [editDraft, setEditDraft] = React.useState("");
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    [],
+  );
+
+  // Each column has TWO accessors:
+  //   - `accessorFn`  → what TanStack uses for sort + the default filter
+  //   - `meta.filterAccessor` (optional) → what the popover lists as
+  //     unique values / what the custom filterFn matches on. We use this
+  //     when the SORT key differs from the FILTER key (e.g. Valor/Firma
+  //     sorts numerically by valor but filters by the year of firma).
+  const columns = React.useMemo<ColumnDef<UnifiedRow>[]>(
+    () => [
+      {
+        id: "contrato",
+        header: "Contrato",
+        accessorFn: (r) =>
+          r.numero_contrato ?? r.id_contrato ?? r.process_id ?? "",
+        cell: ({ row }) => {
+          const r = row.original;
+          const vigencia =
+            r.vigencias.join(", ") ||
+            (r.fecha_firma ? r.fecha_firma.slice(0, 4) : null);
+          return (
+            <div className="font-mono text-[11px]">
+              {vigencia && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-burgundy/10 text-burgundy mb-1 text-[10px]">
+                  {vigencia}
+                </span>
+              )}
+              <button
+                onClick={() =>
+                  onPick(r.id_contrato ?? r.process_id ?? r.key)
+                }
+                className="block text-burgundy hover:underline text-left break-all"
+              >
+                {r.numero_contrato ?? r.id_contrato ?? r.process_id ?? "—"}
+              </button>
+              {r.numero_contrato && (r.id_contrato ?? r.process_id) && (
+                <span className="block text-[10px] text-ink-soft mt-0.5 break-all">
+                  {r.id_contrato ?? r.process_id}
+                </span>
+              )}
+              {r.notice_uid && (
+                <span className="block text-[10px] text-ink-soft/70 mt-0.5 break-all">
+                  {r.notice_uid}
+                </span>
+              )}
+              {r.appearances_count > 1 && (
+                <span className="block text-[10px] text-ink-soft italic mt-0.5">
+                  {r.appearances_count} apariciones
+                </span>
+              )}
+            </div>
+          );
+        },
+        size: 200,
+      },
+      {
+        id: "objeto",
+        header: "Objeto / Proveedor",
+        accessorFn: (r) => r.proveedor ?? r.objeto ?? "",
+        meta: {
+          filterAccessor: (r: UnifiedRow) => r.proveedor ?? "",
+        },
+        cell: ({ row }) => {
+          const r = row.original;
+          return (
+            <div className="text-xs">
+              <div className="text-ink line-clamp-3">
+                {r.objeto ?? (
+                  <span className="text-ink-soft italic">
+                    (sin contrato firmado)
+                  </span>
+                )}
+              </div>
+              {r.proveedor && (
+                <div className="text-[11px] text-ink-soft mt-1 truncate">
+                  {r.proveedor}
+                </div>
+              )}
+            </div>
+          );
+        },
+      },
+      {
+        id: "valor",
+        header: "Valor / Firma",
+        accessorFn: (r) => r.valor ?? 0,
+        sortingFn: (a, b) => (a.original.valor ?? 0) - (b.original.valor ?? 0),
+        meta: {
+          // Filter "Valor/Firma" by the YEAR of fecha_firma — much more
+          // useful than filtering by exact value.
+          filterAccessor: (r: UnifiedRow) =>
+            r.fecha_firma ? r.fecha_firma.slice(0, 4) : "",
+        },
+        filterFn: (row, _id, fv) => {
+          const year = row.original.fecha_firma?.slice(0, 4) ?? "";
+          return matchFilter(fv as FilterVal, year);
+        },
+        cell: ({ row }) => {
+          const r = row.original;
+          return (
+            <div className="text-right">
+              <div className="font-mono text-xs text-ink">
+                {r.valor != null ? moneyCO.format(r.valor) : "—"}
+              </div>
+              <div className="font-mono text-[10px] text-ink-soft mt-0.5">
+                {r.fecha_firma ?? "—"}
+              </div>
+            </div>
+          );
+        },
+        size: 140,
+      },
+      {
+        id: "estado",
+        header: "Estado",
+        accessorFn: (r) => r.estado ?? "",
+        cell: ({ row }) => {
+          const r = row.original;
+          return (
+            <div className="text-xs">
+              {r.estado ? (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-stone-100 text-ink whitespace-nowrap text-[10px]">
+                  {r.estado}
+                </span>
+              ) : (
+                <span className="text-ink-soft/50 text-[10px]">—</span>
+              )}
+              {r.liquidado && (
+                <div className="text-[10px] text-ink-soft italic mt-1">
+                  Liquidado
+                </div>
+              )}
+            </div>
+          );
+        },
+        size: 130,
+      },
+      {
+        id: "modificatorios",
+        header: "Modificatorios",
+        accessorFn: (r) => {
+          const isMod =
+            /modific/i.test(r.estado ?? "") ||
+            (r.dias_adicionados != null && r.dias_adicionados > 0);
+          return isMod ? "Modificado" : "Sin modificatorios";
+        },
+        cell: ({ row }) => {
+          const r = row.original;
+          const isMod =
+            /modific/i.test(r.estado ?? "") ||
+            (r.dias_adicionados != null && r.dias_adicionados > 0);
+          return (
+            <div className="text-[11px]">
+              {isMod ? (
+                <div>
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 text-[10px] whitespace-nowrap">
+                    Modificado
+                  </span>
+                  {r.dias_adicionados && r.dias_adicionados > 0 && (
+                    <span className="block font-mono text-[10px] text-ink-soft mt-1">
+                      +{r.dias_adicionados} días
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <span className="text-ink-soft/50 text-[10px]">
+                  Sin modificatorios
+                </span>
+              )}
+              {r.notas && (
+                <div className="text-[10px] text-ink-soft italic mt-1 line-clamp-2">
+                  {r.notas}
+                </div>
+              )}
+            </div>
+          );
+        },
+        size: 170,
+      },
+      {
+        id: "origen",
+        header: "Origen",
+        accessorFn: (r) => r.verifyStatus,
+        meta: {
+          // Show human-friendly labels in the filter list.
+          filterAccessor: (r: UnifiedRow) => statusLabel(r.verifyStatus),
+        },
+        filterFn: (row, _id, fv) =>
+          matchFilter(fv as FilterVal, statusLabel(row.original.verifyStatus)),
+        cell: ({ row }) => {
+          const r = row.original;
+          return (
+            <div className="text-[10px]">
+              <StatusBadge status={r.verifyStatus} />
+              {r.data_source === "integrado" && (
+                <div
+                  className="mt-1 inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-medium"
+                  title="Datos del dataset SECOP Integrado (rpmr-utcd) — fuente pública sin captcha. La API estándar (p6dx-8zbt/jbjy-vk9h) no expone este proceso."
+                >
+                  vía Integrado
+                </div>
+              )}
+              <div className="text-ink-soft mt-1 truncate">
+                {r.sheets.length > 0 ? (
+                  r.sheets.join(", ")
+                ) : (
+                  <span className="italic">solo SECOP</span>
+                )}
+              </div>
+            </div>
+          );
+        },
+        size: 150,
+      },
+      {
+        id: "acciones",
+        header: "Acciones",
+        enableSorting: false,
+        enableColumnFilter: false,
+        cell: ({ row }) => {
+          const r = row.original;
+          const isEditing = editingKey === r.key;
+          if (isEditing) {
+            return (
+              <div className="flex items-center justify-end gap-1">
+                <Input
+                  autoFocus
+                  value={editDraft}
+                  onChange={(e) => setEditDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") setEditingKey(null);
+                    if (
+                      e.key === "Enter" &&
+                      editDraft.trim() &&
+                      r.watch_url
+                    ) {
+                      onUpdate(r.watch_url, editDraft.trim()).then(() =>
+                        setEditingKey(null),
+                      );
+                    }
+                  }}
+                  className="h-7 text-[11px] w-56"
+                  placeholder="Nueva URL SECOP…"
+                />
+                <button
+                  onClick={() => {
+                    if (editDraft.trim() && r.watch_url) {
+                      onUpdate(r.watch_url, editDraft.trim()).then(() =>
+                        setEditingKey(null),
+                      );
+                    }
+                  }}
+                  disabled={busy || !editDraft.trim()}
+                  className="inline-flex items-center justify-center h-7 w-7 rounded text-emerald-700 hover:bg-emerald-50 disabled:opacity-50"
+                  title="Guardar"
+                >
+                  <Check className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setEditingKey(null)}
+                  className="inline-flex items-center justify-center h-7 w-7 rounded text-ink-soft hover:bg-stone-100"
+                  title="Cancelar"
+                >
+                  <XIcon className="h-4 w-4" />
+                </button>
+              </div>
+            );
+          }
+          return (
+            <div className="flex items-center justify-end gap-1">
+              {r.url && (
+                <a
+                  href={r.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 px-2 h-7 rounded text-[11px] text-burgundy hover:bg-burgundy/10 border border-transparent hover:border-burgundy/30"
+                  title="Abrir el link del proceso en el portal SECOP II"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  Abrir
+                </a>
+              )}
+              {r.watched && r.watch_url && (
+                <>
+                  <button
+                    onClick={() => {
+                      setEditingKey(r.key);
+                      setEditDraft(r.watch_url ?? "");
+                    }}
+                    disabled={busy}
+                    className="inline-flex items-center gap-1 px-2 h-7 rounded text-[11px] text-burgundy hover:bg-burgundy/10 border border-transparent hover:border-burgundy/30 disabled:opacity-50"
+                    title="Corregir el link del proceso si está mal"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    Editar
+                  </button>
+                  <button
+                    onClick={() => r.watch_url && onRemove(r.watch_url)}
+                    disabled={busy}
+                    className="inline-flex items-center gap-1 px-2 h-7 rounded text-[11px] text-rose-700 hover:bg-rose-50 border border-transparent hover:border-rose-300 disabled:opacity-50"
+                    title="Quitar este proceso de tu lista"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Quitar
+                  </button>
+                </>
+              )}
+            </div>
+          );
+        },
+        size: 220,
+      },
+    ],
+    [editingKey, editDraft, busy, onPick, onUpdate, onRemove],
+  );
+
+  const table = useReactTable({
+    data: rows,
+    columns,
+    state: { sorting, columnFilters },
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    enableColumnFilters: true,
+    defaultColumn: {
+      filterFn: (row, colId, filterValue) =>
+        matchFilter(
+          filterValue as FilterVal,
+          String(row.getValue(colId) ?? ""),
+        ),
+    },
+  });
+
+  // Build the unique-values list per column from each column's
+  // filterAccessor (or accessorFn fallback). Capped at 200 distinct
+  // values per column so the popover stays performant.
+  const uniqueValuesByCol = React.useMemo(() => {
+    const m: Record<string, string[]> = {};
+    for (const c of columns) {
+      const id = c.id;
+      if (!id) continue;
+      const colMeta = c.meta as
+        | { filterAccessor?: (r: UnifiedRow) => string }
+        | undefined;
+      const accessor =
+        colMeta?.filterAccessor ??
+        (("accessorFn" in c &&
+          typeof (c as { accessorFn?: unknown }).accessorFn === "function"
+          ? (r: UnifiedRow) =>
+              String(
+                (
+                  c as {
+                    accessorFn: (r: UnifiedRow, i: number) => unknown;
+                  }
+                ).accessorFn(r, 0) ?? "",
+              )
+          : () => ""));
+      const set = new Set<string>();
+      for (const r of rows) {
+        const v = String(accessor(r) ?? "").trim();
+        if (v && v !== "—" && v !== "0") set.add(v);
+        if (set.size > 200) break;
+      }
+      m[id] = Array.from(set).sort();
+    }
+    return m;
+  }, [rows, columns]);
+
+  const hasActiveTableFilters =
+    columnFilters.length > 0 || sorting.length > 0;
+
+  function resetFormat() {
+    setSorting([]);
+    setColumnFilters([]);
+  }
+
+  const visibleCount = table.getRowModel().rows.length;
 
   return (
     <div className="border border-rule rounded-lg bg-surface overflow-hidden">
@@ -345,7 +850,9 @@ export function UnifiedTable({
             disabled={busy}
           />
           <Button
-            onClick={() => addUrl.trim() && onAdd(addUrl.trim()).then(() => setAddUrl(""))}
+            onClick={() =>
+              addUrl.trim() && onAdd(addUrl.trim()).then(() => setAddUrl(""))
+            }
             disabled={busy || !addUrl.trim()}
             className="gap-2"
           >
@@ -355,235 +862,239 @@ export function UnifiedTable({
         </div>
       </div>
 
+      {hasActiveTableFilters && (
+        <div className="flex items-center justify-between px-4 py-2 bg-amber-50 border-b border-amber-200 text-xs">
+          <span className="text-amber-800">
+            <Filter className="h-3 w-3 inline mr-1" />
+            Tabla con filtros u ordenamiento personalizado en columnas
+          </span>
+          <button
+            onClick={resetFormat}
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-600 text-white hover:bg-amber-700 text-xs font-medium"
+          >
+            <RotateCcw className="h-3 w-3" />
+            Restablecer formato
+          </button>
+        </div>
+      )}
+
       {rows.length === 0 ? (
         <div className="px-5 py-12 text-center text-xs text-ink-soft italic">
           No hay procesos que coincidan con los filtros.
         </div>
       ) : (
-        <table className="w-full text-sm table-fixed">
-          <thead className="bg-background text-[11px] uppercase tracking-wider text-ink-soft">
-            <tr>
-              <th className="text-left px-3 py-2 w-[18%]">Contrato</th>
-              <th className="text-left px-3 py-2">Objeto / Proveedor</th>
-              <th className="text-right px-3 py-2 w-[12%]">Valor / Firma</th>
-              <th className="text-left px-3 py-2 w-[12%]">Estado</th>
-              <th className="text-left px-3 py-2 w-[15%]">Modificatorios</th>
-              <th className="text-left px-3 py-2 w-[12%]">Origen</th>
-              <th className="text-right px-3 py-2 w-[12%]">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => {
-              const isEditing = editingKey === r.key;
-              const vigencia = r.vigencias.join(", ") ||
-                (r.fecha_firma ? r.fecha_firma.slice(0, 4) : null);
-              return (
-                <tr
-                  key={r.key}
-                  className="border-t border-rule/60 hover:bg-background align-top"
-                >
-                  <td className="px-3 py-2 font-mono text-[11px]">
-                    {vigencia && (
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-burgundy/10 text-burgundy mb-1 text-[10px]">
-                        {vigencia}
-                      </span>
-                    )}
-                    <button
-                      onClick={() =>
-                        onPick(r.id_contrato ?? r.process_id ?? r.key)
-                      }
-                      className="block text-burgundy hover:underline text-left break-all"
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-background text-[11px] uppercase tracking-wider text-ink-soft">
+              {table.getHeaderGroups().map((hg) => (
+                <tr key={hg.id}>
+                  {hg.headers.map((h) => (
+                    <th
+                      key={h.id}
+                      style={{ width: h.column.columnDef.size }}
+                      className="text-left px-3 py-2 align-top"
                     >
-                      {r.numero_contrato ??
-                        r.id_contrato ??
-                        r.process_id ??
-                        "—"}
-                    </button>
-                    {r.numero_contrato &&
-                      (r.id_contrato ?? r.process_id) && (
-                        <span className="block text-[10px] text-ink-soft mt-0.5 break-all">
-                          {r.id_contrato ?? r.process_id}
-                        </span>
+                      {h.isPlaceholder ? null : (
+                        <ColumnHeader
+                          title={String(h.column.columnDef.header)}
+                          column={h.column}
+                          uniqueValues={
+                            uniqueValuesByCol[h.column.id] ?? []
+                          }
+                        />
                       )}
-                    {r.notice_uid && (
-                      <span className="block text-[10px] text-ink-soft/70 mt-0.5 break-all">
-                        {r.notice_uid}
-                      </span>
-                    )}
-                    {r.appearances_count > 1 && (
-                      <span className="block text-[10px] text-ink-soft italic mt-0.5">
-                        {r.appearances_count} apariciones
-                      </span>
-                    )}
+                    </th>
+                  ))}
+                </tr>
+              ))}
+            </thead>
+            <tbody>
+              {visibleCount === 0 ? (
+                <tr>
+                  <td
+                    colSpan={columns.length}
+                    className="text-center p-12 text-ink-soft italic"
+                  >
+                    Sin resultados con los filtros actuales.
                   </td>
-                  <td className="px-3 py-2 text-xs">
-                    <div className="text-ink line-clamp-3">
-                      {r.objeto ?? (
-                        <span className="text-ink-soft italic">
-                          (sin contrato firmado)
-                        </span>
-                      )}
-                    </div>
-                    {r.proveedor && (
-                      <div className="text-[11px] text-ink-soft mt-1 truncate">
-                        {r.proveedor}
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    <div className="font-mono text-xs text-ink">
-                      {r.valor != null ? moneyCO.format(r.valor) : "—"}
-                    </div>
-                    <div className="font-mono text-[10px] text-ink-soft mt-0.5">
-                      {r.fecha_firma ?? "—"}
-                    </div>
-                  </td>
-                  <td className="px-3 py-2 text-xs">
-                    {r.estado ? (
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-stone-100 text-ink whitespace-nowrap text-[10px]">
-                        {r.estado}
-                      </span>
-                    ) : (
-                      <span className="text-ink-soft/50 text-[10px]">—</span>
-                    )}
-                    {r.liquidado && (
-                      <div className="text-[10px] text-ink-soft italic mt-1">
-                        Liquidado
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 text-[11px]">
-                    {(() => {
-                      const isModificado =
-                        /modific/i.test(r.estado ?? "") ||
-                        (r.dias_adicionados != null &&
-                          r.dias_adicionados > 0);
-                      if (isModificado) {
-                        return (
-                          <div>
-                            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 text-[10px] whitespace-nowrap">
-                              Modificado
-                            </span>
-                            {r.dias_adicionados &&
-                              r.dias_adicionados > 0 && (
-                                <span className="block font-mono text-[10px] text-ink-soft mt-1">
-                                  +{r.dias_adicionados} días
-                                </span>
-                              )}
-                          </div>
-                        );
-                      }
-                      return (
-                        <span className="text-ink-soft/50 text-[10px]">
-                          Sin modificatorios
-                        </span>
-                      );
-                    })()}
-                    {r.notas && (
-                      <div className="text-[10px] text-ink-soft italic mt-1 line-clamp-2">
-                        {r.notas}
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 text-[10px]">
-                    <StatusBadge status={r.verifyStatus} />
-                    <div className="text-ink-soft mt-1 truncate">
-                      {r.sheets.length > 0 ? (
-                        r.sheets.join(", ")
-                      ) : (
-                        <span className="italic">solo SECOP</span>
-                      )}
-                    </div>
-                  </td>
-                    <td className="px-3 py-2 text-right">
-                      {isEditing ? (
-                        <div className="flex items-center justify-end gap-1">
-                          <Input
-                            autoFocus
-                            value={editDraft}
-                            onChange={(e) => setEditDraft(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Escape") setEditingKey(null);
-                              if (e.key === "Enter" && editDraft.trim() && r.watch_url) {
-                                onUpdate(r.watch_url, editDraft.trim()).then(() =>
-                                  setEditingKey(null),
-                                );
-                              }
-                            }}
-                            className="h-7 text-[11px] w-56"
-                            placeholder="Nueva URL SECOP…"
-                          />
-                          <button
-                            onClick={() => {
-                              if (editDraft.trim() && r.watch_url) {
-                                onUpdate(r.watch_url, editDraft.trim()).then(() =>
-                                  setEditingKey(null),
-                                );
-                              }
-                            }}
-                            disabled={busy || !editDraft.trim()}
-                            className="inline-flex items-center justify-center h-7 w-7 rounded text-emerald-700 hover:bg-emerald-50 disabled:opacity-50"
-                            title="Guardar"
-                          >
-                            <Check className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => setEditingKey(null)}
-                            className="inline-flex items-center justify-center h-7 w-7 rounded text-ink-soft hover:bg-stone-100"
-                            title="Cancelar"
-                          >
-                            <XIcon className="h-4 w-4" />
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-end gap-1">
-                          {r.url && (
-                            <a
-                              href={r.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex items-center gap-1 px-2 h-7 rounded text-[11px] text-burgundy hover:bg-burgundy/10 border border-transparent hover:border-burgundy/30"
-                              title="Abrir el link del proceso en el portal SECOP II"
-                            >
-                              <ExternalLink className="h-3.5 w-3.5" />
-                              Abrir
-                            </a>
-                          )}
-                          {r.watched && r.watch_url && (
-                            <>
-                              <button
-                                onClick={() => {
-                                  setEditingKey(r.key);
-                                  setEditDraft(r.watch_url ?? "");
-                                }}
-                                disabled={busy}
-                                className="inline-flex items-center gap-1 px-2 h-7 rounded text-[11px] text-burgundy hover:bg-burgundy/10 border border-transparent hover:border-burgundy/30 disabled:opacity-50"
-                                title="Corregir el link del proceso si está mal"
-                              >
-                                <Pencil className="h-3.5 w-3.5" />
-                                Editar
-                              </button>
-                              <button
-                                onClick={() =>
-                                  r.watch_url && onRemove(r.watch_url)
-                                }
-                                disabled={busy}
-                                className="inline-flex items-center gap-1 px-2 h-7 rounded text-[11px] text-rose-700 hover:bg-rose-50 border border-transparent hover:border-rose-300 disabled:opacity-50"
-                                title="Quitar este proceso de tu lista"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                                Quitar
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      )}
-                    </td>
+                </tr>
+              ) : (
+                table.getRowModel().rows.map((row) => (
+                  <tr
+                    key={row.id}
+                    className="border-t border-rule/60 hover:bg-background align-top"
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <td key={cell.id} className="px-3 py-2 align-top">
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext(),
+                        )}
+                      </td>
+                    ))}
                   </tr>
-                );
-              })}
+                ))
+              )}
             </tbody>
           </table>
+        </div>
+      )}
+
+      <div className="px-4 py-2.5 text-xs text-ink-soft border-t border-rule bg-background">
+        {visibleCount} de {rows.length} procesos · click cualquier fila para
+        ver detalle completo
+      </div>
+    </div>
+  );
+}
+
+
+/** Human-friendly label for a verifyStatus — used by the Origen column
+ *  filter so the popover lists "Contrato firmado" instead of the raw
+ *  enum value "contrato_firmado". */
+function statusLabel(s: UnifiedRow["verifyStatus"]): string {
+  switch (s) {
+    case "contrato_firmado": return "Contrato firmado";
+    case "verificado":       return "Proceso verificado";
+    case "borrador":         return "Borrador SECOP";
+    case "no_en_api":        return "No en API público";
+  }
+}
+
+
+/** Excel-style filter header for one column.
+ *
+ * - Click on the title → toggle sort asc/desc/none
+ * - Click on the funnel icon → opens a popover with:
+ *   - Search box
+ *   - Checkbox list of unique values (multi-select)
+ *   - Limpiar button
+ *
+ * The popover closes on outside-click thanks to Radix Popover, so the
+ * Dra doesn't have to chase a stuck dropdown. */
+function ColumnHeader({
+  title,
+  column,
+  uniqueValues,
+}: {
+  title: string;
+  column: Column<UnifiedRow, unknown>;
+  uniqueValues: string[];
+}) {
+  const filterValue = column.getFilterValue() as FilterVal | undefined;
+  const isActive =
+    !!filterValue &&
+    ((filterValue.kind === "set" && filterValue.values.length > 0) ||
+      (filterValue.kind === "text" && filterValue.q.length > 0));
+  const sort = column.getIsSorted();
+  const canFilter = column.getCanFilter();
+  const canSort = column.getCanSort();
+
+  const [search, setSearch] = React.useState("");
+  const selected = filterValue?.kind === "set" ? filterValue.values : [];
+
+  const filteredValues = uniqueValues.filter((v) =>
+    v.toLowerCase().includes(search.toLowerCase()),
+  );
+
+  function toggleValue(v: string) {
+    const cur = filterValue?.kind === "set" ? filterValue.values : [];
+    const next = cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v];
+    column.setFilterValue({ kind: "set", values: next });
+  }
+
+  function selectAll() {
+    column.setFilterValue({ kind: "set", values: filteredValues });
+  }
+
+  function clearAll() {
+    column.setFilterValue(undefined);
+    setSearch("");
+  }
+
+  return (
+    <div className="flex items-center gap-1 group">
+      {canSort ? (
+        <button
+          onClick={() => column.toggleSorting(sort === "asc")}
+          className="inline-flex items-center gap-1 hover:text-ink"
+          title="Ordenar"
+        >
+          {title}
+          {sort === "asc" ? (
+            <ArrowUp className="h-3 w-3 opacity-90" />
+          ) : sort === "desc" ? (
+            <ArrowDown className="h-3 w-3 opacity-90" />
+          ) : (
+            <ArrowUpDown className="h-3 w-3 opacity-60" />
+          )}
+        </button>
+      ) : (
+        <span>{title}</span>
+      )}
+      {canFilter && (
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              className={cn(
+                "inline-flex items-center justify-center h-5 w-5 rounded transition-colors",
+                isActive
+                  ? "bg-burgundy/15 text-burgundy ring-1 ring-burgundy/30"
+                  : "text-ink-soft hover:bg-stone-200 hover:text-ink",
+              )}
+              title="Filtrar columna (estilo Excel)"
+            >
+              <Filter className="h-3.5 w-3.5" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-72 p-3">
+            <Input
+              placeholder="Buscar valor…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-8 text-xs"
+            />
+            <div className="flex items-center justify-between mt-2 mb-1 px-1">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-soft">
+                {filteredValues.length} valores
+              </span>
+              <button
+                onClick={selectAll}
+                className="text-[11px] uppercase tracking-wider text-burgundy hover:underline"
+              >
+                Seleccionar todos
+              </button>
+            </div>
+            <div className="max-h-64 overflow-y-auto border border-rule rounded">
+              {filteredValues.length === 0 ? (
+                <div className="px-3 py-6 text-xs italic text-ink-soft text-center">
+                  Sin valores
+                </div>
+              ) : (
+                filteredValues.map((v) => (
+                  <label
+                    key={v}
+                    className="flex items-center gap-2 px-2 py-1.5 hover:bg-surface cursor-pointer text-xs"
+                  >
+                    <Checkbox
+                      checked={selected.includes(v)}
+                      onCheckedChange={() => toggleValue(v)}
+                    />
+                    <span className="truncate text-ink">{v}</span>
+                  </label>
+                ))
+              )}
+            </div>
+            <div className="flex justify-between mt-3 pt-2 border-t border-rule">
+              <Button variant="ghost" size="sm" onClick={clearAll}>
+                Limpiar
+              </Button>
+              <span className="text-[10px] text-ink-soft self-center">
+                {selected.length} seleccionados
+              </span>
+            </div>
+          </PopoverContent>
+        </Popover>
       )}
     </div>
   );

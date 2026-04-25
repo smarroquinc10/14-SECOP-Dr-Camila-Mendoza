@@ -109,6 +109,12 @@ dependencies = [
     "plyer>=2.1",
     "winotify>=1.1",
 
+    # ---- Native window wrapper (no browser chrome) ----
+    "pywebview>=5.0",
+
+    # ---- MCP server (Model Context Protocol — for Claude integration) ----
+    "mcp[cli]>=1.0",
+
     # ---- Crypto / security ----
     "cryptography>=42",
 
@@ -122,6 +128,9 @@ dependencies = [
     "beautifulsoup4>=4.12",
     "lxml>=5",
     "browser-cookie3>=0.20",
+
+    # ---- Whisper local for captcha audio (free, MIT, no API key) ----
+    "faster-whisper>=1.0",
 ]
 
 [project.optional-dependencies]

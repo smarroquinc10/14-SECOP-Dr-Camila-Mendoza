@@ -44,11 +44,18 @@ if errorlevel 1 (
 
 set PYTHONPATH=src
 
+REM --- Asegurar pywebview (ventana nativa) ---
+"%PYEXE%" -c "import webview" >nul 2>nul
+if errorlevel 1 (
+    echo Instalando ventana nativa pywebview ^(primera vez, ~30s^)...
+    "%PYEXE%" -m pip install --quiet pywebview
+)
+
 echo.
-echo Abriendo Dra Cami Contractual en tu navegador...
-echo (No cierres esta ventana mientras uses el programa.)
+echo Abriendo Sistema de Seguimiento Contratos FEAB - Dra Cami...
+echo (Se abrira como ventana propia. No cierres esta consola.)
 echo.
 
-"%PYEXE%" -m secop_ii.launcher_pro
+"%PYEXE%" -m secop_ii.launcher_window
 
 pause

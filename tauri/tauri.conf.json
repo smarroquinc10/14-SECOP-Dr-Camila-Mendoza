@@ -1,0 +1,50 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Dra Cami Contractual",
+  "version": "1.0.0",
+  "identifier": "co.gov.fiscalia.feab.dra-cami",
+  "build": {
+    "beforeBuildCommand": "cd ../app && npm run build",
+    "beforeDevCommand": "cd ../app && npm run dev",
+    "devUrl": "http://localhost:3000",
+    "frontendDist": "../app/out"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Sistema de Seguimiento Contratos FEAB · Dra Cami",
+        "width": 1400,
+        "height": 900,
+        "minWidth": 900,
+        "minHeight": 600,
+        "resizable": true,
+        "center": true,
+        "fullscreen": false,
+        "decorations": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["msi", "nsis"],
+    "icon": [
+      "icons/icon.ico"
+    ],
+    "resources": [],
+    "externalBin": [
+      "binaries/dra-cami-api"
+    ],
+    "copyright": "© FEAB · Fiscalía General de la Nación",
+    "category": "Business",
+    "shortDescription": "Espejo automático del SECOP II para FEAB.",
+    "longDescription": "Sistema institucional de seguimiento contractual del Fondo Especial para la Administración de Bienes (FEAB), Fiscalía General de la Nación. Espejo del SECOP II en tiempo real, con audit-log inmutable y lectura directa del portal cuando la API pública no expone un proceso.",
+    "windows": {
+      "wix": {
+        "language": "es-CO"
+      }
+    }
+  }
+}

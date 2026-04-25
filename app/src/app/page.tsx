@@ -4,6 +4,8 @@ import * as React from "react";
 import useSWR from "swr";
 import {
   CheckCircle2,
+  Database,
+  Globe,
   Loader2,
   RefreshCcw,
   ShieldCheck,
@@ -66,6 +68,24 @@ export default function HomePage() {
     { refreshInterval: 3_000 }
   );
 
+  // Portal scrape progress: poll igual que verify-progress pero para el
+  // scraper del portal SECOP (community.secop.gov.co). Cada item toma
+  // ~30-55s (Chrome visible + captcha amortizado), por eso refresh 5s.
+  const { data: portalProgress, mutate: reloadPortalProgress } = useSWR(
+    "portal-progress",
+    api.portalProgress,
+    { refreshInterval: 5_000 }
+  );
+
+  // SECOP Integrado bulk: enriquece la tabla principal con los procesos
+  // que el API estándar no expone, SIN captcha. Recargamos cada 5 min
+  // (el dataset rpmr-utcd no cambia más rápido que eso).
+  const { data: integradoBulk, mutate: reloadIntegradoBulk } = useSWR(
+    "integrado-bulk",
+    api.integradoBulk,
+    { refreshInterval: 300_000 }
+  );
+
   const isLoading = loadingContracts || loadingWatch;
 
   // ---- Filter state -----------------------------------------------------
@@ -83,9 +103,13 @@ export default function HomePage() {
   const onlyMod = false;
 
   // ---- Build unified rows + busy/feedback state for actions -----------
+  // Cardinal rule: cada celda con su procedencia clara.
+  //   - data_source = "api"        → SECOP API estándar
+  //   - data_source = "integrado"  → SECOP Integrado (sin captcha)
+  //   - data_source = null         → ninguno; UI muestra "—" honesto
   const allRows = React.useMemo(
-    () => buildUnifiedRows(watched, contracts),
-    [watched, contracts]
+    () => buildUnifiedRows(watched, contracts, integradoBulk ?? null),
+    [watched, contracts, integradoBulk]
   );
 
   const totalAppearances = React.useMemo(
@@ -195,6 +219,59 @@ export default function HomePage() {
     }
   }
 
+  /** Lanza el scraper del portal para TODOS los procesos pendientes
+   *  (los que el API público no expone o los que tienen cache parcial).
+   *  Tarda ~30-55s por proceso por el captcha amortizado. */
+  async function handleScrapePortalAll() {
+    setRefreshing(true);
+    try {
+      await api.portalScrape({});
+      await new Promise((r) => setTimeout(r, 2000));
+      await reloadPortalProgress();
+      setFeedback({
+        kind: "info",
+        text:
+          "Lectura del portal SECOP iniciada en segundo plano. " +
+          "Si pide captcha la primera vez, resolvelo en la ventana de Chrome.",
+      });
+    } catch (err) {
+      setFeedback({
+        kind: "error",
+        text: err instanceof Error ? err.message : "No pude iniciar el scraper.",
+      });
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  /** Sincroniza el dataset SECOP Integrado (rpmr-utcd) — fuente pública
+   *  sin captcha. Toma ~1s. Resuelve un montón de procesos sin tener
+   *  que abrir el scraper del portal. */
+  const [syncingInteg, setSyncingInteg] = React.useState(false);
+  async function handleIntegradoSync() {
+    setSyncingInteg(true);
+    try {
+      await api.integradoSync();
+      // Esperar que el subprocess escriba (~1-2s típico) + refrescar.
+      await new Promise((r) => setTimeout(r, 2500));
+      await reloadIntegradoBulk();
+      setFeedback({
+        kind: "ok",
+        text: "SECOP Integrado actualizado desde datos.gov.co.",
+      });
+    } catch (err) {
+      setFeedback({
+        kind: "error",
+        text:
+          err instanceof Error
+            ? err.message
+            : "No pude sincronizar SECOP Integrado.",
+      });
+    } finally {
+      setSyncingInteg(false);
+    }
+  }
+
   async function handleAdd(url: string) {
     setBusy(true);
     setFeedback(null);
@@ -265,6 +342,14 @@ export default function HomePage() {
     }).format(d);
   }
 
+  /** Format a number of seconds as "Xm Ys" / "Ys" — for refresh timer/ETA. */
+  function fmtDuration(seconds: number): string {
+    if (seconds < 60) return `${Math.round(seconds)}s`;
+    const m = Math.floor(seconds / 60);
+    const s = Math.round(seconds % 60);
+    return `${m}m ${s}s`;
+  }
+
   const pageFiltersActive =
     !!search ||
     years.length > 0 ||
@@ -275,14 +360,35 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen bg-background">
-      <div className="h-1 bg-secondary" />
-
-      {/* Header */}
-      <div className="mx-auto max-w-7xl px-8 pt-12 pb-6">
-        <div className="eyebrow mb-3">
-          Auditoría · Gestión Contractual · SECOP
+      {/* Top institutional strip — Fiscalía / FEAB identity */}
+      <div className="border-b border-rule bg-surface">
+        <div className="mx-auto max-w-7xl px-8 py-3 flex items-center justify-between gap-4">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/feab-logo.png"
+            alt="Fiscalía General de la Nación"
+            className="h-10 md:h-11 object-contain"
+          />
+          <div className="text-right">
+            <div className="text-[10px] md:text-[11px] font-semibold uppercase tracking-[0.18em] text-burgundy">
+              FEAB · Fondo Especial para la Administración de Bienes
+            </div>
+            <div className="text-[9px] md:text-[10px] text-ink-soft mt-0.5">
+              NIT 901148337 · Adscrito a la Fiscalía General de la Nación
+            </div>
+          </div>
         </div>
-        <h1 className="serif text-5xl font-bold tracking-tight text-ink mb-2">
+      </div>
+
+      {/* Burgundy accent line */}
+      <div className="h-1 bg-burgundy" />
+
+      {/* Header — program title + personal greeting */}
+      <div className="mx-auto max-w-7xl px-8 pt-10 pb-6">
+        <div className="eyebrow mb-3">
+          Sistema de Seguimiento de Contratos · SECOP II
+        </div>
+        <h1 className="serif text-4xl md:text-5xl font-bold tracking-tight text-ink mb-2">
           Bienvenida, Dra. María Camila Mendoza Zubiría
         </h1>
         <div className="eyebrow text-ink-soft">{TODAY}</div>
@@ -305,6 +411,42 @@ export default function HomePage() {
             <RefreshCcw className="h-4 w-4" />
           )}
           {refreshing ? "Refrescando…" : "Refrescar desde SECOP"}
+        </Button>
+
+        <Button
+          size="lg"
+          variant="outline"
+          onClick={handleIntegradoSync}
+          disabled={syncingInteg}
+          className="gap-2"
+          title="Sincroniza el dataset SECOP Integrado (rpmr-utcd) — fuente pública sin captcha. Tarda ~1 segundo."
+        >
+          {syncingInteg ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Database className="h-4 w-4" />
+          )}
+          {syncingInteg
+            ? "Sincronizando…"
+            : `Integrado (${integradoBulk?.total_rows ?? "—"})`}
+        </Button>
+
+        <Button
+          size="lg"
+          variant="outline"
+          onClick={handleScrapePortalAll}
+          disabled={refreshing || (portalProgress?.running ?? false)}
+          className="gap-2"
+          title="Lee directo del portal community.secop.gov.co los procesos que el API público no expone"
+        >
+          {portalProgress?.running ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Globe className="h-4 w-4" />
+          )}
+          {portalProgress?.running
+            ? `Leyendo portal… (${portalProgress.processed}/${portalProgress.total})`
+            : "Leer del portal SECOP"}
         </Button>
 
         {feab && (
@@ -357,7 +499,9 @@ export default function HomePage() {
       </div>
 
       {/* Verify progress bar — only visible while a refresh is in flight,
-          OR for ~30s after a completed run so the Dra sees the result. */}
+          OR for ~30s after a completed run so the Dra sees the result.
+          Layout: counts on top row, ETA + elapsed on bottom row so it
+          never hides off-screen on narrow windows. */}
       {verifyProgress && (verifyProgress.running ||
         (verifyProgress.processed > 0 &&
           (verifyProgress.last_update_age_seconds ?? 999) < 30)) && (
@@ -370,34 +514,15 @@ export default function HomePage() {
                 : "border-emerald-300 bg-emerald-50"
             )}
           >
-            <div className="flex items-center justify-between text-xs mb-2">
-              <span className="font-medium text-ink">
+            <div className="flex items-center justify-between text-xs mb-2 gap-3">
+              <span className="font-medium text-ink truncate">
                 {verifyProgress.running
                   ? "Refrescando contra SECOP…"
                   : "Refresco completado"}
               </span>
-              <span className="font-mono text-ink-soft">
+              <span className="font-mono text-ink-soft whitespace-nowrap">
                 {verifyProgress.processed} / {verifyProgress.total} ·{" "}
                 {verifyProgress.percent}%
-                {verifyProgress.elapsed_seconds != null && (
-                  <>
-                    {" · "}
-                    {verifyProgress.elapsed_seconds < 60
-                      ? `${Math.round(verifyProgress.elapsed_seconds)}s`
-                      : `${Math.floor(verifyProgress.elapsed_seconds / 60)}m ${Math.round(verifyProgress.elapsed_seconds % 60)}s`}{" "}
-                    transcurrido
-                  </>
-                )}
-                {verifyProgress.eta_seconds != null &&
-                  verifyProgress.running && (
-                    <>
-                      {" · "}
-                      ETA{" "}
-                      {verifyProgress.eta_seconds < 60
-                        ? `${Math.round(verifyProgress.eta_seconds)}s`
-                        : `${Math.floor(verifyProgress.eta_seconds / 60)}m ${Math.round(verifyProgress.eta_seconds % 60)}s`}
-                    </>
-                  )}
               </span>
             </div>
             <div className="h-2 bg-stone-100 rounded-full overflow-hidden">
@@ -409,6 +534,38 @@ export default function HomePage() {
                 style={{ width: `${verifyProgress.percent}%` }}
               />
             </div>
+            {/* Tiempo transcurrido + ETA — siempre visibles abajo, nunca se cortan. */}
+            <div className="flex flex-wrap items-center justify-between gap-3 mt-3 text-[11px]">
+              <div className="text-ink-soft font-mono">
+                {verifyProgress.elapsed_seconds != null && (
+                  <span>
+                    Transcurrido:{" "}
+                    <span className="text-ink font-semibold">
+                      {fmtDuration(verifyProgress.elapsed_seconds)}
+                    </span>
+                  </span>
+                )}
+              </div>
+              <div className="font-mono">
+                {verifyProgress.running &&
+                  verifyProgress.eta_seconds != null && (
+                    <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-burgundy/10 text-burgundy">
+                      <span className="text-[10px] uppercase tracking-wider opacity-70">
+                        Tiempo restante
+                      </span>
+                      <span className="font-bold">
+                        ≈ {fmtDuration(verifyProgress.eta_seconds)}
+                      </span>
+                    </span>
+                  )}
+                {verifyProgress.running &&
+                  verifyProgress.eta_seconds == null && (
+                    <span className="text-ink-soft italic">
+                      Calculando tiempo restante…
+                    </span>
+                  )}
+              </div>
+            </div>
             {!verifyProgress.running && verifyProgress.processed > 0 && (
               <div className="text-[11px] text-ink-soft mt-2 italic">
                 Cada link se consultó en datos.gov.co. Los notice_uid
@@ -418,6 +575,87 @@ export default function HomePage() {
           </div>
         </div>
       )}
+
+      {/* Portal scrape progress — barra paralela a la del verify para
+          el scraper de community.secop.gov.co. Se muestra mientras el
+          scraper escribe en .cache/portal_progress.jsonl y ~30s después
+          de terminar para que la Dra vea el resumen. */}
+      {portalProgress &&
+        portalProgress.total > 0 &&
+        (portalProgress.running ||
+          (portalProgress.processed > 0 &&
+            (portalProgress.last_update_age_seconds ?? 999) < 30)) && (
+          <div className="mx-auto max-w-7xl px-8 mb-6">
+            <div
+              className={cn(
+                "border rounded-lg p-4",
+                portalProgress.running
+                  ? "border-burgundy/30 bg-burgundy/5"
+                  : "border-emerald-300 bg-emerald-50",
+              )}
+            >
+              <div className="flex items-center justify-between text-xs mb-2 gap-3">
+                <span className="font-medium text-ink truncate inline-flex items-center gap-1.5">
+                  <Globe className="h-3.5 w-3.5" />
+                  {portalProgress.running
+                    ? "Leyendo del portal SECOP…"
+                    : "Lectura del portal completada"}
+                </span>
+                <span className="font-mono text-ink-soft whitespace-nowrap">
+                  {portalProgress.processed} / {portalProgress.total} ·{" "}
+                  {portalProgress.percent}%
+                </span>
+              </div>
+              <div className="h-2 bg-stone-100 rounded-full overflow-hidden">
+                <div
+                  className={cn(
+                    "h-full transition-all duration-300 rounded-full",
+                    portalProgress.running ? "bg-burgundy" : "bg-emerald-500",
+                  )}
+                  style={{ width: `${portalProgress.percent}%` }}
+                />
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-3 mt-3 text-[11px]">
+                <div className="text-ink-soft font-mono">
+                  {portalProgress.elapsed_seconds != null && (
+                    <span>
+                      Transcurrido:{" "}
+                      <span className="text-ink font-semibold">
+                        {fmtDuration(portalProgress.elapsed_seconds)}
+                      </span>
+                    </span>
+                  )}
+                </div>
+                <div className="font-mono">
+                  {portalProgress.running &&
+                    portalProgress.eta_seconds != null && (
+                      <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-burgundy/10 text-burgundy">
+                        <span className="text-[10px] uppercase tracking-wider opacity-70">
+                          Tiempo restante
+                        </span>
+                        <span className="font-bold">
+                          ≈ {fmtDuration(portalProgress.eta_seconds)}
+                        </span>
+                      </span>
+                    )}
+                </div>
+              </div>
+              {!portalProgress.running && portalProgress.processed > 0 && (
+                <div className="text-[11px] text-ink-soft mt-2 italic">
+                  {portalProgress.ok ?? 0} completos · {portalProgress.partial ?? 0}{" "}
+                  parciales · {portalProgress.errored ?? 0} errores. Cada
+                  proceso ya está en el snapshot del portal.
+                </div>
+              )}
+              {portalProgress.running && (
+                <div className="text-[11px] text-ink-soft mt-2 italic">
+                  Si SECOP pide captcha, resolvelo en la ventana de Chrome
+                  visible — queda guardado para los siguientes procesos.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
       {/* Modificatorios summary panel — context first */}
       <div className="mx-auto max-w-7xl px-8 mb-6">
@@ -537,21 +775,63 @@ export default function HomePage() {
         onOpenChange={(o) => !o && setSelected(null)}
       />
 
-      {/* Footer */}
-      <div className="rule mx-auto max-w-7xl my-8" />
-      <div className="mx-auto max-w-7xl px-8 pb-12 text-center text-xs text-ink-soft">
-        <span className="serif font-medium text-burgundy">
-          Dra Cami Contractual
-        </span>{" "}
-        · Datos oficiales:{" "}
-        <code className="font-mono">datos.gov.co / SECOP II</code> ·{" "}
-        {new Date().toISOString().slice(0, 10)}
-        {lastRefresh && (
-          <span className="ml-3 text-emerald-700">
-            <CheckCircle2 className="inline h-3 w-3 mr-1" />
-            Última actualización: {lastRefresh.slice(11, 16)} UTC
-          </span>
-        )}
+      {/* Institutional footer — sellos del Estado Colombiano + identidad FEAB */}
+      <div className="border-t border-rule bg-surface mt-12">
+        <div className="mx-auto max-w-7xl px-8 py-8">
+          {/* Sellos gov.co — wrapped, monochromed at low opacity for sobriety */}
+          <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-4 mb-6 opacity-80">
+            {[
+              { src: "/sellos/Todos_pais.png", alt: "Todos por un país" },
+              { src: "/sellos/Col_compra.png", alt: "Colombia Compra Eficiente" },
+              { src: "/sellos/gov.co-footer.png", alt: "gov.co" },
+              { src: "/sellos/Gob_linea.png", alt: "Gobierno en línea" },
+            ].map((s) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={s.src}
+                src={s.src}
+                alt={s.alt}
+                className="h-9 md:h-10 object-contain"
+              />
+            ))}
+          </div>
+
+          <div className="rule mb-5" />
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start text-[11px]">
+            <div>
+              <div className="eyebrow mb-1">Entidad</div>
+              <div className="text-ink font-semibold">
+                FEAB — Fondo Especial para la Administración de Bienes
+              </div>
+              <div className="text-ink-soft mt-0.5">
+                NIT 901148337 · Adscrito a la Fiscalía General de la Nación
+              </div>
+            </div>
+            <div>
+              <div className="eyebrow mb-1">Sistema</div>
+              <div className="text-ink font-semibold">
+                Sistema de Seguimiento de Contratos · SECOP II
+              </div>
+              <div className="text-ink-soft mt-0.5">
+                Espejo automático del SECOP — datos oficiales{" "}
+                <code className="font-mono">datos.gov.co</code>
+              </div>
+            </div>
+            <div>
+              <div className="eyebrow mb-1">Estado</div>
+              <div className="text-ink-soft font-mono">
+                {new Date().toISOString().slice(0, 10)}
+              </div>
+              {lastRefresh && (
+                <div className="text-emerald-700 mt-0.5 inline-flex items-center gap-1">
+                  <CheckCircle2 className="h-3 w-3" />
+                  Última actualización: {lastRefresh.slice(11, 16)} UTC
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </main>
   );

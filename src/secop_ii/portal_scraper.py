@@ -69,6 +69,25 @@ except ImportError:  # fall back gracefully
         sync_playwright,
     )
 
+# `playwright-recaptcha` is the community-maintained reference solver for
+# reCAPTCHA v2 (audio challenge). It downloads the audio, transcribes via
+# Google Speech, types the answer and waits for the token to populate.
+# Optionally falls back to CapSolver (paid, ~$0.80/1k) for image challenges.
+# If the lib isn't installed at runtime we fall back to the bespoke solver
+# below — but the lib should be the preferred path because it's better
+# tested against Google's anti-bot heuristics than our hand-rolled code.
+try:
+    from playwright_recaptcha import recaptchav2  # type: ignore[import-not-found]
+    _RECAPTCHA_LIB_AVAILABLE = True
+except ImportError:  # pragma: no cover
+    recaptchav2 = None  # type: ignore[assignment]
+    _RECAPTCHA_LIB_AVAILABLE = False
+
+# Idiomas para el audio solver (cascade). El portal corre con locale es-CO,
+# así que la primera transcripción usa Spanish; si Google sirve audio en
+# inglés (a veces lo hace cuando detecta bot bajo) caemos a en-US.
+_AUDIO_LANGS = ("es-CO", "es", "en-US")
+
 log = logging.getLogger(__name__)
 
 OPPORTUNITY_URL = (
@@ -191,7 +210,46 @@ class PortalScraper:
             locale="es-CO",
             timezone_id="America/Bogota",
         )
+        # Pre-warm: si el persistent profile es nuevo, visitar la home
+        # del portal antes del primer OpportunityDetail. Esto siembra
+        # cookies básicas y le da a reCAPTCHA un "score" más humano
+        # (visita la home → navega → consulta detalle, vs. visita
+        # detalle directo a la primera). Idempotente: si ya hay cookies
+        # del dominio, retorna inmediato.
+        try:
+            self._prewarm_session()
+        except Exception as exc:  # pragma: no cover
+            log.debug("pre-warm fallo (no critico): %s", exc)
         return self
+
+    def _prewarm_session(self) -> None:
+        """Visita la home SECOP para sembrar cookies si el profile es nuevo."""
+        if self._browser is None:
+            return
+        # Heuristic: si ya hay cookies del dominio community.secop.gov.co
+        # asumimos que la sesión fue inicializada previamente y skipeamos.
+        cookies = self._browser.cookies()
+        has_secop = any(
+            "secop.gov.co" in (c.get("domain") or "") for c in cookies
+        )
+        if has_secop:
+            return
+        log.info("Pre-warm: profile nuevo, visitando home SECOP...")
+        page = self._browser.new_page()
+        try:
+            page.goto(
+                "https://community.secop.gov.co/Public/Tendering/ContractNoticeManagement/Index",
+                timeout=30000,
+                wait_until="domcontentloaded",
+            )
+            # Pausa breve para que JS asyncrono setee cookies + Google
+            # tracking ping. Sin pausa Google puede no ver la "visita"
+            # como real.
+            page.wait_for_timeout(3000)
+        except PWTimeout:
+            log.info("Pre-warm timeout — continuando igual.")
+        finally:
+            page.close()
 
     def __exit__(self, *_: object) -> None:
         try:
@@ -279,10 +337,11 @@ class PortalScraper:
                 status=STATUS_NETWORK_ERROR,
             )
 
-        # Handle captcha. Cascade:
-        #   1. auto-click the "No soy un robot" checkbox
-        #   2. if challenge appears, switch to audio + transcribe with Google Speech
-        #   3. if audio fails, ask the user to solve manually in the visible window
+        # Handle captcha. Cascade (de lo m\u00e1s r\u00e1pido a lo m\u00e1s caro):
+        #   1. auto-click "No soy un robot"  (cookies cacheadas \u2192 0s)
+        #   2. playwright-recaptcha lib SyncSolver (audio Spanish + opcional CapSolver)
+        #   3. solver manual interno con cascade es-CO \u2192 en-US
+        #   4. fallback humano (\u00faltimo recurso, ventana Chrome visible)
         if "GoogleReCaptcha" in page.url:
             clicked = _try_auto_click_checkbox(page)
             passed = False
@@ -292,13 +351,28 @@ class PortalScraper:
                         lambda u: "GoogleReCaptcha" not in u, timeout=8000
                     )
                     passed = True
-                    print(f"  * Auto-clic pas\u00f3 para {notice_uid}.", flush=True)
+                    print(f"  * Auto-clic paso para {notice_uid}.", flush=True)
                 except PWTimeout:
                     pass
 
+            if not passed and _RECAPTCHA_LIB_AVAILABLE:
+                print(
+                    f"  * Challenge en {notice_uid} - playwright-recaptcha lib...",
+                    flush=True,
+                )
+                if _try_solve_with_recaptcha_lib(page):
+                    try:
+                        page.wait_for_url(
+                            lambda u: "GoogleReCaptcha" not in u, timeout=20000
+                        )
+                        passed = True
+                        print("    * playwright-recaptcha paso.", flush=True)
+                    except PWTimeout:
+                        pass
+
             if not passed:
                 print(
-                    f"  * Challenge en {notice_uid} \u2014 intentando audio solver...",
+                    f"  * Cayendo a solver manual (audio es-CO -> en-US)...",
                     flush=True,
                 )
                 if _try_solve_audio_challenge(page):
@@ -307,13 +381,13 @@ class PortalScraper:
                             lambda u: "GoogleReCaptcha" not in u, timeout=15000
                         )
                         passed = True
-                        print(f"    * Audio solver pas\u00f3.", flush=True)
+                        print("    * Audio solver manual paso.", flush=True)
                     except PWTimeout:
                         pass
 
             if not passed:
                 print(
-                    f"  * Audio solver fall\u00f3. Resuelve a mano en Chrome "
+                    f"  * Auto-solvers fallaron. Resuelve a mano en Chrome "
                     f"(hasta {self.captcha_timeout_s}s)...",
                     flush=True,
                 )
@@ -322,7 +396,7 @@ class PortalScraper:
                         lambda u: "GoogleReCaptcha" not in u,
                         timeout=self.captcha_timeout_s * 1000,
                     )
-                    print(f"  * Captcha OK.", flush=True)
+                    print("  * Captcha OK (resuelto manual).", flush=True)
                 except PWTimeout:
                     log.warning("Timeout esperando captcha para %s", notice_uid)
                     return None
@@ -472,6 +546,44 @@ def _try_auto_click_checkbox(page: Page) -> bool:
         return False
 
 
+def _try_solve_with_recaptcha_lib(page: Page) -> bool:
+    """Use the community-maintained `playwright-recaptcha` library to
+    solve the audio challenge, optionally with CapSolver as a paid
+    fallback for image challenges.
+
+    Reads ``CAPSOLVER_API_KEY`` from env if set; that lets the lib fall
+    through to image challenges when the audio variant gets blocked
+    ("Try again later").
+
+    Returns True iff the lib reports a solved token. Caller still has
+    to verify the navigation away from /GoogleReCaptcha/ (the form may
+    silently reject the token if anti-bot heuristics flagged us).
+    """
+    if not _RECAPTCHA_LIB_AVAILABLE or recaptchav2 is None:
+        return False
+    capsolver_key = os.environ.get("CAPSOLVER_API_KEY") or None
+    try:
+        with recaptchav2.SyncSolver(
+            page, capsolver_api_key=capsolver_key
+        ) as solver:
+            token = solver.solve_recaptcha(
+                wait=True,
+                # Audio first (free); image only if CapSolver key is set.
+                image_challenge=False,
+                language="es",
+                attempts=3,
+            )
+        if token:
+            return True
+    except Exception as exc:
+        # The lib raises on various failure modes (audio blocked, network
+        # hiccup, captcha not found, etc). We swallow and fall back to the
+        # next solver in the cascade — nothing here is critical enough to
+        # crash the whole batch run.
+        log.info("playwright-recaptcha solver fallo: %s", str(exc)[:200])
+    return False
+
+
 def _try_solve_audio_challenge(page: Page) -> bool:
     """When Google demands a challenge, switch to audio mode and transcribe.
 
@@ -548,8 +660,44 @@ def _try_solve_audio_challenge(page: Page) -> bool:
     return True
 
 
+def _transcribe_audio_with_whisper(wav_path: str) -> str | None:
+    """Transcribe a WAV file with `faster-whisper` (local, free, MIT).
+
+    Whisper es notablemente más preciso que Google Speech para audio en
+    español (que es lo que sirve reCAPTCHA bajo locale es-CO). Modelo
+    ``tiny`` (~75MB) es suficiente para captcha — el audio es 5-10s de
+    voz clara, no necesita el modelo grande.
+
+    Devuelve la transcripción o ``None`` si la lib no está instalada
+    (caller cae a Google Speech como fallback).
+    """
+    try:
+        from faster_whisper import WhisperModel  # type: ignore[import-not-found]
+    except ImportError:
+        return None
+    try:
+        # Modelo cacheado en disco después del primer download.
+        # int8 cuantizado: corre fluido en CPU sin GPU.
+        model = WhisperModel("tiny", device="cpu", compute_type="int8")
+        segments, _info = model.transcribe(
+            wav_path, language="es", beam_size=1, without_timestamps=True
+        )
+        text = " ".join(seg.text for seg in segments).strip()
+        if text:
+            log.info("audio captcha transcrito (whisper-tiny es): %s", text[:40])
+            return text
+    except Exception as exc:  # pragma: no cover
+        log.info("whisper transcribe fallo: %s", str(exc)[:200])
+    return None
+
+
 def _transcribe_audio(mp3_url: str) -> str | None:
-    """Download MP3, convert to WAV via direct ffmpeg call, transcribe via Google Speech."""
+    """Download MP3, convert to WAV, transcribe with cascade:
+    Whisper local (es) → Google Speech (es-CO → es → en-US).
+
+    Whisper se intenta PRIMERO porque es más preciso para español y
+    100% local (no depende de la red). Si Whisper no está instalado o
+    devuelve vacío, caemos a Google Speech."""
     import subprocess
     import speech_recognition as sr  # lazy import — only on captcha path
     import imageio_ffmpeg
@@ -582,17 +730,30 @@ def _transcribe_audio(mp3_url: str) -> str | None:
             log.warning("ffmpeg fallo (code=%s): %s", result.returncode, result.stderr[:200])
             return None
 
+        # 1) Whisper local (free, español nativo)
+        whisper_text = _transcribe_audio_with_whisper(wav_path)
+        if whisper_text:
+            return whisper_text
+
+        # 2) Google Speech como fallback (cascada de idiomas)
         recognizer = sr.Recognizer()
         with sr.AudioFile(wav_path) as source:
             audio_data = recognizer.record(source)
-        try:
-            text = recognizer.recognize_google(audio_data, language="en-US")
-        except sr.UnknownValueError:
-            return None
-        except sr.RequestError as exc:
-            log.warning("Google Speech rechazo: %s", exc)
-            return None
-        return (text or "").strip()
+        last_err: str | None = None
+        for lang in _AUDIO_LANGS:
+            try:
+                text = recognizer.recognize_google(audio_data, language=lang)
+                if text and text.strip():
+                    log.info("audio captcha transcrito (google %s): %s", lang, text[:40])
+                    return text.strip()
+            except sr.UnknownValueError:
+                last_err = f"unknown_value_{lang}"
+                continue  # probar próximo idioma
+            except sr.RequestError as exc:
+                last_err = f"request_{lang}: {exc}"
+                continue
+        log.info("audio captcha no transcrito por ningún solver: %s", last_err)
+        return None
     finally:
         for p in (mp3_path, wav_path):
             try:

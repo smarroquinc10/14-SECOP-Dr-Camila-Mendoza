@@ -373,25 +373,25 @@ function ColumnHeader({
       >
         {title}
         {sort === "asc" ? (
-          <ArrowUp className="h-3 w-3 opacity-70" />
+          <ArrowUp className="h-3 w-3 opacity-90" />
         ) : sort === "desc" ? (
-          <ArrowDown className="h-3 w-3 opacity-70" />
+          <ArrowDown className="h-3 w-3 opacity-90" />
         ) : (
-          <ArrowUpDown className="h-3 w-3 opacity-30 group-hover:opacity-70" />
+          <ArrowUpDown className="h-3 w-3 opacity-60" />
         )}
       </button>
       <Popover>
         <PopoverTrigger asChild>
           <button
             className={cn(
-              "inline-flex items-center justify-center h-5 w-5 rounded transition-opacity",
+              "inline-flex items-center justify-center h-5 w-5 rounded transition-colors",
               isActive
-                ? "bg-burgundy/10 text-burgundy opacity-100"
-                : "opacity-40 group-hover:opacity-100 hover:bg-stone-200"
+                ? "bg-burgundy/15 text-burgundy ring-1 ring-burgundy/30"
+                : "text-ink-soft hover:bg-stone-200 hover:text-ink"
             )}
-            title="Filtrar columna"
+            title="Filtrar columna (estilo Excel)"
           >
-            <Filter className="h-3 w-3" />
+            <Filter className="h-3.5 w-3.5" />
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-72 p-3">

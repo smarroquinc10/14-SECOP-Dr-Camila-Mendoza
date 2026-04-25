@@ -1,80 +1,129 @@
-# Prompt para iniciar nueva sesión de Claude · Dra Cami Contractual
+# Prompt para iniciar nueva sesión de Claude · Sistema de Seguimiento Contratos FEAB Dra Cami
 
 Copia y pega TODO esto al iniciar una nueva sesión:
 
 ---
 
 ```
-Trabajo en el proyecto Dra Cami Contractual.
+Trabajo en el proyecto "Sistema de Seguimiento Contratos FEAB Dra Cami".
 
 Path: C:\Users\FGN\01 Claude Repositorio\14 SECOP Dr Camila Mendoza
-Branch: claude/secop-ii-integration-ee0Lr (ya en GitHub: https://github.com/smarroquinc10/Secop-II)
+Branch: claude/secop-ii-integration-ee0Lr (GitHub: https://github.com/smarroquinc10/Secop-II)
 
-ANTES DE TOCAR CUALQUIER LÍNEA DE CÓDIGO:
+ANTES DE TOCAR CÓDIGO:
 
-1. Lee el archivo CLAUDE.md en la raíz del repo. Tiene TODAS las
-   reglas cardinales (filosofía, UX, qué SÍ y qué NO). NO repreguntes
-   cosas que están ahí — léelo y aplícalo.
+1. Leé CLAUDE.md (raíz del repo) — TODAS las reglas cardinales (filosofía,
+   UX, qué SÍ y qué NO). NO repreguntes lo que está ahí.
 
-2. Lee tu memoria persistente:
-   - feedback_secop_truth_excel_link.md → "verdad = SECOP, Excel solo
-     vigencia + link + numero_contrato"
-   - reference_excel_layout.md → 6 hojas, LINK col 74/72, header row 1/4
+2. Leé tus memorias persistentes (MEMORY.md apunta a ellas):
+   - feedback_secop_truth_excel_link.md → "del Excel SOLO vigencia + link"
+     (NI siquiera numero_contrato — ese también es de SECOP)
+   - project_final_deliverable.md → meta es Tauri MSI para Camila
+   - reference_excel_layout.md → 6 hojas, LINK col 74/72
    - feedback_python_module_caching.md → MATAR python antes de editar
 
-3. Antes de editar archivos Python, mata cualquier proceso corriendo:
+3. Antes de editar Python, mata procesos:
    powershell -Command "Get-Process python,node | Stop-Process -Force"
-   (si no, los cambios al código no se reflejan)
 
-CONTEXTO RÁPIDO:
-- Sistema: FastAPI bridge (puerto 8000) + Next.js 16 (puerto 3000)
-  + Excel master "BASE DE DATOS FEAB CONTRATOS2.xlsx" + watch list
-  persistido en .cache/watched_urls.json (491 procesos únicos del
-  Excel, no en git por PII).
-- Lanzar: ejecutar_pro.bat (doble click). Mata todo y relanza con
-  el comando arriba.
-- Tests: ./.venv/Scripts/python.exe -m pytest -q  →  165/165 verdes.
-- TS check: cd app; ./node_modules/.bin/tsc --noEmit  →  0 errors.
-
-PRINCIPIO CARDINAL (no negociable):
-La verdad vive en SECOP. Del Excel SOLO se toma:
+REGLA CARDINAL ACTUALIZADA (no negociable):
+La verdad vive 100% en SECOP. Del Excel SOLO se toma:
   • la VIGENCIA (col 3.VIGENCIA)
-  • el LINK (col LINK)
-  • el numero_contrato (col 2 — identificador interno de la Dra,
-    legítimo igual que vigencia + link)
+  • el LINK (col 74 / 72 según hoja)
 
-NUNCA derivar estado/valor/proveedor/fecha-firma del Excel para la
-tabla principal. Si SECOP API no tiene un proceso → mostrar "—"
-honestamente y badge "No en API público". Las observaciones manuales
-de la Dra (col 72 OBSERVACIONES) van SÓLO al modal de detalle.
+NADA MÁS. El numero_contrato también viene de SECOP
+(`referencia_del_contrato`). Si SECOP no expone un proceso → "—"
+honesto + badge "No en API público". Las observaciones manuales (col 72)
+van SÓLO al modal de detalle.
 
-ESTADO ACTUAL (commit más reciente: en HEAD del branch):
-✅ Tabla unificada compacta (6 columnas, sin scroll horizontal)
-✅ Filtros arriba (Buscar/Vigencia/Estado/Modalidad/Hoja)
-✅ Filtro por hoja expande a row-per-appearance (FEAB 2024 → 85 rows)
-✅ Columnas: Contrato (con numero FEAB) · Objeto/Proveedor ·
-   Valor/Firma · Estado · Modificatorios · Origen · Acciones
-✅ Botones con rótulo: [↗ Abrir] [✏ Editar] [🗑 Quitar]
-✅ Verify masivo: GET /verify-progress + POST /verify-watch
-✅ Barra de progreso con elapsed + ETA + percent visible cuando running
-✅ Vista única: SIEMPRE solo procesos del Excel (491), sin toggle
-✅ Filosofía cardinal enforced en backend y frontend
+META FINAL DEL PROYECTO:
+Empaquetar como Tauri MSI instalable que la Dra le pasa a Camila
+(usuaria final, no técnica). Doble click → instala → ícono FEAB en
+escritorio → app abre como ventana nativa Windows con identidad
+institucional. Cero "instala Python primero", cero browser, cero consola.
 
-PENDIENTE (priorizar según pida la Dra):
-1. Filtros estilo Excel en cada column header (sort + popover de
-   checkboxes). El componente contracts-table.tsx (no usado actualmente)
-   tiene la lógica con TanStack Table — reusarlo dentro de
-   unified-table.tsx en vez de la tabla simple actual.
-2. Selector de hoja al hacer click "Agregar" — el backend POST /watch
-   ya acepta {url, sheet, note}. Falta UI: cuando la Dra paste URL,
-   le muestra un dropdown con FEAB 2026/2025/.../2018-2021 antes de
-   confirmar.
+Arquitectura final del .exe:
+- Tauri shell (Rust + WebView2 nativo Windows ~15 MB) — ventana
+- Next.js export estático — frontend bundleado
+- FastAPI vía PyInstaller — sidecar que Tauri lanza/mata
+- %LOCALAPPDATA%/Dra-Cami/profile — captcha SECOP persistido entre runs
 
-LA DRA ES NO TÉCNICA — usa lenguaje claro, evita jerga, y NUNCA le
-preguntes algo que esté en CLAUDE.md o en sus memorias persistentes.
-Si algo no es obvio para una persona no técnica, mejora el rótulo.
+CONTEXTO TÉCNICO RÁPIDO:
+- FastAPI bridge (puerto 8000) + Next.js 16 (puerto 3000)
+- Excel master "BASE DE DATOS FEAB CONTRATOS2.xlsx" (no en git por PII)
+- Watch list persistido en .cache/watched_urls.json (491 procesos únicos)
+- Lanzar dev: ejecutar_pro.bat (mata todo y relanza)
+- Tests: ./.venv/Scripts/python.exe -m pytest -q  →  165/165 verdes
+- TS check: cd app; ./node_modules/.bin/tsc --noEmit  →  0 errors
 
-Comenzá leyendo CLAUDE.md ahora.
+ESTADO ACTUAL (sesión 1 de UX completada):
+✅ Identidad FEAB integrada: logo Fiscalía top-strip, sellos gov.co
+   + Colombia Compra + Gob.linea en footer institucional
+✅ Título oficial: "Sistema de Seguimiento Contratos FEAB · Dra Cami"
+   (en layout.tsx metadata + browser tab)
+✅ Logos descargados a app/public/ (feab-logo.png, fiscalia-horizontal.jpg,
+   feab-banner.png, sellos/Todos_pais.png, Col_compra.png, gov.co-footer.png,
+   Gob_linea.png, Ponal.png, MedLegal.png) — bajados de feab.fiscalia.gov.co
+✅ ETA visible en barra de refresh — separada a línea propia con badge
+   "Tiempo restante ≈ Xm Ys" (ya no se cortaba a la derecha)
+✅ Quitado fallback `numero_contrato_excel` en unified-table.tsx —
+   ahora solo muestra `referencia_del_contrato` de SECOP, "—" si no hay
+✅ Filtros tipo Excel en cada columna de unified-table:
+   - Sort asc/desc/none clickeando el título
+   - Popover con search + checkbox list de valores únicos por columna
+   - "Limpiar" / "Seleccionar todos" / banner "Tabla con filtros
+     personalizados" + botón Restablecer formato cuando hay filtros activos
+   - TanStack Table como engine, ColumnHeader compartido con contracts-table.tsx
+   - Filtros inteligentes por columna:
+     · Contrato → filtra por numero_contrato/id
+     · Objeto/Proveedor → filtra por proveedor (más útil que objeto largo)
+     · Valor/Firma → ordena numérico, filtra por año de firma
+     · Estado → multi-select estados
+     · Modificatorios → "Modificado" vs "Sin modificatorios"
+     · Origen → "Contrato firmado / Verificado / Borrador / No en API"
+✅ 165/165 pytest verdes · 0 errors tsc
+
+PENDIENTE PARA LA SESIÓN 2 — SCRAPER PORTAL SECOP:
+Los 201 NTCs que datos.gov.co no expone se ven como "—" en la tabla.
+La verdad está en el portal community.secop.gov.co — el sistema debe
+LEER cada link directamente.
+
+Infra existente (los `_probe_*.py` en raíz):
+- _probe_portal.py → Playwright headful + persistent context + captcha
+- _probe_patchright.py → patchright (Playwright stealth)
+- _probe_solver.py → captcha solver
+- _captcha_page.html → ejemplo de página captcha
+
+Trabajo a hacer:
+1. Convertir probes en servicio batch: scripts/scrape_portal.py
+   - Recibe lista de notice_uid (los 201 que no_en_api)
+   - Lanza Playwright con persistent context (.cache/browser_profile/)
+   - Por cada URL: navega, espera captcha si aparece (1ª vez Camila
+     resuelve, después está cacheado), parsea el DOM, extrae:
+     numero_contrato, valor, proveedor, estado, fecha_firma, modalidad,
+     mods proceso, adiciones, etc.
+   - Persiste en .cache/portal_snapshots/{notice_uid}.json con
+     secop_hash SHA-256 + code_version + fetched_at
+2. Endpoint /contract-portal/{id} en FastAPI que devuelve el snapshot
+3. UI: cuando verifyStatus === "no_en_api" Y hay snapshot, mostrar los
+   datos del snapshot con badge "Leído del portal" (en vez de "—")
+4. Botón "Leer del portal" por fila para forzar re-scrape
+5. Tests: pytest cubriendo el parser + endpoint
+
+PENDIENTE PARA LA SESIÓN 3 — EMPAQUETADO TAURI:
+1. Setup Tauri en /tauri (cargo init, tauri.conf.json)
+2. Configurar:
+   - Title: "Sistema de Seguimiento Contratos FEAB · Dra Cami"
+   - Icon: FEAB logo
+   - Sidecar: FastAPI bundleado con PyInstaller (en /api_server/dist/)
+   - Frontend: Next.js export estático (next build → /out/)
+3. tauri build → MSI instalable
+4. Test en VM Windows limpia (sin Python ni Node) — debe funcionar
+
+LA DRA ES NO TÉCNICA — lenguaje claro, evita jerga, NUNCA preguntes
+algo que esté en CLAUDE.md o en mi memoria persistente. Si algo no es
+obvio para una persona no técnica, mejora el rótulo.
+
+Empezá leyendo CLAUDE.md ahora.
 ```
 
 ---
@@ -83,7 +132,7 @@ Comenzá leyendo CLAUDE.md ahora.
 
 1. Abrí Claude Code en el path del proyecto
 2. Pegá TODO el bloque de arriba (entre los ` ``` `) como primer mensaje
-3. Claude leerá el CLAUDE.md automáticamente y va a tener el contexto completo
+3. Claude leerá CLAUDE.md automáticamente y va a tener el contexto completo
 4. NO necesitás repetir las reglas — están en CLAUDE.md
 
 ## Qué leerá Claude automáticamente
@@ -91,11 +140,13 @@ Comenzá leyendo CLAUDE.md ahora.
 Todo esto se carga en contexto al arrancar:
 - `CLAUDE.md` (raíz del repo) — reglas cardinales
 - `~/.claude/projects/.../memory/MEMORY.md` — pointers a memorias persistentes
-- Las 6 memorias persistentes (project, references, feedback)
+- Las memorias persistentes (project, references, feedback)
 
 ## Si algo se rompe en la nueva sesión
 
 Decile a Claude:
 - "Lee CLAUDE.md primero"
-- "Recordá la regla cardinal: verdad = SECOP, Excel solo vigencia + link + numero_contrato"
+- "Recordá la regla cardinal: verdad = SECOP, Excel SOLO vigencia + link"
+- "El numero_contrato también es de SECOP, no del Excel"
 - "Mata los procesos Python antes de editar"
+- "La meta final es Tauri MSI para Camila"

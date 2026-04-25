@@ -168,7 +168,6 @@ export interface WatchedItem {
   vigencias: string[];
   appearances: WatchedAppearance[];
   excel_data?: ExcelData | null;
-  numero_contrato_excel?: string | null;
   obs_brief?: string | null;
   is_modificado_excel?: boolean;
   added_at: string;
@@ -264,4 +263,115 @@ export const api = {
       eta_seconds: number | null;
       report_path: string | null;
     }>("/verify-progress"),
+
+  // ---- Portal scraper (community.secop.gov.co) ----
+  // Espejo del portal SECOP para los procesos que la API pública no expone.
+  // Cada link tiene campos diferentes — el endpoint devuelve TODOS los
+  // labels capturados (`all_labels`) además de los campos curados (`fields`).
+  contractPortal: (notice_uid: string) =>
+    get<PortalSnapshot>(
+      `/contract-portal/${encodeURIComponent(notice_uid)}`,
+    ),
+  portalProgress: () =>
+    get<{
+      running: boolean;
+      processed: number;
+      total: number;
+      percent: number;
+      started_at: string | null;
+      elapsed_seconds: number | null;
+      last_update_age_seconds: number | null;
+      eta_seconds: number | null;
+      ok?: number;
+      partial?: number;
+      errored?: number;
+      last_event: Record<string, unknown> | null;
+    }>("/portal-progress"),
+  portalScrape: (opts?: { uid?: string; limit?: number; force?: boolean }) =>
+    post<{ started: boolean; pid: number; cmd: string }>(
+      "/portal-scrape",
+      opts ?? {},
+    ),
+
+  // ---- SECOP Integrado (rpmr-utcd) — sin captcha, datos.gov.co ----
+  // 382 procesos del FEAB en un solo dataset que no requiere captcha.
+  // Lookup primero acá antes de mandar el portal scraper (que sí lo pide).
+  contractIntegrado: (key: string) =>
+    get<IntegradoSnapshot>(
+      `/contract-integrado/${encodeURIComponent(key)}`,
+    ),
+  integradoBulk: () =>
+    get<{
+      synced_at: string | null;
+      total_rows: number;
+      source: string | null;
+      nit: string | null;
+      by_notice_uid: Record<string, IntegradoSummary>;
+      by_pccntr: Record<string, IntegradoSummary>;
+    }>("/integrado-bulk"),
+  integradoSummary: () =>
+    get<{
+      synced_at: string | null;
+      total_rows: number;
+      by_notice_uid_count: number;
+      by_pccntr_count: number;
+      source: string | null;
+      nit: string | null;
+    }>("/integrado-summary"),
+  integradoSync: (nit?: string) =>
+    post<{ started: boolean; pid: number; cmd: string }>(
+      "/integrado-sync",
+      nit ? { nit } : {},
+    ),
 };
+
+/** Espejo de un proceso del dataset rpmr-utcd (SECOP Integrado).
+ *  Datos públicos vía datos.gov.co — sin captcha. */
+export interface IntegradoSnapshot {
+  available: boolean;
+  key: string;
+  fields?: Record<string, string | null>;
+  synced_at?: string | null;
+  source?: string | null;
+}
+
+/** Subset summary del Integrado para la tabla principal — cada celda
+ *  que muestre estos datos DEBE renderizar un badge "Integrado" para
+ *  que la procedencia quede explícita. NUNCA mergear con campos del
+ *  API estándar (p6dx-8zbt / jbjy-vk9h) — son fuentes paralelas y la
+ *  Dra debe saber cuál ve. */
+export interface IntegradoSummary {
+  estado_del_proceso?: string | null;
+  valor_contrato?: string | null;
+  nom_raz_social_contratista?: string | null;
+  fecha_de_firma_del_contrato?: string | null;
+  fecha_inicio_ejecuci_n?: string | null;
+  fecha_fin_ejecuci_n?: string | null;
+  modalidad_de_contrataci_n?: string | null;
+  tipo_de_contrato?: string | null;
+  numero_del_contrato?: string | null;
+  numero_de_proceso?: string | null;
+  objeto_a_contratar?: string | null;
+  url_contrato?: string | null;
+}
+
+/** Espejo de un proceso del portal SECOP (community.secop.gov.co).
+ *
+ * Cada link expone campos distintos — `all_labels` es el dump completo
+ * label_normalizado → valor. `fields` es el subconjunto con keys cortas
+ * curadas (estado, valor_total, fecha_firma, etc.). El frontend muestra
+ * `fields` como "campos clave" arriba, `all_labels` como dump completo
+ * abajo. NUNCA inventar valores ausentes — si está vacío, mostrar "—".
+ */
+export interface PortalSnapshot {
+  available: boolean;
+  notice_uid: string;
+  fields?: Record<string, string>;
+  all_labels?: Record<string, string>;
+  documents?: { name: string; url: string }[];
+  notificaciones?: { proceso: string; evento: string; fecha: string }[];
+  status?: string | null;
+  missing_fields?: string[];
+  scraped_at?: string | null;
+  raw_length?: number | null;
+}
