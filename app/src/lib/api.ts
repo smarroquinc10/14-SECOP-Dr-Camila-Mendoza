@@ -250,4 +250,17 @@ export const api = {
     }>("/watch/import-from-excel", workbook ? { workbook } : {}),
   refresh: () => post<{ status: string; workbook: string; started_at: string }>("/refresh"),
   verify: () => post<{ total: number; fresh: number; stale: number; errors: number; drift_rows: { row: number; process_id: string }[] }>("/verify"),
+  verifyWatch: () =>
+    post<{ started: boolean; pid: number; message: string }>("/verify-watch"),
+  verifyProgress: () =>
+    get<{
+      running: boolean;
+      processed: number;
+      total: number;
+      percent: number;
+      started_at: string | null;
+      last_update_age_seconds: number | null;
+      eta_seconds: number | null;
+      report_path: string | null;
+    }>("/verify-progress"),
 };

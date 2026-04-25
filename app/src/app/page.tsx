@@ -66,13 +66,13 @@ export default function HomePage() {
   const [states, setStates] = React.useState<string[]>([]);
   const [modalities, setModalities] = React.useState<string[]>([]);
   const [sheets, setSheets] = React.useState<string[]>([]);
-  const [onlyMod, setOnlyMod] = React.useState(false);
   const [selected, setSelected] = React.useState<string | null>(null);
-  // Always show only the Dra's tracked processes (Excel-imported).
-  // Per cardinal rule: truth = SECOP, Excel only contributes link +
-  // vigencia. The Dra cares about HER 491 procesos, not the full
-  // SECOP inventory. No toggle — implicit always.
+  // Cardinal rules (no toggle, always ON):
+  //   - Always show only the Dra's tracked processes (Excel-imported).
+  //   - "Modificados" gets filtered from the column header (Excel-style),
+  //     no separate toggle needed.
   const onlyMine = true;
+  const onlyMod = false;
 
   // ---- Build unified rows + busy/feedback state for actions -----------
   const allRows = React.useMemo(
@@ -360,21 +360,6 @@ export default function HomePage() {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <div>
-              <span className="eyebrow mb-2 block">Atajos</span>
-              <label
-                className="flex items-center gap-2 text-sm text-ink cursor-pointer h-10 px-3 border border-input rounded-md hover:bg-background"
-                title="Solo contratos con estado 'Modificado' o con días adicionados / prórrogas"
-              >
-                <input
-                  type="checkbox"
-                  checked={onlyMod}
-                  onChange={(e) => setOnlyMod(e.target.checked)}
-                  className="rounded border-border"
-                />
-                Solo contratos modificados
-              </label>
-            </div>
           </div>
 
           <SlicerPills
@@ -415,7 +400,6 @@ export default function HomePage() {
                   setStates([]);
                   setModalities([]);
                   setSheets([]);
-                  setOnlyMod(false);
                 }}
               >
                 Limpiar filtros

@@ -1524,6 +1524,111 @@ async def modificatorios_recientes(limit: int = Query(20, ge=1, le=100)) -> dict
     return await loop.run_in_executor(_executor, _fetch)
 
 
+@app.get("/verify-progress")
+async def verify_progress() -> dict[str, Any]:
+    """Report progress of the most-recent ``scripts/verify_watch_list.py``
+    run.
+
+    Looks at ``.cache/watch_verify_*.jsonl`` to figure out:
+      - ``running``: True if the latest report's mtime is < 30s ago
+      - ``processed`` / ``total``: line count vs current watch list size
+      - ``percent``, ``started_at``, ``last_update``, ``eta_seconds``
+
+    The UI polls this endpoint every few seconds while a verify is
+    in flight to render a progress bar.
+    """
+    import time
+
+    cache_dir = Path(".cache")
+    jsonls = sorted(
+        cache_dir.glob("watch_verify_*.jsonl"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+    total = len(_load_watched()) or 491
+    if not jsonls:
+        return {
+            "running": False, "processed": 0, "total": total,
+            "percent": 0.0, "started_at": None, "last_update": None,
+            "eta_seconds": None, "report_path": None,
+        }
+
+    latest = jsonls[0]
+    stat = latest.stat()
+    now = time.time()
+    age = now - stat.st_mtime
+
+    processed = 0
+    started_at_str: str | None = None
+    last_line_ts: float | None = None
+    try:
+        with latest.open("r", encoding="utf-8") as fh:
+            for line in fh:
+                processed += 1
+        # Parse the timestamp out of the filename: watch_verify_YYYYMMDD_HHMMSS.jsonl
+        import re as _re
+        m = _re.search(r"_(\d{8}_\d{6})\.", latest.name)
+        if m:
+            started_at_str = m.group(1)
+            from datetime import datetime as _dt
+            started_dt = _dt.strptime(started_at_str, "%Y%m%d_%H%M%S")
+            last_line_ts = stat.st_mtime
+            elapsed = stat.st_mtime - started_dt.timestamp()
+            rate = processed / elapsed if elapsed > 0 else 0
+            eta = (total - processed) / rate if rate > 0 else None
+        else:
+            elapsed = None
+            eta = None
+    except Exception as exc:
+        log.warning("verify-progress read failed: %s", exc)
+        eta = None
+
+    # Heuristic: file mtime within last 30 s = the script is still
+    # writing → running. Otherwise: finished or stale.
+    running = age < 30 and processed < total
+
+    return {
+        "running": running,
+        "processed": processed,
+        "total": total,
+        "percent": round(100 * processed / total, 1) if total else 0.0,
+        "started_at": started_at_str,
+        "last_update_age_seconds": round(age, 1),
+        "eta_seconds": round(eta, 1) if eta else None,
+        "report_path": str(latest),
+    }
+
+
+@app.post("/verify-watch")
+async def verify_watch() -> dict[str, Any]:
+    """Kick off ``scripts/verify_watch_list.py`` in the background.
+
+    The Dra hits "Refrescar contra SECOP" — this re-reads every URL
+    in her watch list against datos.gov.co and refreshes the
+    notice_uid + verify_status taxonomy. Idempotent. Takes ~17 minutes
+    for 491 URLs.
+    """
+    import subprocess
+    import sys
+
+    if not Path("scripts/verify_watch_list.py").exists():
+        raise HTTPException(404, "scripts/verify_watch_list.py not found")
+    # Best-effort: spawn detached so the API request returns immediately.
+    proc = subprocess.Popen(
+        [sys.executable, "-X", "utf8", "-u",
+         "scripts/verify_watch_list.py"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        creationflags=getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0),
+    )
+    return {
+        "started": True,
+        "pid": proc.pid,
+        "message": "Verificación masiva iniciada — la Dra puede seguir "
+                  "trabajando, los notice_uid se van actualizando.",
+    }
+
+
 @app.post("/refresh")
 async def refresh(background: BackgroundTasks) -> dict[str, str]:
     """Kick off an Excel update in the background. Returns immediately."""

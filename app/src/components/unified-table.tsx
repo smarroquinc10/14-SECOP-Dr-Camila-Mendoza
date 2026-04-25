@@ -366,9 +366,10 @@ export function UnifiedTable({
               <th className="text-left px-3 py-2 w-[18%]">Contrato</th>
               <th className="text-left px-3 py-2">Objeto / Proveedor</th>
               <th className="text-right px-3 py-2 w-[12%]">Valor / Firma</th>
-              <th className="text-left px-3 py-2 w-[15%]">Estado</th>
-              <th className="text-left px-3 py-2 w-[14%]">Origen</th>
-              <th className="text-right px-3 py-2 w-[14%]">Acciones</th>
+              <th className="text-left px-3 py-2 w-[12%]">Estado</th>
+              <th className="text-left px-3 py-2 w-[15%]">Modificatorios</th>
+              <th className="text-left px-3 py-2 w-[12%]">Origen</th>
+              <th className="text-right px-3 py-2 w-[12%]">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -445,8 +446,41 @@ export function UnifiedTable({
                     ) : (
                       <span className="text-ink-soft/50 text-[10px]">—</span>
                     )}
-                    {r.notas && (
+                    {r.liquidado && (
                       <div className="text-[10px] text-ink-soft italic mt-1">
+                        Liquidado
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-3 py-2 text-[11px]">
+                    {(() => {
+                      const isModificado =
+                        /modific/i.test(r.estado ?? "") ||
+                        (r.dias_adicionados != null &&
+                          r.dias_adicionados > 0);
+                      if (isModificado) {
+                        return (
+                          <div>
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 text-[10px] whitespace-nowrap">
+                              Modificado
+                            </span>
+                            {r.dias_adicionados &&
+                              r.dias_adicionados > 0 && (
+                                <span className="block font-mono text-[10px] text-ink-soft mt-1">
+                                  +{r.dias_adicionados} días
+                                </span>
+                              )}
+                          </div>
+                        );
+                      }
+                      return (
+                        <span className="text-ink-soft/50 text-[10px]">
+                          Sin modificatorios
+                        </span>
+                      );
+                    })()}
+                    {r.notas && (
+                      <div className="text-[10px] text-ink-soft italic mt-1 line-clamp-2">
                         {r.notas}
                       </div>
                     )}
