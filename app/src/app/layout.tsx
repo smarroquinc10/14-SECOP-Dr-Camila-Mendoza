@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import { Inter, Source_Serif_4, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+// UpdatePrompt es un opt-in del bundle Tauri. En la versión web (GitHub
+// Pages) no se monta — `isInTauri()` adentro del componente devuelve false
+// y se queda silencioso. La importamos igualmente para no quitarla del
+// codepath cuando alguien decida volver al MSI.
 import { UpdatePrompt } from "@/components/update-prompt";
 
 const inter = Inter({

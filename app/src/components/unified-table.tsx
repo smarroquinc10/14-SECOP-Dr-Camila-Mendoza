@@ -154,17 +154,22 @@ export function expandRowsByAppearance(
 function classifyStatus(
   watch: WatchedItem | null,
   contract: Contract | null,
+  integ: IntegradoSummary | null = null,
 ): UnifiedRow["verifyStatus"] {
   // 1. If we have an API contract, it IS in the public API.
   if (contract?.id_contrato) return "contrato_firmado";
   // 2. If watch has notice_uid resolved, it's verified against datos.gov.co.
   if (watch?.notice_uid) return "verificado";
-  // 3. If process_id is a workspace ID (REQ/BDOS), it's a draft.
+  // 3. NEW: Integrado matchea => el proceso ESTÁ publicado en datos.gov.co
+  //    (rpmr-utcd combina SECOP I + II). El badge "no_en_api" en estos
+  //    casos era un FALSE NEGATIVE que ocultaba data que sí teníamos.
+  if (integ) return "verificado";
+  // 4. If process_id is a workspace ID (REQ/BDOS), it's a draft.
   const pid = watch?.process_id ?? "";
   if (pid.startsWith("CO1.REQ.") || pid.startsWith("CO1.BDOS.")) {
     return "borrador";
   }
-  // 4. Otherwise: not in the public API.
+  // 5. Otherwise: not in the public API.
   return "no_en_api";
 }
 
@@ -197,6 +202,14 @@ export function buildUnifiedRows(
 
   // Lookup helper: SECOP Integrado por notice_uid o PCCNTR. Devuelve
   // un summary inmutable (no se modifica) o null si no hay match.
+  //
+  // CASCADA DE LOOKUP (importa el orden):
+  //   1. notice_uid del watch list → by_notice_uid (NTC format)
+  //   2. process_id del watch list → by_pccntr (PCCNTR format)
+  //   3. process_id del watch list → by_notice_uid (cuando el seed guardó
+  //      el NTC como process_id pero el verify_watch script no había
+  //      corrido para resolver notice_uid). Esto era un agujero del que
+  //      caían 491 procs y por eso el badge mostraba "No en API público".
   const lookupIntegrado = (
     notice_uid: string | null,
     process_id: string | null,
@@ -207,6 +220,10 @@ export function buildUnifiedRows(
     }
     if (process_id && integradoBulk.by_pccntr[process_id]) {
       return integradoBulk.by_pccntr[process_id];
+    }
+    // Fallback: process_id en formato NTC matchea by_notice_uid
+    if (process_id && integradoBulk.by_notice_uid[process_id]) {
+      return integradoBulk.by_notice_uid[process_id];
     }
     return null;
   };
@@ -322,7 +339,7 @@ export function buildUnifiedRows(
       appearances_count: w.appearances?.length ?? 0,
       watched: true,
       watch_url: w.url,
-      verifyStatus: classifyStatus(w, contract),
+      verifyStatus: classifyStatus(w, contract, integ),
       data_source: dataSource,
     });
   }
