@@ -42,6 +42,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
+from secop_ii.paths import state_path  # noqa: E402  (post-sys.path setup)
 from secop_ii.portal_scraper import (  # noqa: E402  (post-sys.path setup)
     PortalScraper,
     STATUS_NETWORK_ERROR,
@@ -49,8 +50,8 @@ from secop_ii.portal_scraper import (  # noqa: E402  (post-sys.path setup)
 
 log = logging.getLogger("scrape-portal")
 
-WATCH_PATH = ROOT / ".cache" / "watched_urls.json"
-PORTAL_CACHE_PATH = ROOT / ".cache" / "portal_opportunity.json"
+WATCH_PATH = state_path("watched_urls.json")
+PORTAL_CACHE_PATH = state_path("portal_opportunity.json")
 
 
 def _load_watch_list() -> list[dict]:
@@ -121,7 +122,7 @@ def main() -> int:
     parser.add_argument(
         "--progress-file",
         type=Path,
-        default=ROOT / ".cache" / "portal_progress.jsonl",
+        default=state_path("portal_progress.jsonl"),
         help="Archivo JSONL donde escribir progreso (UI lo lee)",
     )
     parser.add_argument("-v", "--verbose", action="store_true")

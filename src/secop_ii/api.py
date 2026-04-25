@@ -54,6 +54,7 @@ from secop_ii.audit_log import (
 )
 from secop_ii.feab_columns import compute_feab_fill, source_fingerprint
 from secop_ii.feab_validation import validate_fills
+from secop_ii.paths import state_dir, state_path
 from secop_ii.secop_client import SecopClient
 from secop_ii.url_parser import InvalidSecopUrlError, parse_secop_url
 
@@ -69,9 +70,56 @@ _client = SecopClient()
 _executor = ThreadPoolExecutor(max_workers=4)
 
 
+def _seed_state_dir_if_empty() -> None:
+    """First-run seed for the MSI build.
+
+    A PyInstaller-frozen sidecar starts with an empty
+    ``%LOCALAPPDATA%\\Dra Cami Contractual\\.cache\\`` on a fresh
+    install — no watch list, no audit log. We ship the user's existing
+    files inside the bundle (``--add-data .cache;seed``) and copy them
+    once on the first cold boot. Subsequent boots see the populated
+    state dir and skip seeding (so the Dra's edits are never overwritten
+    by a re-install of the same version).
+
+    Safe no-op in dev (no ``sys.frozen`` flag) and idempotent.
+    """
+    if not getattr(sys, "frozen", False):
+        return
+    target = state_dir()
+    # Already seeded? Bail out — user data wins.
+    if (target / "watched_urls.json").exists():
+        return
+    seed = Path(getattr(sys, "_MEIPASS", "")) / "seed"
+    if not seed.is_dir():
+        log.info("No seed dir bundled at %s — first run will be empty", seed)
+        return
+    import shutil
+    copied = 0
+    for src in seed.iterdir():
+        dst = target / src.name
+        if dst.exists():
+            continue  # never overwrite
+        try:
+            if src.is_file():
+                shutil.copy2(src, dst)
+                copied += 1
+            elif src.is_dir():
+                shutil.copytree(src, dst)
+                copied += 1
+        except OSError as exc:
+            log.warning("seed copy failed for %s: %s", src, exc)
+    if copied:
+        log.info("Seeded %d entries into %s", copied, target)
+
+
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
     """Warm-up: probe SECOP once so the first user request is fast."""
+    # First-run seed (no-op in dev, copies bundled .cache on MSI cold boot).
+    try:
+        _seed_state_dir_if_empty()
+    except Exception as exc:
+        log.warning("seed step failed (non-fatal): %s", exc)
     try:
         await asyncio.get_event_loop().run_in_executor(
             _executor, lambda: _client.query("jbjy-vk9h",
@@ -93,9 +141,22 @@ app = FastAPI(
 )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=[
+        # Next dev server (`npm run dev`)
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        # Tauri 2 packaged app — Windows uses http://tauri.localhost,
+        # macOS/Linux/iOS use tauri://localhost. Both are local-only
+        # (the WebView2/WebKit content is bundled inside the MSI).
+        "http://tauri.localhost",
+        "https://tauri.localhost",
+        "tauri://localhost",
+    ],
     allow_credentials=False,
-    allow_methods=["GET", "POST"],
+    # Watch list uses DELETE (remove) and PUT (edit) — without these the
+    # browser preflight blocks them as soon as fetch is cross-origin
+    # (which it is in the Tauri MSI: tauri.localhost → 127.0.0.1:8000).
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -489,7 +550,7 @@ async def list_processes(
     return rows
 
 
-_WATCH_PATH = Path(".cache/watched_urls.json")
+_WATCH_PATH = state_path("watched_urls.json")
 _WATCH_LOCK = __import__("threading").Lock()
 
 
@@ -1378,7 +1439,7 @@ async def audit_log(
     op: str | None = Query(None, description="Filter by op: fill/replace/etc."),
 ) -> dict[str, Any]:
     """Return recent audit-log entries + chain integrity status."""
-    log_path = Path(".cache/audit_log.jsonl")
+    log_path = state_path("audit_log.jsonl")
     if not log_path.exists():
         return {"entries": [], "intact": True, "problems": [], "total": 0}
 
@@ -1416,7 +1477,7 @@ async def ultima_actualizacion() -> dict[str, Any]:
     de operación. La Dra. ve esto en el header para saber qué tan
     fresca está la data sin tener que disparar una verificación.
     """
-    log_path = Path(".cache/audit_log.jsonl")
+    log_path = state_path("audit_log.jsonl")
     result: dict[str, str | None] = {
         "ultimo_fill": None,
         "ultimo_replace": None,
@@ -1532,7 +1593,7 @@ async def verify_progress() -> dict[str, Any]:
     """
     import time
 
-    cache_dir = Path(".cache")
+    cache_dir = state_dir()
     jsonls = sorted(
         cache_dir.glob("watch_verify_*.jsonl"),
         key=lambda p: p.stat().st_mtime,
@@ -1606,24 +1667,11 @@ async def verify_watch() -> dict[str, Any]:
     notice_uid + verify_status taxonomy. Idempotent. Takes ~17 minutes
     for 491 URLs.
     """
-    import subprocess
-    import sys
-
-    if not Path("scripts/verify_watch_list.py").exists():
-        raise HTTPException(404, "scripts/verify_watch_list.py not found")
-    # Best-effort: spawn detached so the API request returns immediately.
-    proc = subprocess.Popen(
-        [sys.executable, "-X", "utf8", "-u",
-         "scripts/verify_watch_list.py"],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        creationflags=getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0),
-    )
+    result = _run_script_async("scripts/verify_watch_list.py", [])
     return {
-        "started": True,
-        "pid": proc.pid,
+        **result,
         "message": "Verificación masiva iniciada — la Dra puede seguir "
-                  "trabajando, los notice_uid se van actualizando.",
+                   "trabajando, los notice_uid se van actualizando.",
     }
 
 
@@ -1687,9 +1735,9 @@ async def verify_endpoint() -> dict[str, Any]:
 # ``.cache/portal_opportunity.json``. Estos endpoints exponen ese cache a la
 # UI sin atarla al filesystem y permiten lanzar el scraper como subprocess.
 
-_PORTAL_CACHE = Path(".cache") / "portal_opportunity.json"
-_PORTAL_PROGRESS = Path(".cache") / "portal_progress.jsonl"
-_INTEGRADO_CACHE = Path(".cache") / "secop_integrado.json"
+_PORTAL_CACHE = state_path("portal_opportunity.json")
+_PORTAL_PROGRESS = state_path("portal_progress.jsonl")
+_INTEGRADO_CACHE = state_path("secop_integrado.json")
 
 
 def _read_integrado_cache() -> dict[str, Any]:
@@ -1797,19 +1845,12 @@ async def integrado_summary() -> dict[str, Any]:
 
 @app.post("/integrado-sync")
 async def integrado_sync(payload: dict[str, Any] | None = None) -> dict[str, Any]:
-    """Lanza ``scripts/sync_secop_integrado.py`` como subprocess."""
+    """Lanza ``scripts/sync_secop_integrado.py`` (subprocess en dev, runpy en MSI)."""
     payload = payload or {}
-    cmd = [sys.executable, "scripts/sync_secop_integrado.py"]
+    args: list[str] = []
     if payload.get("nit"):
-        cmd += ["--nit", str(payload["nit"])]
-    proc = subprocess.Popen(
-        cmd,
-        cwd=str(Path(__file__).resolve().parent.parent.parent),
-        env={**os.environ, "PYTHONUNBUFFERED": "1"},
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-    return {"started": True, "pid": proc.pid, "cmd": " ".join(cmd)}
+        args += ["--nit", str(payload["nit"])]
+    return _run_script_async("scripts/sync_secop_integrado.py", args)
 
 
 def _read_portal_cache() -> dict[str, Any]:
@@ -1945,32 +1986,29 @@ async def portal_progress() -> dict[str, Any]:
 
 @app.post("/portal-scrape")
 async def portal_scrape(payload: dict[str, Any] | None = None) -> dict[str, Any]:
-    """Lanza ``scripts/scrape_portal.py`` como subprocess.
+    """Lanza ``scripts/scrape_portal.py`` (subprocess en dev, runpy en MSI).
 
     Body opcional:
       ``{"uid": "CO1.NTC.X"}``     → un solo proceso (forzado)
       ``{"limit": 10}``             → primeros N pendientes
       ``{"force": true}``           → re-scrapea aunque haya cache OK
       (sin body)                    → todos los pendientes
+
+    En el MSI (frozen) este endpoint requiere que Playwright esté instalado
+    junto al ejecutable; si no, el script logea el ImportError y la barra
+    de progreso queda en cero. La Dra abre community.secop.gov.co en su
+    navegador y la app sigue mostrando los datos vía SECOP Integrado.
     """
     payload = payload or {}
-    cmd = [sys.executable, "scripts/scrape_portal.py"]
+    args: list[str] = []
     if payload.get("uid"):
-        cmd += ["--uid", str(payload["uid"])]
+        args += ["--uid", str(payload["uid"])]
     if payload.get("limit") is not None:
-        cmd += ["--limit", str(int(payload["limit"]))]
+        args += ["--limit", str(int(payload["limit"]))]
     if payload.get("force"):
-        cmd.append("--force")
-
+        args.append("--force")
     # Reset progress: la próxima corrida pisa el archivo (el script lo hace).
-    proc = subprocess.Popen(
-        cmd,
-        cwd=str(Path(__file__).resolve().parent.parent.parent),
-        env={**os.environ, "PYTHONUNBUFFERED": "1"},
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-    return {"started": True, "pid": proc.pid, "cmd": " ".join(cmd)}
+    return _run_script_async("scripts/scrape_portal.py", args)
 
 
 # ---- Helpers ----------------------------------------------------------------
@@ -1981,13 +2019,114 @@ def _esc(value: str) -> str:
     return str(value).replace("'", "''")
 
 
+def _run_script_async(script_relpath: str, args: list[str]) -> dict[str, Any]:
+    """Launch a `scripts/*.py` worker — subprocess in dev, in-process thread in MSI.
+
+    In dev ``sys.executable`` is ``python.exe`` and we spawn a child process the
+    classic way. In a PyInstaller-frozen MSI build, ``sys.executable`` is the
+    bundled ``.exe`` itself (it does not interpret Python), so we cannot
+    ``Popen([sys.executable, "scripts/foo.py"])``. Instead we ``runpy.run_path``
+    the script in a worker thread on the API's own process.
+
+    Both paths return the same shape (``started``, ``pid``, ``cmd``) so the
+    Next.js client doesn't need a frozen-vs-dev branch.
+    """
+    is_frozen = getattr(sys, "frozen", False)
+
+    if is_frozen:
+        meipass = Path(getattr(sys, "_MEIPASS", "."))
+        script_path = meipass / script_relpath
+        if not script_path.exists():
+            raise HTTPException(
+                500, f"Script no embebido en el .exe: {script_relpath}"
+            )
+
+        import runpy
+        import threading
+
+        def _runner() -> None:
+            old_argv = sys.argv
+            sys.argv = [str(script_path), *args]
+            try:
+                runpy.run_path(str(script_path), run_name="__main__")
+            except SystemExit:
+                # argparse calls sys.exit(0) on success
+                pass
+            except Exception:
+                log.exception("Script %s failed in frozen runpy", script_relpath)
+            finally:
+                sys.argv = old_argv
+
+        threading.Thread(target=_runner, daemon=False).start()
+        return {
+            "started": True,
+            "pid": os.getpid(),
+            "cmd": f"runpy:{script_relpath} " + " ".join(args),
+        }
+
+    # Dev mode — preserve the original detached-subprocess behavior.
+    cmd = [sys.executable, "-X", "utf8", "-u", script_relpath, *args]
+    proc = subprocess.Popen(
+        cmd,
+        cwd=str(Path(__file__).resolve().parent.parent.parent),
+        env={**os.environ, "PYTHONUNBUFFERED": "1"},
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        creationflags=getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0),
+    )
+    return {
+        "started": True,
+        "pid": proc.pid,
+        "cmd": " ".join(cmd),
+    }
+
+
 def main() -> None:
-    """Entry point used by the launcher and the .bat file."""
+    """Entry point used by the launcher, the .bat file, and the MSI sidecar.
+
+    The ``app`` object is passed by reference (not as a ``"secop_ii.api:app"``
+    import string) so this works inside a PyInstaller bundle, where the
+    entry script runs as ``__main__`` and the dotted name does not resolve.
+    Reload is intentionally disabled — the MSI ships a frozen build.
+    """
+    # PyInstaller-frozen Python on Windows defaults stdout/stderr to cp1252
+    # (the ANSI codepage) and IGNORES PYTHONUTF8 because the codec is wired
+    # before env vars are read. The legacy CLI scripts print "→ Sincronizando…"
+    # and "✓ Persistido en…"; without this reconfig those calls raise
+    # UnicodeEncodeError inside the runpy worker thread. We force UTF-8
+    # with ``errors='replace'`` so a broken byte never takes down the API.
+    if getattr(sys, "frozen", False):
+        for stream_name in ("stdout", "stderr"):
+            stream = getattr(sys, stream_name, None)
+            reconfigure = getattr(stream, "reconfigure", None)
+            if callable(reconfigure):
+                try:
+                    reconfigure(encoding="utf-8", errors="replace")
+                except Exception as exc:
+                    log.warning("could not reconfigure sys.%s: %s",
+                                stream_name, exc)
+    # If running frozen (MSI) and the user has no .cache yet, bring our
+    # bundled seed across before uvicorn boots so the lifespan handlers
+    # (and the very first /watch hit) see a populated state dir. This is
+    # also called from `_lifespan`, but doing it here too makes single-shot
+    # CLI uses (`dra-cami-api.exe --version` style) feel consistent.
+    try:
+        _seed_state_dir_if_empty()
+    except Exception as exc:
+        log.warning("seed step failed (non-fatal): %s", exc)
+    if getattr(sys, "frozen", False):
+        # Surface a one-line boot marker into whatever stdout Tauri gave us
+        # — usually the file `tauri/src/main.rs` redirects to. Helpful when
+        # the Dra reports "no abre" and we need to prove the .exe ran.
+        log.info("MSI sidecar boot · code_version=%s · state_dir=%s",
+                 _CODE_VERSION, state_dir())
     import uvicorn
     uvicorn.run(
-        "secop_ii.api:app",
-        host="127.0.0.1", port=8000,
-        log_level="info", reload=False,
+        app,
+        host="127.0.0.1",
+        port=8000,
+        log_level="info",
+        reload=False,
     )
 
 

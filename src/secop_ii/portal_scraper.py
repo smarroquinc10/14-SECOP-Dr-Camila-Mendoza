@@ -33,6 +33,8 @@ import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
+
+from secop_ii.paths import state_path
 from typing import Any
 
 import requests
@@ -171,12 +173,12 @@ class PortalScraper:
         / "profile"
     )
     cache_path: Path = field(
-        default_factory=lambda: Path(".cache") / "portal_opportunity.json"
+        default_factory=lambda: state_path("portal_opportunity.json")
     )
     # Raw-HTML archive: gzipped per NTC, lets us re-extract any field later
     # without revisiting the portal. ~50 KB per process compressed.
     html_archive_dir: Path = field(
-        default_factory=lambda: Path(".cache") / "portal_html"
+        default_factory=lambda: state_path("portal_html")
     )
     captcha_timeout_s: int = 180
     page_timeout_s: int = 45

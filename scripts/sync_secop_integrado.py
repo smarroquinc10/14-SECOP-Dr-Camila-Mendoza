@@ -38,7 +38,18 @@ from pathlib import Path
 import requests
 
 ROOT = Path(__file__).resolve().parent.parent
-CACHE_PATH = ROOT / ".cache" / "secop_integrado.json"
+# In dev ROOT/src is on sys.path via the editable install; in a frozen
+# bundle the package is already importable. This insertion is a no-op
+# in both contexts but lets the script work when invoked directly with
+# a bare ``python scripts/sync_secop_integrado.py`` from the repo.
+sys.path.insert(0, str(ROOT / "src"))
+
+from secop_ii.paths import state_path  # noqa: E402  (post-sys.path setup)
+
+# Cache is written to a per-environment state directory (see paths.py).
+# In dev this is ``<repo>/.cache/secop_integrado.json``; in the MSI it
+# lives under ``%LOCALAPPDATA%\Dra Cami Contractual\.cache\``.
+CACHE_PATH = state_path("secop_integrado.json")
 
 # NIT del FEAB (Fondo Especial para la Administración de Bienes,
 # Fiscalía General de la Nación) — el filtro por defecto.

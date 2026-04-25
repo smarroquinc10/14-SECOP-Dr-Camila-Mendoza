@@ -29,6 +29,8 @@ from typing import Any
 
 from openpyxl import load_workbook as _load
 
+from secop_ii.paths import state_path
+
 # Fields we watch for changes. Picked because:
 #   - "Fase en SECOP" / "Contrato: Estado" — legal state changes
 #   - "Valor adjudicación" / "Contrato: Valor" / "Contrato: Valor pagado"
@@ -52,7 +54,7 @@ _WATCHED_FIELDS = (
 )
 
 _ID_COLUMN = "ID identificado"
-_SNAPSHOT_DIR = Path(".cache") / "snapshots"
+_SNAPSHOT_DIR = state_path("snapshots")
 
 
 @dataclass

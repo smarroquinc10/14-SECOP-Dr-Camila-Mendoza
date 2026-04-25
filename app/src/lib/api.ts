@@ -1,9 +1,14 @@
 /**
- * Thin client for the FastAPI bridge running on http://localhost:8000.
- * Goes through Next.js rewrite at /api/secop/*.
+ * Thin client for the FastAPI bridge running on http://127.0.0.1:8000.
+ *
+ * Direct fetch (not via Next.js rewrite) so the same code works in:
+ *   - dev: `npm run dev` (Next on :3000) → fetches :8000 cross-origin
+ *   - prod: Tauri MSI (frontend served from http://tauri.localhost) → fetches :8000
+ *
+ * Either way the FastAPI sidecar must allow the origin (see api.py CORS).
  */
 
-const BASE = "/api/secop";
+const BASE = "http://127.0.0.1:8000";
 
 export interface Contract {
   id_contrato?: string;
@@ -201,14 +206,14 @@ export const api = {
     ),
   watchRemove: async (url: string) => {
     const res = await fetch(
-      `/api/secop/watch?url=${encodeURIComponent(url)}`,
+      `${BASE}/watch?url=${encodeURIComponent(url)}`,
       { method: "DELETE", cache: "no-store" }
     );
     if (!res.ok) throw new Error(`watch-remove ${res.status}`);
     return res.json() as Promise<{ removed: number; total: number }>;
   },
   watchUpdate: async (oldUrl: string, newUrl: string, note?: string) => {
-    const res = await fetch(`/api/secop/watch`, {
+    const res = await fetch(`${BASE}/watch`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ old_url: oldUrl, new_url: newUrl, note }),

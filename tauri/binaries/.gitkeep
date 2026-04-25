@@ -1,0 +1,3 @@
+# Placeholder so tauri/binaries/ exists before PyInstaller writes here.
+# The actual dra-cami-api.exe is gitignored — it's a 60-100MB build artifact
+# regenerated each release.

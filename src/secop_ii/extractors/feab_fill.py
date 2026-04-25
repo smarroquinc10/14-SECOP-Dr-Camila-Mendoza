@@ -28,6 +28,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from pathlib import Path
+
+from secop_ii.paths import state_path
 from typing import Any
 
 from secop_ii.audit_log import append_entry as _audit_append
@@ -205,7 +207,7 @@ class FeabFillExtractor:
         # audit log. The chain links each entry to the previous one's
         # SHA-256 so any post-hoc edit breaks integrity.
         try:
-            log_path = Path(".cache") / "audit_log.jsonl"
+            log_path = state_path("audit_log.jsonl")
             row_idx = getattr(ctx, "row_idx", None)
             for col, new_val in fill_values.items():
                 old = existing.get(col)

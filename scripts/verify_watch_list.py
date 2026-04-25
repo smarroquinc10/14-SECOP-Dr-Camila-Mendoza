@@ -30,14 +30,15 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from secop_ii.secop_client import SecopClient
-from secop_ii.url_parser import InvalidSecopUrlError, parse_secop_url
+from secop_ii.paths import state_dir, state_path  # noqa: E402
+from secop_ii.secop_client import SecopClient  # noqa: E402
+from secop_ii.url_parser import InvalidSecopUrlError, parse_secop_url  # noqa: E402
 
 
 def main() -> int:
-    watch_path = Path(".cache/watched_urls.json")
+    watch_path = state_path("watched_urls.json")
     if not watch_path.exists():
-        print("FATAL: .cache/watched_urls.json not found")
+        print(f"FATAL: {watch_path} not found")
         return 2
 
     items = json.loads(watch_path.read_text(encoding="utf-8"))
@@ -46,7 +47,7 @@ def main() -> int:
     print()
 
     client = SecopClient()
-    out_dir = Path(".cache")
+    out_dir = state_dir()
     out_dir.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     report_path = out_dir / f"watch_verify_{stamp}.jsonl"

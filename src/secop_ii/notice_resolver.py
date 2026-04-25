@@ -28,6 +28,8 @@ import re
 import threading
 import time
 from dataclasses import dataclass, field
+
+from secop_ii.paths import state_path
 from pathlib import Path
 
 import requests
@@ -52,7 +54,7 @@ _BROWSER_HEADERS = {
 class NoticeResolver:
     """Map ``CO1.PPI.*`` pivot URLs to ``CO1.NTC.*`` notice IDs (cached)."""
 
-    cache_path: Path = field(default_factory=lambda: Path(".cache") / "ppi_ntc.json")
+    cache_path: Path = field(default_factory=lambda: state_path("ppi_ntc.json"))
     min_interval_s: float = 1.0
     timeout_s: int = 20
     _cache: dict[str, str | None] = field(default_factory=dict, init=False, repr=False)
