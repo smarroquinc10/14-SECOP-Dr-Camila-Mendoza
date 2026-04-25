@@ -34,6 +34,7 @@ export interface UnifiedRow {
   process_id: string | null;
   id_contrato: string | null;
   notice_uid: string | null;
+  numero_contrato: string | null;  // CONTRATO-FEAB-NNNN-AAAA from Excel
   url: string | null;
 
   // From SECOP contracts dataset (if matched)
@@ -153,41 +154,17 @@ export function buildUnifiedRows(
     }
     if (contract?.id_contrato) usedContracts.add(contract.id_contrato);
 
-    const ex = w.excel_data ?? null;
+    // Truth = SECOP. Excel only contributes vigencia + link. Every
+    // other field comes EXCLUSIVELY from the contracts/process dataset.
     const apiDias = parseInt(String(contract?.dias_adicionados ?? "0"), 10);
-    const exDias = parseInt(String(ex?.dias_prorrogas ?? "0"), 10);
     const dias =
-      Number.isFinite(apiDias) && apiDias > 0
-        ? apiDias
-        : Number.isFinite(exDias) && exDias > 0
-          ? exDias
-          : null;
-    const apiLiq =
+      Number.isFinite(apiDias) && apiDias > 0 ? apiDias : null;
+    const liq =
       String(contract?.liquidaci_n ?? "")
         .trim()
         .toLowerCase() === "si";
-    const exLiq =
-      String(ex?.liquidacion ?? "")
-        .trim()
-        .toLowerCase()
-        .startsWith("s");
-    const liq = apiLiq || exLiq;
 
-    // Compose human-readable "Notas" line. Prefer API-computed; else
-    // build from Excel signals.
-    let notas: string | null = (contract?._notas as string) ?? null;
-    if (!notas) {
-      const parts: string[] = [];
-      const estado =
-        (contract?.estado_contrato as string) ?? ex?.estado ?? "";
-      if (/modific/i.test(estado)) parts.push("Modificado");
-      if (dias && dias > 0) parts.push(`+${dias} días`);
-      if (liq) parts.push("Liquidado");
-      notas = parts.length ? parts.join(" · ") : null;
-    }
-
-    const valorRaw = contract?.valor_del_contrato ?? ex?.valor_total ??
-      ex?.valor_inicial;
+    const valorRaw = contract?.valor_del_contrato;
     const valor = valorRaw != null && valorRaw !== ""
       ? Number(valorRaw)
       : null;
@@ -197,23 +174,18 @@ export function buildUnifiedRows(
       process_id: w.process_id,
       id_contrato: contract?.id_contrato ?? null,
       notice_uid: w.notice_uid ?? contract?.proceso_de_compra ?? null,
+      numero_contrato:
+        (contract?.referencia_del_contrato as string) ?? null,
       url: w.url,
-      objeto:
-        (contract?.objeto_del_contrato as string) ?? ex?.objeto ?? null,
-      proveedor:
-        (contract?.proveedor_adjudicado as string) ?? ex?.proveedor ?? null,
+      objeto: (contract?.objeto_del_contrato as string) ?? null,
+      proveedor: (contract?.proveedor_adjudicado as string) ?? null,
       valor: valor != null && Number.isFinite(valor) ? valor : null,
       fecha_firma:
-        ((contract?.fecha_de_firma as string) ?? "").slice(0, 10) ||
-        (ex?.fecha_firma ?? null) ||
-        null,
-      estado:
-        (contract?.estado_contrato as string) ?? ex?.estado ?? null,
+        ((contract?.fecha_de_firma as string) ?? "").slice(0, 10) || null,
+      estado: (contract?.estado_contrato as string) ?? null,
       modalidad:
-        (contract?.modalidad_de_contratacion as string) ??
-        ex?.modalidad ??
-        null,
-      notas,
+        (contract?.modalidad_de_contratacion as string) ?? null,
+      notas: (contract?._notas as string) ?? null,
       dias_adicionados: dias,
       liquidado: liq,
       sheets: w.sheets ?? [],
@@ -239,6 +211,7 @@ export function buildUnifiedRows(
       process_id: c.id_contrato,
       id_contrato: c.id_contrato,
       notice_uid: (c.proceso_de_compra as string) ?? null,
+      numero_contrato: (c.referencia_del_contrato as string) ?? null,
       url: (c.urlproceso as string) ?? null,
       objeto: (c.objeto_del_contrato as string) ?? null,
       proveedor: (c.proveedor_adjudicado as string) ?? null,
@@ -369,103 +342,107 @@ export function UnifiedTable({
           No hay procesos que coincidan con los filtros.
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-background text-[11px] uppercase tracking-wider text-ink-soft">
-              <tr>
-                <th className="text-left px-3 py-2 w-20">Vigencia</th>
-                <th className="text-left px-3 py-2 w-44">Código</th>
-                <th className="text-left px-3 py-2 w-40">Notice UID</th>
-                <th className="text-left px-3 py-2">Objeto</th>
-                <th className="text-left px-3 py-2 w-44">Proveedor</th>
-                <th className="text-right px-3 py-2 w-32">Valor (COP)</th>
-                <th className="text-left px-3 py-2 w-24">Firma</th>
-                <th className="text-left px-3 py-2 w-28">Estado</th>
-                <th className="text-left px-3 py-2 w-40">Notas</th>
-                <th className="text-left px-3 py-2 w-28">Verificación</th>
-                <th className="text-left px-3 py-2 w-28">Hoja</th>
-                <th className="text-right px-3 py-2 w-44">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => {
-                const isEditing = editingKey === r.key;
-                const vigencia = r.vigencias.join(", ") ||
-                  (r.fecha_firma ? r.fecha_firma.slice(0, 4) : null);
-                return (
-                  <tr
-                    key={r.key}
-                    className="border-t border-rule/60 hover:bg-background"
-                  >
-                    <td className="px-3 py-2 font-mono text-xs">
-                      {vigencia ? (
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-burgundy/10 text-burgundy">
-                          {vigencia}
-                        </span>
-                      ) : (
-                        <span className="text-ink-soft/50">—</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2 font-mono text-[11px]">
-                      <button
-                        onClick={() =>
-                          onPick(r.id_contrato ?? r.process_id ?? r.key)
-                        }
-                        className="text-burgundy hover:underline text-left"
-                      >
-                        {r.id_contrato ?? r.process_id ?? "—"}
-                      </button>
-                      {r.appearances_count > 1 && (
-                        <span className="block text-[10px] text-ink-soft italic mt-0.5">
-                          {r.appearances_count} apariciones
+        <table className="w-full text-sm table-fixed">
+          <thead className="bg-background text-[11px] uppercase tracking-wider text-ink-soft">
+            <tr>
+              <th className="text-left px-3 py-2 w-[18%]">Contrato</th>
+              <th className="text-left px-3 py-2">Objeto / Proveedor</th>
+              <th className="text-right px-3 py-2 w-[12%]">Valor / Firma</th>
+              <th className="text-left px-3 py-2 w-[15%]">Estado</th>
+              <th className="text-left px-3 py-2 w-[14%]">Origen</th>
+              <th className="text-right px-3 py-2 w-[14%]">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => {
+              const isEditing = editingKey === r.key;
+              const vigencia = r.vigencias.join(", ") ||
+                (r.fecha_firma ? r.fecha_firma.slice(0, 4) : null);
+              return (
+                <tr
+                  key={r.key}
+                  className="border-t border-rule/60 hover:bg-background align-top"
+                >
+                  <td className="px-3 py-2 font-mono text-[11px]">
+                    {vigencia && (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-burgundy/10 text-burgundy mb-1 text-[10px]">
+                        {vigencia}
+                      </span>
+                    )}
+                    <button
+                      onClick={() =>
+                        onPick(r.id_contrato ?? r.process_id ?? r.key)
+                      }
+                      className="block text-burgundy hover:underline text-left break-all"
+                    >
+                      {r.numero_contrato ??
+                        r.id_contrato ??
+                        r.process_id ??
+                        "—"}
+                    </button>
+                    {r.numero_contrato &&
+                      (r.id_contrato ?? r.process_id) && (
+                        <span className="block text-[10px] text-ink-soft mt-0.5 break-all">
+                          {r.id_contrato ?? r.process_id}
                         </span>
                       )}
-                    </td>
-                    <td className="px-3 py-2 font-mono text-[10px] text-ink-soft">
-                      {r.notice_uid ?? "—"}
-                    </td>
-                    <td className="px-3 py-2 text-xs text-ink">
-                      {r.objeto
-                        ? r.objeto.slice(0, 80) + (r.objeto.length > 80 ? "…" : "")
-                        : (
-                          <span className="text-ink-soft italic">
-                            (sin contrato firmado)
-                          </span>
-                        )}
-                    </td>
-                    <td className="px-3 py-2 text-xs">
-                      {r.proveedor ?? <span className="text-ink-soft/50">—</span>}
-                    </td>
-                    <td className="px-3 py-2 font-mono text-xs text-right">
-                      {r.valor != null ? moneyCO.format(r.valor) : (
-                        <span className="text-ink-soft/50">—</span>
+                    {r.notice_uid && (
+                      <span className="block text-[10px] text-ink-soft/70 mt-0.5 break-all">
+                        {r.notice_uid}
+                      </span>
+                    )}
+                    {r.appearances_count > 1 && (
+                      <span className="block text-[10px] text-ink-soft italic mt-0.5">
+                        {r.appearances_count} apariciones
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2 text-xs">
+                    <div className="text-ink line-clamp-3">
+                      {r.objeto ?? (
+                        <span className="text-ink-soft italic">
+                          (sin contrato firmado)
+                        </span>
                       )}
-                    </td>
-                    <td className="px-3 py-2 font-mono text-[11px] text-ink-soft">
+                    </div>
+                    {r.proveedor && (
+                      <div className="text-[11px] text-ink-soft mt-1 truncate">
+                        {r.proveedor}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    <div className="font-mono text-xs text-ink">
+                      {r.valor != null ? moneyCO.format(r.valor) : "—"}
+                    </div>
+                    <div className="font-mono text-[10px] text-ink-soft mt-0.5">
                       {r.fecha_firma ?? "—"}
-                    </td>
-                    <td className="px-3 py-2 text-xs">
-                      {r.estado ? (
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-stone-100 text-ink whitespace-nowrap">
-                          {r.estado}
-                        </span>
-                      ) : (
-                        <span className="text-ink-soft/50">—</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2 text-[11px] text-ink-soft italic">
-                      {r.notas ?? <span className="not-italic">—</span>}
-                    </td>
-                    <td className="px-3 py-2">
-                      <StatusBadge status={r.verifyStatus} />
-                    </td>
-                    <td className="px-3 py-2 text-[11px] text-ink-soft">
+                    </div>
+                  </td>
+                  <td className="px-3 py-2 text-xs">
+                    {r.estado ? (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-stone-100 text-ink whitespace-nowrap text-[10px]">
+                        {r.estado}
+                      </span>
+                    ) : (
+                      <span className="text-ink-soft/50 text-[10px]">—</span>
+                    )}
+                    {r.notas && (
+                      <div className="text-[10px] text-ink-soft italic mt-1">
+                        {r.notas}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-3 py-2 text-[10px]">
+                    <StatusBadge status={r.verifyStatus} />
+                    <div className="text-ink-soft mt-1 truncate">
                       {r.sheets.length > 0 ? (
                         r.sheets.join(", ")
                       ) : (
                         <span className="italic">solo SECOP</span>
                       )}
-                    </td>
+                    </div>
+                  </td>
                     <td className="px-3 py-2 text-right">
                       {isEditing ? (
                         <div className="flex items-center justify-end gap-1">
@@ -555,7 +532,6 @@ export function UnifiedTable({
               })}
             </tbody>
           </table>
-        </div>
       )}
     </div>
   );

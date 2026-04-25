@@ -530,30 +530,20 @@ def _save_watched(items: list[dict[str, Any]]) -> None:
 
 @app.get("/watch")
 async def watch_list() -> dict[str, Any]:
-    """Return the manually-tracked SECOP URLs, each enriched with the
-    Dra's Excel data (estado, valor, fecha firma, proveedor, prórrogas,
-    liquidación, observaciones) so the UI can show real values for
-    procesos that the public API doesn't expose by NTC.
+    """Return the manually-tracked SECOP URLs.
 
-    The Excel data is cached per workbook mtime and merged in-memory
-    on each request — no persistence change. Items the Dra added by
-    URL paste (without sheet) get ``excel_data: null`` and the UI
-    shows what little SECOP exposes.
+    Per the Dra's cardinal rule: **the truth lives in SECOP, the Excel
+    only contributes the LINK and the VIGENCIA**. We never derive
+    estado/valor/proveedor/etc from the Excel — those flow exclusively
+    from the SECOP API (jbjy-vk9h, p6dx-8zbt) when the contract
+    exists. If the SECOP API has no record of a process, we render
+    "—" honestly and the UI prompts the Dra to open the portal link.
+
+    The Dra's hand-written OBSERVACIONES still surface in the per-
+    contract detail modal (``/contracts/{id}``) but never in the
+    summary table — that one mirrors SECOP, full stop.
     """
-    items = _load_watched()
-    for it in items:
-        try:
-            it["excel_data"] = _excel_data_for(
-                process_id=it.get("process_id"),
-                notice_uid=it.get("notice_uid"),
-                contract_id=None,
-                url=it.get("url"),
-            )
-        except Exception as exc:
-            log.warning("excel_data lookup failed for %s: %s",
-                       it.get("process_id"), exc)
-            it["excel_data"] = None
-    return {"items": items}
+    return {"items": _load_watched()}
 
 
 @app.post("/watch")

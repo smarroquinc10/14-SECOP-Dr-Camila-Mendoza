@@ -156,6 +156,8 @@ export interface ExcelData {
   fecha_liquidacion?: string;
   numero_contrato?: string;
   supervisor?: string;
+  obs_brief?: string | null;
+  is_modificado?: boolean;
 }
 
 export interface WatchedItem {
