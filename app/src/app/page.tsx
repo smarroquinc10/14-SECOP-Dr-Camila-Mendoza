@@ -26,10 +26,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   api,
+  withBasePath,
   type Contract,
   type WatchedItem,
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { exportRowsToExcel } from "@/lib/export-excel";
 
 const TODAY = new Intl.DateTimeFormat("es-CO", {
   weekday: "long",
@@ -378,16 +380,16 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl px-8 py-3 flex items-center justify-between gap-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/feab-logo.png"
-            alt="Fiscalía General de la Nación"
-            className="h-10 md:h-11 object-contain"
+            src={withBasePath("/feab-logo-square.png")}
+            alt="FEAB · Fondo Especial para la Administración de Bienes"
+            className="h-12 md:h-14 object-contain"
           />
           <div className="text-right">
             <div className="text-[10px] md:text-[11px] font-semibold uppercase tracking-[0.18em] text-burgundy">
               FEAB · Fondo Especial para la Administración de Bienes
             </div>
             <div className="text-[9px] md:text-[10px] text-ink-soft mt-0.5">
-              NIT 901148337 · Adscrito a la Fiscalía General de la Nación
+              NIT 901148337
             </div>
           </div>
         </div>
@@ -756,13 +758,42 @@ export default function HomePage() {
 
       {/* TABLA UNIFICADA */}
       <div className="mx-auto max-w-7xl px-8 pb-12">
-        <div className="flex items-baseline justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 gap-3">
           <h2 className="serif text-2xl font-semibold text-ink">
             {onlyMine ? "Mis procesos seguidos" : "Inventario completo"}
           </h2>
-          <span className="text-xs text-ink-soft">
-            {filtered.length} de {allRows.length} mostrados
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-ink-soft">
+              {filtered.length} de {allRows.length} mostrados
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={filtered.length === 0}
+              onClick={async () => {
+                try {
+                  await exportRowsToExcel(filtered, "FEAB-procesos");
+                  setFeedback({
+                    kind: "ok",
+                    text: `Excel descargado · ${filtered.length} filas`,
+                  });
+                } catch (err) {
+                  setFeedback({
+                    kind: "error",
+                    text:
+                      err instanceof Error
+                        ? err.message
+                        : "No pude generar el Excel.",
+                  });
+                }
+              }}
+              className="gap-2"
+              title="Descarga lo que tenés filtrado en pantalla como un .xlsx"
+            >
+              <Database className="h-4 w-4" />
+              Descargar Excel ({filtered.length})
+            </Button>
+          </div>
         </div>
 
         {isLoading ? (
@@ -802,7 +833,7 @@ export default function HomePage() {
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 key={s.src}
-                src={s.src}
+                src={withBasePath(s.src)}
                 alt={s.alt}
                 className="h-9 md:h-10 object-contain"
               />
@@ -818,7 +849,7 @@ export default function HomePage() {
                 FEAB — Fondo Especial para la Administración de Bienes
               </div>
               <div className="text-ink-soft mt-0.5">
-                NIT 901148337 · Adscrito a la Fiscalía General de la Nación
+                NIT 901148337
               </div>
             </div>
             <div>
