@@ -1,0 +1,87 @@
+name: Refrescar seeds (datos.gov.co)
+
+# Workflow programado para mantener los snapshots de datos.gov.co frescos
+# en el repo. Aprovecha que jbjy-vk9h (contratos) y rpmr-utcd (Integrado)
+# son endpoints abiertos sin captcha.
+#
+# Qué refresca:
+#   - app/public/data/secop_integrado_seed.json  ← LIVE rpmr-utcd
+#
+# Qué NO refresca:
+#   - app/public/data/portal_opportunity_seed.json  ← requiere Playwright
+#     visible + captcha solver. Se actualiza solo cuando la Dra (o Sergio)
+#     corre `python scripts/scrape_portal.py` en su máquina y pushea.
+#   - app/public/data/watched_urls.json  ← lo administra la Dra desde la
+#     UI (persistido en IndexedDB). El seed es solo el bootstrap inicial.
+#
+# Cadencia:
+#   - Cron: todos los días a las 06:00 UTC (~01:00 hora Bogotá).
+#     Modificatorios al jbjy-vk9h aparecen casi en real-time vía la app
+#     (que hace LIVE fetch a Socrata cada carga), pero este job mantiene
+#     un snapshot histórico en el repo para auditoría retrospectiva.
+#   - workflow_dispatch: corre ahora bajo demanda desde la UI de Actions.
+#
+# Resultado:
+#   - Si el seed cambió, el job committea con mensaje descriptivo y
+#     dispara `deploy-pages.yml` automáticamente (push a main).
+#   - Si no cambió, el job termina sin commit (no hay churn).
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-seeds
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # token con write para que el commit del job dispare el deploy
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install requests
+        run: pip install --no-cache-dir "requests>=2.31"
+
+      - name: Sync rpmr-utcd → secop_integrado_seed.json
+        run: |
+          python scripts/sync_secop_integrado.py
+          mkdir -p app/public/data
+          cp .cache/secop_integrado.json app/public/data/secop_integrado_seed.json
+
+      - name: Detect changes
+        id: diff
+        run: |
+          if git diff --quiet -- app/public/data/secop_integrado_seed.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "✓ Seed sin cambios — no commit."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            # Diff stats para el commit message
+            old=$(git show HEAD:app/public/data/secop_integrado_seed.json 2>/dev/null | python -c "import json,sys; d=json.load(sys.stdin); print(d.get('total_rows',0))" || echo 0)
+            new=$(python -c "import json; d=json.load(open('app/public/data/secop_integrado_seed.json')); print(d.get('total_rows',0))")
+            echo "old_rows=$old" >> "$GITHUB_OUTPUT"
+            echo "new_rows=$new" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit & push
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/public/data/secop_integrado_seed.json
+          git commit -m "chore(seeds): refrescar Integrado ${{ steps.diff.outputs.old_rows }} → ${{ steps.diff.outputs.new_rows }} rows"
+          git push

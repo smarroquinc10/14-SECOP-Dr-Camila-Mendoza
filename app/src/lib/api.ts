@@ -299,9 +299,16 @@ const FEAB_ENTITY: FeabEntity = {
 
 // Cache en memoria de los datos crudos de Socrata. Se invalida con
 // `integradoSync()` o `verifyWatch()`.
-let _contractsCache: SocrataContrato[] | null = null;
-let _integradoCache: SocrataIntegrado[] | null = null;
-let _portalBulkCache: PortalBulk | null = null;
+//
+// IMPORTANTE: usamos una promise singleton (no el resultado) para que dos
+// componentes que llamen `getContracts()` / `getIntegrado()` en paralelo
+// antes de que el primer fetch termine compartan la MISMA request. Antes
+// el cache era `T[] | null` y se rellenaba post-await: si el segundo
+// caller llegaba durante el await, hacía fetch de nuevo. Ese race causaba
+// 2-3 hits a datos.gov.co por carga inicial (~6 MB de overhead).
+let _contractsPromise: Promise<SocrataContrato[]> | null = null;
+let _integradoPromise: Promise<SocrataIntegrado[]> | null = null;
+let _portalBulkPromise: Promise<PortalBulk> | null = null;
 let _lastSyncedAt: string | null = null;
 
 /**
@@ -326,19 +333,35 @@ export type PortalBulk = Record<
 >;
 
 async function getContracts(forceRefresh = false): Promise<SocrataContrato[]> {
-  if (!forceRefresh && _contractsCache) return _contractsCache;
-  _contractsCache = await fetchFeabContratos();
-  _lastSyncedAt = new Date().toISOString();
-  await setMeta("last_synced_at", _lastSyncedAt);
-  return _contractsCache;
+  if (forceRefresh) _contractsPromise = null;
+  if (!_contractsPromise) {
+    _contractsPromise = (async () => {
+      const rows = await fetchFeabContratos();
+      _lastSyncedAt = new Date().toISOString();
+      await setMeta("last_synced_at", _lastSyncedAt);
+      return rows;
+    })().catch((err) => {
+      _contractsPromise = null; // permite reintentar
+      throw err;
+    });
+  }
+  return _contractsPromise;
 }
 
 async function getIntegrado(forceRefresh = false): Promise<SocrataIntegrado[]> {
-  if (!forceRefresh && _integradoCache) return _integradoCache;
-  _integradoCache = await fetchIntegrado();
-  _lastSyncedAt = new Date().toISOString();
-  await setMeta("last_synced_at", _lastSyncedAt);
-  return _integradoCache;
+  if (forceRefresh) _integradoPromise = null;
+  if (!_integradoPromise) {
+    _integradoPromise = (async () => {
+      const rows = await fetchIntegrado();
+      _lastSyncedAt = new Date().toISOString();
+      await setMeta("last_synced_at", _lastSyncedAt);
+      return rows;
+    })().catch((err) => {
+      _integradoPromise = null;
+      throw err;
+    });
+  }
+  return _integradoPromise;
 }
 
 /**
@@ -348,19 +371,19 @@ async function getIntegrado(forceRefresh = false): Promise<SocrataIntegrado[]> {
  * fallbacks de `unified-table.tsx` siga siendo honesta.
  */
 async function getPortalBulk(): Promise<PortalBulk> {
-  if (_portalBulkCache) return _portalBulkCache;
-  try {
-    const url = withBasePath("/data/portal_opportunity_seed.json");
-    const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) {
-      _portalBulkCache = {};
-      return _portalBulkCache;
-    }
-    _portalBulkCache = (await res.json()) as PortalBulk;
-  } catch {
-    _portalBulkCache = {};
+  if (!_portalBulkPromise) {
+    _portalBulkPromise = (async () => {
+      try {
+        const url = withBasePath("/data/portal_opportunity_seed.json");
+        const res = await fetch(url, { cache: "no-store" });
+        if (!res.ok) return {} as PortalBulk;
+        return (await res.json()) as PortalBulk;
+      } catch {
+        return {} as PortalBulk;
+      }
+    })();
   }
-  return _portalBulkCache;
+  return _portalBulkPromise;
 }
 
 function toContract(row: SocrataContrato): Contract {

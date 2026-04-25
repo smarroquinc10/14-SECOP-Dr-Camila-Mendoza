@@ -25,6 +25,12 @@ const mono = JetBrains_Mono({
   weight: ["400", "500", "600"],
 });
 
+// Next no prefija el path de `icons` con `basePath` automáticamente, así
+// que en GitHub Pages (basePath = "/14-SECOP-Dr-Camila-Mendoza") el
+// favicon resolvía a /feab-logo-square.png y daba 404. Lo construimos a
+// mano leyendo la misma env var que usa next.config.ts.
+const _basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+
 export const metadata: Metadata = {
   title: "Sistema de Seguimiento Contratos FEAB · Dra Cami",
   description:
@@ -32,7 +38,7 @@ export const metadata: Metadata = {
   // El feab-logo-square.png es el cubo FEAB (4 cuadrados azul marino con
   // F/E/A/B). Lo recortamos del feab-banner.png y lo padeamos en blanco
   // para que sirva como icon de la pestaña/favicon de WebView2.
-  icons: { icon: "/feab-logo-square.png" },
+  icons: { icon: `${_basePath}/feab-logo-square.png` },
 };
 
 export default function RootLayout({

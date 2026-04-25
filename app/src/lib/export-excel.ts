@@ -44,6 +44,10 @@ const COLUMNS: Column[] = [
     pick: (r) => (typeof r.dias_adicionados === "number" ? r.dias_adicionados : ""),
   },
   { header: "Liquidado", pick: (r) => (r.liquidado ? "Si" : "No") },
+  // Notas vienen del campo `_notas` computado del API (estado_contrato +
+  // dias_adicionados) ó de la observación manual (Excel) con prefijo claro.
+  // No se exportaba antes y la Dra perdía esa columna al mandar el XLSX.
+  { header: "Notas", pick: (r) => r.notas ?? "" },
   { header: "Origen del dato", pick: (r) => labelDataSource(r.data_source) },
   { header: "URL del proceso (SECOP)", pick: (r) => r.url ?? "" },
 ];
@@ -97,6 +101,7 @@ export async function exportRowsToExcel(
     if (c.header === "Proveedor") return { wch: 40 };
     if (c.header === "Notice UID" || c.header === "Process ID") return { wch: 22 };
     if (c.header === "Numero Contrato") return { wch: 24 };
+    if (c.header === "Notas") return { wch: 50 };
     return { wch: 16 };
   });
 

@@ -113,6 +113,43 @@ const SECTIONS: { label: string; fields: [string, string][] }[] = [
   },
 ];
 
+/** Set de field names ya cubiertos por las SECTIONS curadas. Cualquier
+ *  campo del API jbjy-vk9h que no esté acá se renderiza al final en
+ *  "Otros campos del API" — así nunca se "comen" datos del SECOP.
+ *  La regla cardinal "espejo y reflejo fiel" exige que TODO lo que el
+ *  API devuelva quede expuesto al usuario, aunque sea en una sección
+ *  expandible secundaria. */
+const CURATED_FIELDS: Set<string> = new Set(
+  SECTIONS.flatMap((s) => s.fields.map(([k]) => k)),
+);
+
+/** Fields administrativos / de sistema que NUNCA es útil mostrar al
+ *  usuario. Los excluimos explícitamente del "Otros campos" para no
+ *  ensuciar el modal con basura. */
+const NOISE_FIELDS: Set<string> = new Set([
+  "_id",
+  "_notas", // se computa en backend; ya se muestra como "Notas"
+  ":@computed_region_y8tx_xa3w",
+  ":@computed_region_b8mb_y23g",
+  ":@computed_region_kpa3_pdzn",
+  ":@computed_region_ck25_dyt8",
+  ":@computed_region_g8jr_8txm",
+  ":@computed_region_yyfu_pwt8",
+]);
+
+/** Money-shaped fields adicionales que pueden aparecer en "Otros campos". */
+const MORE_MONEY_FIELDS = new Set([
+  "saldo_cdp",
+  "saldo_vigencia",
+  "valor_amortizado",
+  "presupuesto_general_de_la_nacion_pgn",
+  "recursos_de_credito",
+  "recursos_propios",
+  "recursos_propios_alcald_as_gobernaciones_y_resguardos_ind_genas_",
+  "sistema_general_de_participaciones",
+  "sistema_general_de_regal_as",
+]);
+
 const MONEY_FIELDS = new Set([
   "valor_del_contrato",
   "valor_facturado",
@@ -120,6 +157,7 @@ const MONEY_FIELDS = new Set([
   "valor_pendiente_de_pago",
   "valor_pendiente_de_ejecucion",
   "valor_de_pago_adelantado",
+  ...MORE_MONEY_FIELDS,
 ]);
 const DATE_FIELDS = new Set([
   "fecha_de_firma",
@@ -152,6 +190,27 @@ export function DetailDialog({ contractId, open, onOpenChange }: Props) {
   const contract = data?.contratos?.[0] || {};
   const url =
     (contract as Record<string, unknown>).urlproceso?.toString() ?? "";
+
+  // Estado del toggle de "Otros campos del API". Cerrado por default
+  // para no abrumar — pero la data SIEMPRE está disponible al click.
+  const [showAllApiFields, setShowAllApiFields] = React.useState(false);
+
+  // Calculamos los campos del API NO cubiertos por SECTIONS — son los
+  // 29 campos que antes se "comían". Filtramos vacíos y ruido conocido.
+  const otrosCamposApi = React.useMemo(() => {
+    const out: Array<[string, unknown]> = [];
+    for (const [k, v] of Object.entries(contract as Record<string, unknown>)) {
+      if (CURATED_FIELDS.has(k)) continue;
+      if (NOISE_FIELDS.has(k)) continue;
+      if (v === null || v === undefined || v === "") continue;
+      const s = String(v).trim();
+      if (!s) continue;
+      const sl = s.toLowerCase();
+      if (sl === "no definido" || sl === "nan" || sl === "null") continue;
+      out.push([k, v]);
+    }
+    return out.sort((a, b) => a[0].localeCompare(b[0]));
+  }, [contract]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -266,6 +325,53 @@ export function DetailDialog({ contractId, open, onOpenChange }: Props) {
                   </section>
                 );
               })}
+
+              {/* Otros campos del API jbjy-vk9h que las SECTIONS curadas no
+                  cubren. Antes este bloque NO existía y el modal mostraba
+                  44/73 campos — los 29 restantes ("descripcion_del_proceso",
+                  "condiciones_de_entrega", etc.) quedaban invisibles para
+                  la Dra aunque el API los devolviera. Cardinal violation.
+                  Ahora se muestran SIEMPRE, escondidos detrás de un toggle
+                  para no abrumar el modal por default. */}
+              {otrosCamposApi.length > 0 && (
+                <section>
+                  <button
+                    onClick={() => setShowAllApiFields((s) => !s)}
+                    className="inline-flex items-center gap-1 text-xs text-burgundy hover:underline"
+                  >
+                    {showAllApiFields ? (
+                      <ChevronDown className="h-3 w-3" />
+                    ) : (
+                      <ChevronRight className="h-3 w-3" />
+                    )}
+                    Otros campos del API SECOP ({otrosCamposApi.length})
+                  </button>
+                  {showAllApiFields && (
+                    <div className="mt-2 border border-rule rounded-md overflow-hidden">
+                      <table className="w-full text-sm">
+                        <tbody>
+                          {otrosCamposApi.map(([field, value], i) => (
+                            <tr
+                              key={field}
+                              className={cn(
+                                "border-b border-rule/50 last:border-0",
+                                i % 2 === 0 ? "bg-background" : "bg-surface",
+                              )}
+                            >
+                              <td className="px-3 py-2 w-1/3 text-ink-soft text-[10px] uppercase tracking-wide font-mono">
+                                {field.replace(/_/g, " ")}
+                              </td>
+                              <td className="px-3 py-2 text-ink whitespace-pre-wrap">
+                                {fmtValue(field, value)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </section>
+              )}
 
               {/* Adiciones */}
               {Object.values(data.adiciones_by_contrato).some((a) => a.length > 0) && (

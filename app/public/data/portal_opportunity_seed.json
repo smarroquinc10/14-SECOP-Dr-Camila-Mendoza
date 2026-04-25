@@ -479,7 +479,9 @@
         "proceso": "CO1.REQ.5469397"
       }
     ],
-    "raw_length": 312685
+    "raw_length": 312685,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.5405232": {
     "all_labels": {
@@ -928,7 +930,9 @@
         "proceso": "CO1.REQ.5469710"
       }
     ],
-    "raw_length": 304691
+    "raw_length": 304691,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.5419109": {
     "all_labels": {
@@ -1385,7 +1389,9 @@
         "proceso": "CO1.REQ.5510387"
       }
     ],
-    "raw_length": 294884
+    "raw_length": 294884,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.5578040": {
     "all_labels": {
@@ -1859,7 +1865,9 @@
         "proceso": "CO1.REQ.5640299"
       }
     ],
-    "raw_length": 293792
+    "raw_length": 293792,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.5578203": {
     "all_labels": {
@@ -2002,7 +2010,9 @@
         "proceso": "CO1.REQ.5670326"
       }
     ],
-    "raw_length": 156515
+    "raw_length": 156515,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.5578214": {
     "all_labels": {
@@ -2436,7 +2446,9 @@
         "proceso": "CO1.REQ.5662990"
       }
     ],
-    "raw_length": 292618
+    "raw_length": 292618,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.5708167": {
     "all_labels": {
@@ -2641,7 +2653,9 @@
         "proceso": "CO1.REQ.5809848"
       }
     ],
-    "raw_length": 185051
+    "raw_length": 185051,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.5708318": {
     "all_labels": {
@@ -3078,7 +3092,9 @@
         "proceso": "CO1.REQ.5809586"
       }
     ],
-    "raw_length": 290048
+    "raw_length": 290048,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.5723507": {
     "all_labels": {
@@ -3326,7 +3342,9 @@
         "proceso": "CO1.REQ.5810536"
       }
     ],
-    "raw_length": 256544
+    "raw_length": 256544,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.5792785": {
     "all_labels": {
@@ -3513,7 +3531,9 @@
         "proceso": "CO1.REQ.5863685"
       }
     ],
-    "raw_length": 176163
+    "raw_length": 176163,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.5792792": {
     "all_labels": {
@@ -3759,7 +3779,9 @@
         "proceso": "CO1.REQ.5889976"
       }
     ],
-    "raw_length": 209690
+    "raw_length": 209690,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.5793216": {
     "all_labels": {
@@ -3976,7 +3998,9 @@
         "proceso": "CO1.REQ.5863252"
       }
     ],
-    "raw_length": 198545
+    "raw_length": 198545,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.5841046": {
     "all_labels": {
@@ -4153,7 +4177,9 @@
         "proceso": "CO1.MSG.5927075"
       }
     ],
-    "raw_length": 391904
+    "raw_length": 391904,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.5865622": {
     "all_labels": {
@@ -4637,7 +4663,9 @@
         "proceso": "CO1.REQ.5954284"
       }
     ],
-    "raw_length": 309971
+    "raw_length": 309971,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.5870742": {
     "all_labels": {
@@ -4874,7 +4902,9 @@
         "proceso": "CO1.REQ.5979927"
       }
     ],
-    "raw_length": 533896
+    "raw_length": 533896,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.5903970": {
     "all_labels": {
@@ -5025,7 +5055,9 @@
         "proceso": "CO1.REQ.6013041"
       }
     ],
-    "raw_length": 158631
+    "raw_length": 158631,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.5903977": {
     "all_labels": {
@@ -5373,7 +5405,9 @@
         "proceso": "CO1.REQ.5987665"
       }
     ],
-    "raw_length": 251972
+    "raw_length": 251972,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.5921229": {
     "all_labels": {
@@ -5815,7 +5849,9 @@
         "proceso": "CO1.REQ.6024896"
       }
     ],
-    "raw_length": 293741
+    "raw_length": 293741,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.5921611": {
     "all_labels": {
@@ -6255,7 +6291,9 @@
         "proceso": "CO1.REQ.6013176"
       }
     ],
-    "raw_length": 301842
+    "raw_length": 301842,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.5921703": {
     "all_labels": {
@@ -6459,7 +6497,9 @@
         "proceso": "CO1.REQ.6024321"
       }
     ],
-    "raw_length": 182584
+    "raw_length": 182584,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.5924038": {
     "all_labels": {
@@ -6740,7 +6780,9 @@
         "proceso": "CO1.REQ.6024620"
       }
     ],
-    "raw_length": 223737
+    "raw_length": 223737,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.5932766": {
     "all_labels": {
@@ -6907,7 +6949,9 @@
         "proceso": "CO1.REQ.6041183"
       }
     ],
-    "raw_length": 162743
+    "raw_length": 162743,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.5933103": {
     "all_labels": {
@@ -7038,7 +7082,9 @@
         "proceso": "CO1.MSG.6058197"
       }
     ],
-    "raw_length": 250172
+    "raw_length": 250172,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.5934044": {
     "all_labels": {
@@ -7170,7 +7216,9 @@
       "valor_total": "978"
     },
     "notificaciones": [],
-    "raw_length": 250307
+    "raw_length": 250307,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.6026725": {
     "all_labels": {
@@ -7422,7 +7470,9 @@
         "proceso": "CO1.REQ.6104237"
       }
     ],
-    "raw_length": 217843
+    "raw_length": 217843,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.6106913": {
     "all_labels": {
@@ -7591,7 +7641,9 @@
         "proceso": "CO1.MSG.6193392"
       }
     ],
-    "raw_length": 380219
+    "raw_length": 380219,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.6203868": {
     "all_labels": {
@@ -7766,7 +7818,9 @@
         "proceso": "CO1.MSG.6299815"
       }
     ],
-    "raw_length": 362539
+    "raw_length": 362539,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.6311419": {
     "all_labels": {
@@ -8099,7 +8153,9 @@
         "proceso": "CO1.REQ.6375433"
       }
     ],
-    "raw_length": 231880
+    "raw_length": 231880,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.6343203": {
     "all_labels": {
@@ -8532,7 +8588,9 @@
         "proceso": "CO1.REQ.6455357"
       }
     ],
-    "raw_length": 935831
+    "raw_length": 935831,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.6414971": {
     "all_labels": {
@@ -8706,7 +8764,9 @@
         "proceso": "CO1.MSG.6604908"
       }
     ],
-    "raw_length": 296432
+    "raw_length": 296432,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.6535964": {
     "all_labels": {
@@ -8875,7 +8935,9 @@
         "proceso": "CO1.MSG.6677500"
       }
     ],
-    "raw_length": 379391
+    "raw_length": 379391,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.6536210": {
     "all_labels": {
@@ -9154,7 +9216,9 @@
         "proceso": "CO1.REQ.6640688"
       }
     ],
-    "raw_length": 219273
+    "raw_length": 219273,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.6539031": {
     "all_labels": {
@@ -9417,7 +9481,9 @@
         "proceso": "CO1.REQ.6650617"
       }
     ],
-    "raw_length": 215330
+    "raw_length": 215330,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.6689409": {
     "all_labels": {
@@ -9689,7 +9755,9 @@
         "proceso": "CO1.REQ.6622163"
       }
     ],
-    "raw_length": 561287
+    "raw_length": 561287,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.6762140": {
     "all_labels": {
@@ -10061,7 +10129,9 @@
         "proceso": "CO1.REQ.6878282"
       }
     ],
-    "raw_length": 267473
+    "raw_length": 267473,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.6884202": {
     "all_labels": {
@@ -10399,7 +10469,9 @@
         "proceso": "CO1.REQ.6918247"
       }
     ],
-    "raw_length": 533461
+    "raw_length": 533461,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.7042400": {
     "all_labels": {
@@ -10587,7 +10659,9 @@
       "valor_total": "22.500.000"
     },
     "notificaciones": [],
-    "raw_length": 183223
+    "raw_length": 183223,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.7042758": {
     "all_labels": {
@@ -10889,7 +10963,9 @@
         "proceso": "CO1.REQ.7103382"
       }
     ],
-    "raw_length": 227136
+    "raw_length": 227136,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.7055183": {
     "all_labels": {
@@ -11130,7 +11206,9 @@
         "proceso": "CO1.REQ.7172425"
       }
     ],
-    "raw_length": 200499
+    "raw_length": 200499,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.7108388": {
     "all_labels": {
@@ -11438,7 +11516,9 @@
         "proceso": "CO1.REQ.7225949"
       }
     ],
-    "raw_length": 251754
+    "raw_length": 251754,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.7108490": {
     "all_labels": {
@@ -11738,7 +11818,9 @@
         "proceso": "CO1.REQ.7222502"
       }
     ],
-    "raw_length": 249758
+    "raw_length": 249758,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.7108582": {
     "all_labels": {
@@ -12057,7 +12139,9 @@
         "proceso": "CO1.REQ.7226308"
       }
     ],
-    "raw_length": 261590
+    "raw_length": 261590,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.7108583": {
     "all_labels": {
@@ -12367,7 +12451,9 @@
         "proceso": "CO1.REQ.7226198"
       }
     ],
-    "raw_length": 256660
+    "raw_length": 256660,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.7108797": {
     "all_labels": {
@@ -12679,7 +12765,9 @@
         "proceso": "CO1.REQ.7223844"
       }
     ],
-    "raw_length": 252816
+    "raw_length": 252816,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.7108821": {
     "all_labels": {
@@ -12994,7 +13082,9 @@
         "proceso": "CO1.REQ.7222500"
       }
     ],
-    "raw_length": 261350
+    "raw_length": 261350,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.7108825": {
     "all_labels": {
@@ -13294,7 +13384,9 @@
         "proceso": "CO1.REQ.7223803"
       }
     ],
-    "raw_length": 249983
+    "raw_length": 249983,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.7108912": {
     "all_labels": {
@@ -13599,7 +13691,9 @@
         "proceso": "CO1.REQ.7223323"
       }
     ],
-    "raw_length": 254316
+    "raw_length": 254316,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.7113379": {
     "all_labels": {
@@ -13821,7 +13915,9 @@
         "proceso": "CO1.REQ.7233502"
       }
     ],
-    "raw_length": 208419
+    "raw_length": 208419,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.7113869": {
     "all_labels": {
@@ -14034,7 +14130,9 @@
         "proceso": "CO1.REQ.7233187"
       }
     ],
-    "raw_length": 203596
+    "raw_length": 203596,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.7113871": {
     "all_labels": {
@@ -14256,7 +14354,9 @@
         "proceso": "CO1.REQ.7233137"
       }
     ],
-    "raw_length": 208299
+    "raw_length": 208299,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.7113947": {
     "all_labels": {
@@ -14598,7 +14698,9 @@
         "proceso": "CO1.REQ.7226839"
       }
     ],
-    "raw_length": 259159
+    "raw_length": 259159,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.7114107": {
     "all_labels": {
@@ -14918,7 +15020,9 @@
         "proceso": "CO1.REQ.7228195"
       }
     ],
-    "raw_length": 257539
+    "raw_length": 257539,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.7114108": {
     "all_labels": {
@@ -15228,7 +15332,9 @@
         "proceso": "CO1.REQ.7229218"
       }
     ],
-    "raw_length": 250502
+    "raw_length": 250502,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.7114109": {
     "all_labels": {
@@ -15526,7 +15632,9 @@
         "proceso": "CO1.REQ.7231188"
       }
     ],
-    "raw_length": 247412
+    "raw_length": 247412,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.7114111": {
     "all_labels": {
@@ -15824,7 +15932,9 @@
         "proceso": "CO1.REQ.7232021"
       }
     ],
-    "raw_length": 247300
+    "raw_length": 247300,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.7114112": {
     "all_labels": {
@@ -16126,7 +16236,9 @@
         "proceso": "CO1.REQ.7232615"
       }
     ],
-    "raw_length": 248636
+    "raw_length": 248636,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.7114421": {
     "all_labels": {
@@ -16450,7 +16562,9 @@
         "proceso": "CO1.REQ.7227860"
       }
     ],
-    "raw_length": 258483
+    "raw_length": 258483,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.7124492": {
     "all_labels": {
@@ -16903,7 +17017,9 @@
         "proceso": "CO1.REQ.7235369"
       }
     ],
-    "raw_length": 295365
+    "raw_length": 295365,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.7124817": {
     "all_labels": {
@@ -17127,7 +17243,9 @@
         "proceso": "CO1.REQ.7235022"
       }
     ],
-    "raw_length": 204417
+    "raw_length": 204417,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.7125003": {
     "all_labels": {
@@ -17353,7 +17471,9 @@
         "proceso": "CO1.REQ.7234848"
       }
     ],
-    "raw_length": 209300
+    "raw_length": 209300,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.7125007": {
     "all_labels": {
@@ -17667,7 +17787,9 @@
         "proceso": "CO1.REQ.7234976"
       }
     ],
-    "raw_length": 251084
+    "raw_length": 251084,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.7125106": {
     "all_labels": {
@@ -18032,7 +18154,9 @@
         "proceso": "CO1.REQ.7237393"
       }
     ],
-    "raw_length": 271535
+    "raw_length": 271535,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.7125166": {
     "all_labels": {
@@ -18330,7 +18454,9 @@
         "proceso": "CO1.REQ.7238129"
       }
     ],
-    "raw_length": 247416
+    "raw_length": 247416,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.7125168": {
     "all_labels": {
@@ -18632,7 +18758,9 @@
         "proceso": "CO1.REQ.7238807"
       }
     ],
-    "raw_length": 248643
+    "raw_length": 248643,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.7130965": {
     "all_labels": {
@@ -18983,7 +19111,9 @@
         "proceso": "CO1.REQ.7235557"
       }
     ],
-    "raw_length": 273926
+    "raw_length": 273926,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   },
   "CO1.NTC.7133101": {
     "all_labels": {
@@ -19156,6 +19286,8 @@
         "proceso": "CO1.REQ.7104048"
       }
     ],
-    "raw_length": 352561
+    "raw_length": 352561,
+    "scraped_at": "2026-04-25T19:53:49+00:00",
+    "status": "ok_completo"
   }
 }

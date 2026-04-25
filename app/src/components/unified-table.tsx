@@ -114,6 +114,11 @@ export interface UnifiedRow {
   // La UI muestra un badge claro cuando data_source !== "api" para que la
   // procedencia NUNCA quede ambigua.
   data_source: "api" | "integrado" | "portal" | null;
+
+  // Cuándo se obtuvo la data del portal (cuando data_source === "portal").
+  // Permite al badge mostrar antigüedad real ("hace 3 días" / "hace 2 meses")
+  // en lugar del genérico "vía portal cache". null cuando no aplica.
+  data_source_scraped_at: string | null;
 }
 
 /** Mapa del bulk Portal cache pasado por la página — cada entry es el
@@ -331,6 +336,8 @@ export function buildUnifiedRows(
       : portalSnap
       ? "portal"
       : null;
+    const dataSourceScrapedAt =
+      dataSource === "portal" ? portalSnap?.scraped_at ?? null : null;
 
     const apiDias = parseInt(String(contract?.dias_adicionados ?? "0"), 10);
     const dias =
@@ -423,6 +430,7 @@ export function buildUnifiedRows(
       watch_url: w.url,
       verifyStatus: classifyStatus(w, contract, integ, portalSnap != null),
       data_source: dataSource,
+      data_source_scraped_at: dataSourceScrapedAt,
     });
   }
 
@@ -458,10 +466,32 @@ export function buildUnifiedRows(
       watch_url: null,
       verifyStatus: "contrato_firmado",
       data_source: "api",
+      data_source_scraped_at: null,
     });
   }
 
   return rows;
+}
+
+
+/**
+ * Convierte un timestamp ISO a un label legible "hace X días/meses".
+ * Si no parsea, devuelve null (la UI cae al label genérico).
+ */
+function formatAge(iso: string | null): string | null {
+  if (!iso) return null;
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return null;
+  const days = Math.floor((Date.now() - t) / 86400000);
+  if (days < 0) return "hoy";
+  if (days === 0) return "hoy";
+  if (days === 1) return "ayer";
+  if (days < 30) return `hace ${days} días`;
+  const months = Math.floor(days / 30);
+  if (months === 1) return "hace 1 mes";
+  if (months < 12) return `hace ${months} meses`;
+  const years = Math.floor(days / 365);
+  return years === 1 ? "hace 1 año" : `hace ${years} años`;
 }
 
 
@@ -744,6 +774,20 @@ export function UnifiedTable({
                   vía Integrado
                 </div>
               )}
+              {r.data_source === "portal" && (() => {
+                const age = formatAge(r.data_source_scraped_at);
+                const tooltip = r.data_source_scraped_at
+                  ? `Cache del portal community.secop.gov.co — leído ${r.data_source_scraped_at.slice(0, 10)} (${age ?? "fecha desconocida"}). No se actualiza en vivo; se refresca con cada scrape periódico.`
+                  : "Datos del cache estático del portal community.secop.gov.co. Se actualiza con un scrape periódico (no en vivo).";
+                return (
+                  <div
+                    className="mt-1 inline-flex items-center px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 text-[9px] font-medium"
+                    title={tooltip}
+                  >
+                    vía portal cache{age ? ` · ${age}` : ""}
+                  </div>
+                );
+              })()}
               <div className="text-ink-soft mt-1 truncate">
                 {r.sheets.length > 0 ? (
                   r.sheets.join(", ")
