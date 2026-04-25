@@ -2,7 +2,10 @@
 requests>=2.32
 httpx>=0.28
 requests-cache>=1.2
-tenacity>=9.0
+# Loosen a >=8.1 para compatibilidad con streamlit (que pinea <9). El
+# secop_client.py solo usa la API estable: retry, stop_after_attempt,
+# wait_exponential, retry_if_exception_type — disponibles en 8 y 9.
+tenacity>=8.1
 
 # Excel
 openpyxl>=3.1
