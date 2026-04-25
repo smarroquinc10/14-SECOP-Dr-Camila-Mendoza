@@ -33,9 +33,11 @@ from typing import Any
 
 import requests
 
+from secop_ii.paths import state_path
+
 log = logging.getLogger(__name__)
 
-DEFAULT_CACHE_DIR = Path(".cache") / "pdf"
+DEFAULT_CACHE_DIR = state_path("pdf")
 DEFAULT_TIMEOUT_S = 30
 _USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
