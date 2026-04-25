@@ -26,6 +26,18 @@
       "csp": null
     }
   },
+  "plugins": {
+    "updater": {
+      "active": true,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM5QjlBRTE5QzJDNERGNzAKUldSdzM4VENHYTY1T1NFQm8vdXhsOVdtWEU5bHVsaVVIdjViNUhlQ05mRjdJNzZIM29TdTQyMWUK",
+      "endpoints": [
+        "https://github.com/smarroquinc10/14-SECOP-Dr-Camila-Mendoza/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  },
   "bundle": {
     "active": true,
     "targets": ["msi", "nsis"],

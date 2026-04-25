@@ -134,6 +134,13 @@ fn chrono_lite_now() -> String {
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        // Auto-updater + relaunch — el frontend (UpdatePrompt.tsx) llama
+        // `check()` cada arranque + cada 4hs y muestra el popup cuando hay
+        // una versión más nueva en GitHub Releases. La firma minisign
+        // (pubkey en tauri.conf.json) impide que un atacante reemplace
+        // el .msi en GitHub con un binario falso.
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .manage(ApiSidecar(Mutex::new(None)))
         .setup(|app| {
             // En el MSI instalado, los recursos viven junto al .exe. En dev

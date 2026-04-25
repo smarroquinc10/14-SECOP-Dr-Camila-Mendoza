@@ -1,0 +1,206 @@
+name: Release MSI on tag push
+
+# Workflow del flujo de release auto-update.
+#
+# Disparador: cualquier tag que empiece con "v" (ej. v1.0.1, v2.0.0, v1.0.0-rc1).
+# El script `scripts/release.ps1` crea esos tags via `git tag -a vX.Y.Z`.
+#
+# Pasos:
+#   1. Checkout del tag (no del branch).
+#   2. Setup de Python 3.13, Node 20, Rust stable.
+#   3. Instala deps (Python venv, npm ci, cargo).
+#   4. Genera tauri/icons/icon.ico desde el feab-logo.png (no la commiteamos
+#      a la rama de la PR para mantenerla chica; la regeneramos cada release).
+#   5. Bundlea el sidecar FastAPI con PyInstaller. NO incluye el seed dir
+#      (eso es PII de Cami; CI no la tiene). Auto-updates no necesitan seed
+#      porque la data del usuario vive en %LOCALAPPDATA% y no se reemplaza.
+#   6. `cargo tauri build` con TAURI_SIGNING_PRIVATE_KEY desde secrets ->
+#      genera el .msi y su firma minisign .sig en bundle/msi/.
+#   7. Genera latest.json — el manifest que Tauri leer� desde
+#      releases/latest/download/latest.json para detectar updates.
+#   8. Sube todo (MSI, .sig, latest.json) a GitHub Releases con el tag.
+#
+# La PC de Cami detecta el nuevo manifest la pr�xima vez que abra la app
+# o cada 4hs si la deja abierta. Le aparece el popup "Hay actualizaci�n",
+# clickea, se reinstala, listo.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    timeout-minutes: 30
+    steps:
+      - name: Checkout (with full history for tag annotations)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Setup Rust stable (MSVC)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Cache cargo workspace (Tauri target dir)
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ./tauri -> target
+          key: tauri-msi
+
+      - name: Install Python deps (venv)
+        shell: pwsh
+        run: |
+          python -m venv .venv
+          .venv\Scripts\python -m pip install --upgrade pip
+          .venv\Scripts\pip install -e ".[dev]" || .venv\Scripts\pip install -e .
+          .venv\Scripts\pip install pyinstaller pillow
+
+      - name: Install Node deps for app
+        working-directory: app
+        run: npm ci --no-audit --no-fund
+
+      - name: Install Tauri CLI v2
+        run: cargo install tauri-cli --version "^2.0" --locked
+
+      - name: Build Next.js as static export
+        working-directory: app
+        run: npm run build
+
+      - name: Generate tauri/icons/icon.ico from feab-logo.png
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path tauri\icons | Out-Null
+          .venv\Scripts\python -c @"
+          from PIL import Image
+          import os
+          src = Image.open('app/public/feab-logo.png').convert('RGBA')
+          sw, sh = src.size
+          canvas = Image.new('RGBA', (256, 256), (0, 0, 0, 0))
+          target_w = int(256 * 0.92)
+          target_h = max(1, int(sh * target_w / sw))
+          resized = src.resize((target_w, target_h), Image.LANCZOS)
+          canvas.paste(resized, ((256 - target_w) // 2, (256 - target_h) // 2), resized)
+          os.makedirs('tauri/icons', exist_ok=True)
+          canvas.save('tauri/icons/icon.ico', sizes=[(256,256),(128,128),(64,64),(48,48),(32,32),(16,16)])
+          print('icon.ico generated:', os.path.getsize('tauri/icons/icon.ico'), 'bytes')
+          "@
+
+      - name: Bundle FastAPI sidecar with PyInstaller (lean, no seed)
+        shell: pwsh
+        run: |
+          $REPO = (Get-Location).Path
+          New-Item -ItemType Directory -Force -Path tauri\binaries | Out-Null
+          # Seed dir vac�o pero existente (PyInstaller --add-data lo necesita
+          # como path. El api._seed_state_dir_if_empty() detecta dir vac�o y
+          # no copia nada — clean upgrade behavior).
+          New-Item -ItemType Directory -Force -Path tauri\seed | Out-Null
+          New-Item -ItemType File -Force -Path tauri\seed\.gitkeep | Out-Null
+          .venv\Scripts\python -m PyInstaller `
+            --onefile `
+            --name dra-cami-api `
+            --distpath "$REPO\tauri\binaries" `
+            --workpath "$REPO\build\pyinstaller-work" `
+            --specpath "$REPO\build\pyinstaller" `
+            --add-data "$REPO\tauri\seed;seed" `
+            --add-data "$REPO\scripts;scripts" `
+            --paths "$REPO\src" `
+            --hidden-import secop_ii.notice_resolver `
+            --collect-submodules uvicorn `
+            --exclude-module streamlit `
+            --exclude-module matplotlib `
+            --exclude-module plotly `
+            --exclude-module pdfminer `
+            --exclude-module pypdfium2 `
+            --exclude-module imageio `
+            --exclude-module imageio_ffmpeg `
+            --exclude-module pywebview `
+            --exclude-module webview `
+            --exclude-module IPython `
+            --exclude-module pandas.io.formats.style `
+            --exclude-module playwright `
+            --exclude-module patchright `
+            --exclude-module pyee `
+            --exclude-module greenlet `
+            --noconfirm `
+            "$REPO\src\secop_ii\api.py"
+          if (-not (Test-Path "tauri\binaries\dra-cami-api.exe")) {
+            throw "PyInstaller did not produce dra-cami-api.exe"
+          }
+          $size = (Get-Item "tauri\binaries\dra-cami-api.exe").Length / 1MB
+          Write-Host ("Sidecar size: {0:N1} MB" -f $size)
+
+      - name: Build Tauri MSI + sign with minisign Ed25519 key
+        working-directory: tauri
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: cargo tauri build --bundles msi
+
+      - name: Generate latest.json manifest for Tauri updater
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $version = $tag -replace '^v', ''
+          $msi = Get-ChildItem "tauri\target\release\bundle\msi\*.msi" | Select-Object -First 1
+          if (-not $msi) { throw "No .msi found in bundle/msi/" }
+          $sigFile = "$($msi.FullName).sig"
+          if (-not (Test-Path $sigFile)) { throw "No .sig found at $sigFile — �TAURI_SIGNING_PRIVATE_KEY est� en secrets?" }
+          $signature = (Get-Content $sigFile -Raw).Trim()
+          # Release notes salen de la anotaci�n del tag (ya pusiste eso en
+          # release.ps1 con `git tag -a -m`). Si por alguna raz�n no hay
+          # anotaci�n, caemos al �ltimo commit subject.
+          $notes = (git tag -l --format='%(contents)' $tag).Trim()
+          if (-not $notes) { $notes = (git log -1 --format='%s').Trim() }
+          # GitHub URL-encodea espacios en los nombres de assets — usamos %20.
+          $encodedName = [System.Web.HttpUtility]::UrlPathEncode($msi.Name)
+          # Tauri esquema:
+          #   { version, notes, pub_date, platforms: { 'windows-x86_64': { signature, url } } }
+          $manifest = [PSCustomObject]@{
+            version = $version
+            notes = $notes
+            pub_date = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+            platforms = [PSCustomObject]@{
+              "windows-x86_64" = [PSCustomObject]@{
+                signature = $signature
+                url = "https://github.com/${{ github.repository }}/releases/download/$tag/$encodedName"
+              }
+            }
+          }
+          # JSON con UTF-8 sin BOM (Tauri es estricto con encodings).
+          $json = $manifest | ConvertTo-Json -Depth 5
+          [System.IO.File]::WriteAllText("$PWD/latest.json", $json, (New-Object System.Text.UTF8Encoding $false))
+          Write-Host "latest.json:"
+          Get-Content latest.json
+
+      - name: Create GitHub Release with MSI + sig + latest.json
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          # Notas leg�das desde el tag annotation; softprops parsea Markdown.
+          body_path: ${{ github.workspace }}\latest.json
+          files: |
+            tauri/target/release/bundle/msi/*.msi
+            tauri/target/release/bundle/msi/*.msi.sig
+            latest.json
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
