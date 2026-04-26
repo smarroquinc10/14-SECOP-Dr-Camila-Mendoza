@@ -144,6 +144,33 @@ ya están **DEPLOYED** y verificados en `VERIFICATION-REPORT-2026-04-25.md`
 
 ---
 
+### Error #6 — SCRAPE_PORTAL_SISTEMA_NO_FUNCIONAL_4_BLOQUEADORES
+**Proceso**: piloto sobre `CO1.NTC.7906712` y `CO1.NTC.8210327`
+**Fecha / hora**: 2026-04-26 10:10–10:17 (Bogotá)
+**Reportado por**: yo durante el intento de cerrar Error #5 con piloto pequeño (2 procs)
+**Síntoma exacto**: piloto de 2 procesos terminó con **2/2 errores** (100% fail rate, 7.3 minutos):
+```
+[1/2] CO1.NTC.7906712 → status=error_red, 0 docs
+[2/2] CO1.NTC.8210327 → status=error_red, 0 docs
+✓ Listo. 0 completos · 0 parciales · 2 errores · 7.3 min totales.
+```
+**Causa**: 4 bloqueadores técnicos en cascada en `src/secop_ii/portal_scraper.py` y env:
+1. **API mismatch playwright-recaptcha**: el código llama `SyncSolver.solve_recaptcha(language='es-CO')` pero la versión actual de la librería ya no acepta ese kwarg. Log: `solve_recaptcha() got an unexpected keyword argument 'language'`.
+2. **ffmpeg no instalado**: warning al inicio `Couldn't find ffmpeg or avconv`. Sin ffmpeg, pydub no puede convertir el WAV del captcha → audio solver falla en cascada.
+3. **Whisper no instalado**: `importlib.util.find_spec('whisper')` devuelve None. El captcha solver primario no existe → cae a Google Speech (rate-limited) → cae a manual (también falla).
+4. **Chrome headless por default**: cuando todos los solvers automáticos fallan, el script dice "Resuelve a mano en Chrome (hasta 180s)" pero corre headless → no hay UI donde clickear → timeout 180s → error_red.
+**Fix propuesto**:
+- Fix 1: patch del solver kwarg en `portal_scraper.py` (línea aprox del playwright-recaptcha call) — quitar `language` o usar la nueva API.
+- Fix 2: instalar ffmpeg (`choco install ffmpeg` Windows) y agregar a PATH.
+- Fix 3: `pip install openai-whisper` + descargar modelo `small` (~500MB).
+- Fix 4: agregar flag `--headed` al script o forzar Chrome visible para fallback manual.
+**Impacto**: bloqueo total del Error #5 — sin estos 4 fixes, el dashboard NUNCA va a ser espejo completo de los 491 links. Es el bloqueador cardinal.
+**Test que regresione**: re-correr `python scripts/scrape_portal.py --limit 2` y verificar `0 errores` (o al menos `2 completos`).
+**Smoke test canónico**: cualquier proceso PPI con notice_uid resuelto que esté en `coverage=none` (sample en `_AUDITORIA_DASHBOARD_2026-04-26.md`).
+**Status**: **PENDIENTE_DIAGNÓSTICO** (subnivel: 4 fixes técnicos antes de poder proceder con Error #5).
+
+---
+
 ## Cierre de cada incidente — checklist
 
 Antes de marcar un Error como **DEPLOYED**:
