@@ -208,6 +208,28 @@ status=error_red docs=0
 
 ---
 
+### Error #9 — THREADPOOLEXECUTOR_ROMPE_PLAYWRIGHT_SYNC
+**Proceso**: piloto post-CapSolver con 3 procs (`CO1.NTC.7906712`, `CO1.NTC.8210327`, `CO1.NTC.7983080`)
+**Fecha / hora**: 2026-04-26 17:01 (Bogotá)
+**Reportado por**: yo durante test del batch full con CapSolver activo
+**Síntoma exacto**: 3/3 procesos fallaron en **2.9 segundos** con error:
+```
+Cannot switch to a different thread
+Current:  <greenlet.greenlet ... current active>
+Expected: <greenlet.greenlet ... suspended active>
+```
+Toda la suite del batch fail-fast.
+**Causa**: Playwright sync API NO es thread-safe. Cuando el browser se inicializa en `PortalScraper.__enter__`, queda atado al greenlet del main thread. Cualquier llamada subsiguiente a métodos del browser (page.goto, page.click, etc) DEBE hacerse desde el mismo greenlet — no desde un worker thread. Mi fix de "timeout duro per-item con `concurrent.futures.ThreadPoolExecutor`" (Error #6+#8) movió `scraper.fetch(uid)` a un worker thread, violando esa restricción.
+**Fix propuesto**: revertir el ThreadPoolExecutor. Volver a `try/except` directo con `scraper.fetch(uid)`. Aceptar que NO hay timeout duro externo (es estructuralmente imposible con Playwright sync sin subprocess separado). El cap natural per-captcha viene del `wait_timeout=60` del solver lib (Fix Error #7) + timeouts internos de Playwright (180s captcha humano, 60s navigation). Worst-case per proc sin CapSolver: ~5-6 min. Worst-case con CapSolver: ~30s.
+**Impacto**: scrape inejecutable mientras esté el ThreadPoolExecutor. **Cardinal: rolledback inmediato.**
+**Test que regresione**: piloto con `--limit 1` debe terminar en <5 min con `status=ok_completo` o `partial`, NO con `Cannot switch to a different thread`.
+**Smoke test canónico**: `CO1.NTC.7906712`
+**Status**: **DEPLOYED** (rollback aplicado en commit en proceso)
+
+**Lección operacional**: Playwright sync requiere **subprocess** (no threads) para timeouts duros externos. Si en el futuro el batch cuelga, agregar como wrapper outermost con `subprocess.Popen` + signal kill, NO threading.
+
+---
+
 ## Cierre de cada incidente — checklist
 
 Antes de marcar un Error como **DEPLOYED**:

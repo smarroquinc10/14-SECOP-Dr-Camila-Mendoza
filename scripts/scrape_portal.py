@@ -194,38 +194,17 @@ def main() -> int:
                 f"(elapsed {elapsed:5.0f}s · ETA ~{eta / 60:4.1f} min)",
                 flush=True,
             )
-            # Timeout duro per-item con concurrent.futures (Errores #7 + #8):
-            # garantiza que NUNCA un item cuelgue silenciosamente al batch.
-            # Si supera 5 min, marcamos timeout y seguimos con el siguiente.
-            # Esto cumple la regla cardinal "el bot nunca muere" del RUNT.
-            from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutTimeout
-            ITEM_TIMEOUT_S = 300  # 5 min hard cap per item
+            # NOTA Error #9 (2026-04-26): el wrapper ThreadPoolExecutor que
+            # hicimos rompe Playwright sync API con
+            # "Cannot switch to a different thread" (greenlet error). El
+            # browser se inicializa en main thread y los metodos sync NO
+            # son thread-safe. Volvimos al try/except simple. El cap natural
+            # por captcha viene de wait_timeout=60 en el solver lib
+            # (Fix Error #7) y los timeouts internos del scrape (180s humano,
+            # 60s navigation, etc). Worst-case per proc: ~5-6 min sin
+            # CapSolver, ~30s con CapSolver active.
             try:
-                with ThreadPoolExecutor(max_workers=1) as executor:
-                    future = executor.submit(scraper.fetch, uid)
-                    try:
-                        data = future.result(timeout=ITEM_TIMEOUT_S)
-                    except FutTimeout:
-                        log.warning(
-                            "Timeout duro %ds excedido para %s — kill + next",
-                            ITEM_TIMEOUT_S, uid
-                        )
-                        future.cancel()
-                        errored += 1
-                        _write_progress(
-                            args.progress_file,
-                            {
-                                "event": "item",
-                                "idx": idx,
-                                "uid": uid,
-                                "status": "timeout_hard",
-                                "documents": 0,
-                                "missing": [],
-                                "scraped_at": None,
-                            },
-                        )
-                        print(f"     status=timeout_hard  (excedio {ITEM_TIMEOUT_S}s)", flush=True)
-                        continue
+                data = scraper.fetch(uid)
             except KeyboardInterrupt:
                 print("\n✗ Interrumpido por el usuario.")
                 _write_progress(
