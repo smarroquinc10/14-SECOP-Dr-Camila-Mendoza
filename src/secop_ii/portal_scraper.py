@@ -568,11 +568,14 @@ def _try_solve_with_recaptcha_lib(page: Page) -> bool:
         with recaptchav2.SyncSolver(
             page, capsolver_api_key=capsolver_key
         ) as solver:
+            # Fix Error #6 (2026-04-26): playwright-recaptcha removio el kwarg
+            # `language` en versiones recientes. Signature actual es
+            # solve_recaptcha(*, attempts, wait, wait_timeout, image_challenge).
+            # El audio captcha se decodifica en es-CO via faster-whisper en
+            # el solver fallback (line ~680).
             token = solver.solve_recaptcha(
                 wait=True,
-                # Audio first (free); image only if CapSolver key is set.
                 image_challenge=False,
-                language="es",
                 attempts=3,
             )
         if token:
