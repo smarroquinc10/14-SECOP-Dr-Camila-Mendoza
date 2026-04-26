@@ -1,0 +1,51 @@
+name: Auditoria diaria del Dashboard FEAB
+
+# Verifica los 491 links del watch list contra LIVE Socrata + portal cache.
+# Detecta FP / FN cardinales con 13 checks por item (estilo MEGA-AUDIT v2 RUNT).
+# Commitea el reporte JSON + Markdown si hay cambios. Falla en strict mode si
+# hay FP o FN — bloquea el sistema.
+
+on:
+  schedule:
+    # 07:00 UTC = 02:00 Bogota (corre despues del Refresh seeds 06:00 UTC)
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install minimal deps
+        run: pip install requests
+
+      - name: Run audit (informational - never fails the job)
+        run: python -X utf8 scripts/audit_dashboard_full.py
+
+      - name: Commit report if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add _AUDITORIA_DASHBOARD_*.json _AUDITORIA_DASHBOARD_*.md
+          if git diff --cached --quiet; then
+            echo "No changes in audit report"
+          else
+            git commit -m "audit: reporte diario $(date -u +'%Y-%m-%d %H:%M UTC')"
+            git push
+          fi
+
+      - name: Strict check (fails if FP/FN)
+        run: python -X utf8 scripts/audit_dashboard_full.py --strict
