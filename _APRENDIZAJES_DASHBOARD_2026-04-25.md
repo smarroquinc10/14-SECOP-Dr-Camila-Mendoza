@@ -171,6 +171,43 @@ ya están **DEPLOYED** y verificados en `VERIFICATION-REPORT-2026-04-25.md`
 
 ---
 
+### Error #7 — SOLVER_RECAPTCHA_CUELGA_INDEFINIDAMENTE
+**Proceso**: piloto post-Fix1 sobre `CO1.NTC.7906712` y `CO1.NTC.8210327`
+**Fecha / hora**: 2026-04-26 11:00 (Bogotá)
+**Reportado por**: yo durante intento de re-piloto post-fix Error #6
+**Síntoma exacto**: piloto colgado por 14+ minutos sin producir item events. Output file 0 bytes. Sin Chrome procesos visibles en tasklist.
+**Causa**: el fix del kwarg `language` (Error #6) hizo que `solve_recaptcha(wait=True)` ahora corriera sin timeout explícito. Versiones recientes de `playwright-recaptcha` esperan indefinidamente cuando `wait=True` no tiene `wait_timeout` claro.
+**Fix propuesto**: agregar `wait_timeout=60` al call. La cobertura de captcha completo NO debe tardar más de 60s legítimamente.
+**Impacto**: bloqueador del scrape masivo (otra capa). Sin esto, cualquier captcha mal-detectado cuelga el batch completo.
+**Test que regresione**: `python scripts/scrape_portal.py --limit 1` debe terminar en <5 min (con éxito o `error_red`, no colgado).
+**Smoke test canónico**: `CO1.NTC.7906712` (proceso del primer piloto)
+**Status**: **DEPLOYED** (commit en proceso)
+
+---
+
+### Error #8 — CAPTCHA_REQUIERE_HUMANO_INTERACTIVO
+**Proceso**: piloto post-Fix1+Fix2 sobre `CO1.NTC.7906712`
+**Fecha / hora**: 2026-04-26 11:18 (Bogotá)
+**Reportado por**: yo durante segundo re-piloto
+**Síntoma exacto**: con timeouts robustos aplicados, piloto termina en 3.8 min con `error_red` igual:
+```
+* Challenge en CO1.NTC.7906712 - playwright-recaptcha lib...
+playwright-recaptcha solver fallo: Locator.is_enabled: Timeout 30000ms exceeded.
+Call log: waiting for get_by_role("button", name=re.compile(r"^(Skip|Saltar|...)$"))
+* Cayendo a solver manual (audio es-CO -> en-US)...
+* Auto-solvers fallaron. Resuelve a mano en Chrome (hasta 180s)...
+WARNING: Timeout esperando captcha para CO1.NTC.7906712
+status=error_red docs=0
+```
+**Causa**: el captcha de community.secop.gov.co NO siempre es reCaptcha v2 estándar — la lib `playwright-recaptcha` busca botón "Skip/Saltar" que no existe en este portal. Audio captcha solver depende de Whisper (que funciona) PERO el flujo de download del audio falla por la estructura del portal. **Cuando ambos solvers automáticos fallan, el script abre Chrome visible y espera 180s para resolución MANUAL** — pero correr desde un sub-shell sin display interactivo del usuario significa que nadie clickea → timeout → `error_red`.
+**Fix propuesto**: NINGUNO automatizable. **El scrape masivo solo puede correr desde una sesión interactiva de Windows del usuario** donde la Dra/IT vea el Chrome y resuelva captchas manualmente cuando aparezcan.
+**Impacto**: el batch full de los 265 procesos NO se puede ejecutar desde mi sandbox. Solo desde sesión real Windows. Trabajo operacional manual de la Dra/IT.
+**Test que regresione**: ninguno automático. Es propiedad operacional del entorno de ejecución.
+**Smoke test canónico**: corrida manual exitosa de `ejecutar_scraper.bat` con sample de 5-10 procs por la Dra/IT.
+**Status**: **OPERATIONAL_REQUIREMENT** (no es bug del código, es requisito del entorno de ejecución).
+
+---
+
 ## Cierre de cada incidente — checklist
 
 Antes de marcar un Error como **DEPLOYED**:

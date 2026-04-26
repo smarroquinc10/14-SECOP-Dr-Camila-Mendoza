@@ -568,13 +568,17 @@ def _try_solve_with_recaptcha_lib(page: Page) -> bool:
         with recaptchav2.SyncSolver(
             page, capsolver_api_key=capsolver_key
         ) as solver:
-            # Fix Error #6 (2026-04-26): playwright-recaptcha removio el kwarg
-            # `language` en versiones recientes. Signature actual es
+            # Fix Error #6 + #7 (2026-04-26): playwright-recaptcha
+            # removio el kwarg `language` y wait=True sin wait_timeout
+            # cuelga indefinidamente en versiones recientes. Signature:
             # solve_recaptcha(*, attempts, wait, wait_timeout, image_challenge).
+            # wait_timeout=60 es duro - el captcha completo NO debe tardar
+            # mas. Si tarda mas, salimos y caemos al solver manual interno.
             # El audio captcha se decodifica en es-CO via faster-whisper en
             # el solver fallback (line ~680).
             token = solver.solve_recaptcha(
                 wait=True,
+                wait_timeout=60,
                 image_challenge=False,
                 attempts=3,
             )
