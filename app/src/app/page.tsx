@@ -172,10 +172,20 @@ export default function HomePage() {
     const base = allRows.filter((r) => {
       if (onlyMine && !r.watched) return false;
       if (search) {
+        // Bug A fix (2026-04-26): incluir notice_uid en el blob de búsqueda.
+        // 276/491 items del watch list tienen notice_uid != process_id (ej.
+        // process_id=CO1.PPI.10057597, notice_uid=CO1.NTC.1416630). Sin esto,
+        // buscar por el código NTC que aparece en community.secop devolvía
+        // "no encontrado" cuando la fila SÍ existe en la tabla. FN del filtro.
         const blob = (
           (r.id_contrato ?? "") +
+          " " +
           (r.process_id ?? "") +
+          " " +
+          (r.notice_uid ?? "") +
+          " " +
           (r.objeto ?? "") +
+          " " +
           (r.proveedor ?? "")
         ).toLowerCase();
         if (!blob.includes(search.toLowerCase())) return false;
@@ -764,7 +774,13 @@ export default function HomePage() {
           </h2>
           <div className="flex items-center gap-3">
             <span className="text-xs text-ink-soft">
-              {filtered.length} de {allRows.length} mostrados
+              {/* Bug C fix (2026-04-26): el divisor era allRows.length que
+                  incluye 282 contratos huerfanos del SECOP no presentes en
+                  el watch list. Con onlyMine=true esos quedan filtrados,
+                  pero el counter mostraba "X de 773" engañoso. CLAUDE.md
+                  regla 8: vista por defecto = SUS 491 procesos. Counter
+                  ahora refleja solo lo realmente mostrable. */}
+              {filtered.length} de {allRows.filter((r) => r.watched).length} mostrados
             </span>
             <Button
               size="sm"
