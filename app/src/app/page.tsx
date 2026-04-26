@@ -132,6 +132,41 @@ export default function HomePage() {
     [watched]
   );
 
+  // Coverage stats — qué porcentaje del watch list tiene datos automáticos
+  // vs muestra "—" honesto. La Dra ve transparencia total: cuánto el sistema
+  // cubre solo y cuánto requiere acción humana (botón "Abrir" o scrape local).
+  const coverageStats = React.useMemo(() => {
+    const watched_rows = allRows.filter((r) => r.watched);
+    const total = watched_rows.length;
+    const api = watched_rows.filter((r) => r.data_source === "api").length;
+    const integrado = watched_rows.filter((r) => r.data_source === "integrado").length;
+    const portal = watched_rows.filter((r) => r.data_source === "portal").length;
+    const none = watched_rows.filter((r) => r.data_source == null).length;
+    const cubierto = api + integrado + portal;
+    const pct = total > 0 ? Math.round((cubierto / total) * 100) : 0;
+    return { total, api, integrado, portal, none, cubierto, pct };
+  }, [allRows]);
+
+  // Frescura del SECOP — fecha del contrato más reciente entre los watched.
+  // Sirve como indicador de "qué tan al día está la API pública vs hoy".
+  // Si la última firma es de hace 30+ días, la Dra sabe que algo nuevo
+  // probablemente todavía no está sincronizado.
+  const freshnessStats = React.useMemo(() => {
+    const fechas = allRows
+      .filter((r) => r.watched && r.fecha_firma)
+      .map((r) => r.fecha_firma as string)
+      .sort()
+      .reverse();
+    const ultimaFirma = fechas[0] ?? null;
+    let diasDesde: number | null = null;
+    if (ultimaFirma) {
+      const d = new Date(ultimaFirma);
+      const hoy = new Date();
+      diasDesde = Math.floor((hoy.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
+    }
+    return { ultimaFirma, diasDesde };
+  }, [allRows]);
+
   // ---- Distinct option sets for slicers --------------------------------
   const yearOptions = React.useMemo(
     () =>
@@ -493,6 +528,57 @@ export default function HomePage() {
                 Refresh: {fmtTimestamp(ultActualiz.ultimo_replace)}
               </span>
             )}
+          </div>
+        )}
+
+        {/* Cobertura SECOP — Bug F UX (2026-04-26): indicador prominente
+            de qué porcentaje del watch list tiene datos automáticos vs
+            muestra "—" honesto. Cumple regla cardinal "honestidad cuando
+            no sabe" + da claridad operativa a la Dra. */}
+        {coverageStats.total > 0 && (
+          <div
+            className="flex flex-col text-[11px] text-ink-soft border-l border-rule pl-3"
+            title={`API jbjy-vk9h: ${coverageStats.api} · SECOP Integrado: ${coverageStats.integrado} · Portal cache: ${coverageStats.portal} · Sin cobertura API (viven solo en community.secop): ${coverageStats.none}`}
+          >
+            <span className="eyebrow">Cobertura automática</span>
+            <span className="font-mono text-ink">
+              <span
+                className={cn(
+                  coverageStats.pct >= 80
+                    ? "text-emerald-700"
+                    : coverageStats.pct >= 50
+                    ? "text-amber-700"
+                    : "text-rose-700"
+                )}
+              >
+                {coverageStats.cubierto}/{coverageStats.total}
+              </span>
+              {" · "}
+              <span className="text-ink-soft">{coverageStats.pct}%</span>
+            </span>
+            <span className="text-[10px] mt-0.5">
+              {coverageStats.none} sin API · click "Abrir" en la fila
+            </span>
+          </div>
+        )}
+
+        {/* Frescura datos.gov.co — última firma de contrato detectada. */}
+        {freshnessStats.ultimaFirma && (
+          <div
+            className="flex flex-col text-[11px] text-ink-soft border-l border-rule pl-3"
+            title={`Última firma de contrato del FEAB en datos.gov.co: ${freshnessStats.ultimaFirma}. Las APIs públicas tienen lag de ~1-2 semanas vs community.secop. Cron 'Refrescar seeds' corre cada día 06:00 UTC.`}
+          >
+            <span className="eyebrow">Última firma SECOP</span>
+            <span className="font-mono text-ink">
+              {freshnessStats.ultimaFirma.slice(0, 10)}
+            </span>
+            <span className="text-[10px] mt-0.5">
+              {freshnessStats.diasDesde === 0
+                ? "hoy"
+                : freshnessStats.diasDesde === 1
+                ? "hace 1 día"
+                : `hace ${freshnessStats.diasDesde} días`}
+            </span>
           </div>
         )}
 
