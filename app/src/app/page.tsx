@@ -115,7 +115,15 @@ export default function HomePage() {
   //   - "Modificados" gets filtered from the column header (Excel-style),
   //     no separate toggle needed.
   const onlyMine = true;
-  const onlyMod = false;
+  const [onlyMod, setOnlyMod] = React.useState(false);
+  // Feature D (2026-04-26): Toggle "Vencen en 30 días" — la Dra como
+  // contractual del FEAB necesita estar pendiente de contratos que vencen
+  // pronto para anticipar liquidaciones / renovaciones / prórrogas.
+  const [onlyExpiringSoon, setOnlyExpiringSoon] = React.useState(false);
+  // Feature A (2026-04-26): Toggle "Requieren tu atención" — filas con
+  // modificatorios recientes (últimos 7 días) o que vencen en 30 días.
+  // Ayuda a estar pendiente sin abrumar.
+  const [onlyAttention, setOnlyAttention] = React.useState(false);
 
   // ---- Build unified rows + busy/feedback state for actions -----------
   // Cardinal rule: cada celda con su procedencia clara.
@@ -165,6 +173,61 @@ export default function HomePage() {
       diasDesde = Math.floor((hoy.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
     }
     return { ultimaFirma, diasDesde };
+  }, [allRows]);
+
+  // Feature B (2026-04-26): "Cambios recientes" — los ultimos N modificatorios
+  // detectados en el watch list. Ayuda a la Dra a estar pendiente de cambios
+  // sin tener que filtrar manualmente. Criterio: dias_adicionados > 0 ordenados
+  // por fecha_firma descendente (proxy de "ultima actividad del proceso").
+  const recentMods = React.useMemo(() => {
+    return allRows
+      .filter(
+        (r) =>
+          r.watched &&
+          r.dias_adicionados != null &&
+          r.dias_adicionados > 0
+      )
+      .sort((a, b) => (b.fecha_firma ?? "").localeCompare(a.fecha_firma ?? ""))
+      .slice(0, 8);
+  }, [allRows]);
+
+  // Feature A (2026-04-26): Stats de "requieren atencion" para el header.
+  // Union de mods recientes + venciendo en 30 dias (sin duplicados).
+  const attentionStats = React.useMemo(() => {
+    const today = new Date();
+    let mods = 0;
+    let expiring = 0;
+    const seenKeys = new Set<string>();
+    for (const r of allRows) {
+      if (!r.watched) continue;
+      let needs = false;
+      const isMod =
+        (r.dias_adicionados != null && r.dias_adicionados > 0) ||
+        /modific/i.test(r.estado ?? "");
+      if (isMod) needs = true;
+      const fechaFin =
+        (r._raw_api?.fecha_de_fin_del_contrato as string | undefined) ??
+        (r._raw_integrado?.fecha_fin_ejecuci_n as string | undefined) ??
+        null;
+      let venceProx = false;
+      if (fechaFin) {
+        const fin = new Date(fechaFin);
+        if (!isNaN(fin.getTime())) {
+          const dias = Math.floor(
+            (fin.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+          );
+          venceProx = dias >= 0 && dias <= 30;
+        }
+      }
+      if (venceProx) needs = true;
+      if (!needs) continue;
+      const k = r.process_id ?? r.id_contrato ?? "";
+      if (seenKeys.has(k)) continue;
+      seenKeys.add(k);
+      if (isMod) mods++;
+      if (venceProx) expiring++;
+    }
+    return { total: seenKeys.size, mods, expiring };
   }, [allRows]);
 
   // ---- Distinct option sets for slicers --------------------------------
@@ -243,13 +306,55 @@ export default function HomePage() {
           (r.dias_adicionados != null && r.dias_adicionados > 0);
         if (!isMod) return false;
       }
+      // Feature D (2026-04-26): "Vencen en 30 dias". El campo viene de
+      // _raw_api.fecha_de_fin_del_contrato (jbjy-vk9h) o
+      // _raw_integrado.fecha_fin_ejecuci_n (rpmr-utcd).
+      if (onlyExpiringSoon) {
+        const fechaFin =
+          (r._raw_api?.fecha_de_fin_del_contrato as string | undefined) ??
+          (r._raw_integrado?.fecha_fin_ejecuci_n as string | undefined) ??
+          null;
+        if (!fechaFin) return false;
+        const fin = new Date(fechaFin);
+        if (isNaN(fin.getTime())) return false;
+        const hoy = new Date();
+        const diasRestantes = Math.floor(
+          (fin.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24)
+        );
+        if (diasRestantes < 0 || diasRestantes > 30) return false;
+      }
+      // Feature A (2026-04-26): "Requieren tu atencion" - union de:
+      //   (a) modificatorios recientes (dias_adicionados > 0 + fecha_firma
+      //       en ultimos 30 dias)
+      //   (b) vencen en proximos 30 dias
+      //   (c) estado contiene "modific" (literal del SECOP)
+      if (onlyAttention) {
+        const tieneModReciente =
+          r.dias_adicionados != null && r.dias_adicionados > 0;
+        const estadoMod = /modific/i.test(r.estado ?? "");
+        const fechaFin =
+          (r._raw_api?.fecha_de_fin_del_contrato as string | undefined) ??
+          (r._raw_integrado?.fecha_fin_ejecuci_n as string | undefined) ??
+          null;
+        let venceProx = false;
+        if (fechaFin) {
+          const fin = new Date(fechaFin);
+          if (!isNaN(fin.getTime())) {
+            const dias = Math.floor(
+              (fin.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+            );
+            venceProx = dias >= 0 && dias <= 30;
+          }
+        }
+        if (!tieneModReciente && !estadoMod && !venceProx) return false;
+      }
       return true;
     });
     // When the user picks one or more sheet pills, expand every row
     // by its appearances in those sheets so the count matches the
     // Excel exactly (e.g. FEAB 2024 → 85 rows, not 66 dedup-by-process).
     return expandRowsByAppearance(base, sheets);
-  }, [allRows, search, years, states, modalities, sheets, onlyMod, onlyMine]);
+  }, [allRows, search, years, states, modalities, sheets, onlyMod, onlyMine, onlyExpiringSoon, onlyAttention]);
 
   // ---- Refresh + watch CRUD --------------------------------------------
   const [refreshing, setRefreshing] = React.useState(false);
@@ -416,7 +521,9 @@ export default function HomePage() {
     states.length > 0 ||
     modalities.length > 0 ||
     sheets.length > 0 ||
-    onlyMod;
+    onlyMod ||
+    onlyExpiringSoon ||
+    onlyAttention;
 
   return (
     <main className="min-h-screen bg-background">
@@ -580,6 +687,28 @@ export default function HomePage() {
                 : `hace ${freshnessStats.diasDesde} días`}
             </span>
           </div>
+        )}
+
+        {/* Feature A (2026-04-26): "Requieren atención" — la Dra como
+            contractual del FEAB ve de un vistazo cuántos procesos tienen
+            modificatorios o están por vencer. Click navega al filtro. */}
+        {attentionStats.total > 0 && (
+          <button
+            onClick={() => {
+              setOnlyAttention(true);
+              window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+            }}
+            className="flex flex-col text-[11px] text-amber-700 border-l border-rule pl-3 cursor-pointer hover:text-amber-900 text-left"
+            title={`${attentionStats.mods} con modificatorios + ${attentionStats.expiring} por vencer en 30 días. Click → activa el filtro.`}
+          >
+            <span className="eyebrow text-amber-700">🔔 Requieren atención</span>
+            <span className="font-mono font-bold text-amber-900 text-base">
+              {attentionStats.total}
+            </span>
+            <span className="text-[10px] mt-0.5">
+              {attentionStats.mods} mods · {attentionStats.expiring} por vencer
+            </span>
+          </button>
         )}
 
         <div className="flex-1" />
@@ -814,6 +943,53 @@ export default function HomePage() {
             />
           )}
 
+          {/* Features A+D (2026-04-26): toggles para "estar pendiente"
+              sin abrumar a la Dra. Combinan modificatorios + vencimientos. */}
+          <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-rule mt-2">
+            <span className="eyebrow text-ink-soft">ATAJOS</span>
+            <label className="flex items-center gap-2 cursor-pointer text-sm text-ink-soft hover:text-ink">
+              <input
+                type="checkbox"
+                checked={onlyAttention}
+                onChange={(e) => setOnlyAttention(e.target.checked)}
+                className="rounded"
+              />
+              <span>
+                🔔 Requieren tu atención{" "}
+                {attentionStats.total > 0 && (
+                  <span className="font-mono text-[11px] text-amber-700">
+                    ({attentionStats.total})
+                  </span>
+                )}
+              </span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer text-sm text-ink-soft hover:text-ink">
+              <input
+                type="checkbox"
+                checked={onlyMod}
+                onChange={(e) => setOnlyMod(e.target.checked)}
+                className="rounded"
+              />
+              <span>Solo contratos modificados</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer text-sm text-ink-soft hover:text-ink">
+              <input
+                type="checkbox"
+                checked={onlyExpiringSoon}
+                onChange={(e) => setOnlyExpiringSoon(e.target.checked)}
+                className="rounded"
+              />
+              <span>
+                ⏰ Vencen en 30 días{" "}
+                {attentionStats.expiring > 0 && (
+                  <span className="font-mono text-[11px] text-rose-700">
+                    ({attentionStats.expiring})
+                  </span>
+                )}
+              </span>
+            </label>
+          </div>
+
           {pageFiltersActive && (
             <div className="flex justify-end">
               <Button
@@ -825,6 +1001,9 @@ export default function HomePage() {
                   setStates([]);
                   setModalities([]);
                   setSheets([]);
+                  setOnlyMod(false);
+                  setOnlyExpiringSoon(false);
+                  setOnlyAttention(false);
                 }}
               >
                 Limpiar filtros
@@ -848,6 +1027,49 @@ export default function HomePage() {
             )}
           >
             {feedback.text}
+          </div>
+        </div>
+      )}
+
+      {/* Feature B (2026-04-26): "Cambios recientes" — los ultimos N
+          modificatorios del watch list. La Dra como contractual del FEAB
+          los ve de un vistazo sin filtrar manualmente. Click → modal del
+          proceso especifico. */}
+      {recentMods.length > 0 && (
+        <div className="mx-auto max-w-7xl px-8 pb-6">
+          <div className="bg-amber-50 border border-amber-200 rounded-md p-4">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="serif text-base font-semibold text-amber-900">
+                🔔 Cambios recientes en tus procesos
+              </h3>
+              <span className="text-[11px] text-amber-700">
+                últimos {recentMods.length} modificatorios detectados
+              </span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {recentMods.map((r) => (
+                <button
+                  key={r.key}
+                  onClick={() => setSelected(r.key)}
+                  className="text-left bg-white border border-amber-200 rounded px-3 py-2 hover:border-amber-400 hover:bg-amber-50 text-xs"
+                  title={`Click para ver detalle de ${r.process_id ?? r.id_contrato}`}
+                >
+                  <div className="font-mono text-amber-900 text-[11px] mb-0.5">
+                    {r.numero_contrato ?? r.process_id ?? r.id_contrato}
+                  </div>
+                  <div className="text-ink line-clamp-1">
+                    {r.objeto ?? "(sin objeto)"}
+                  </div>
+                  <div className="flex items-center gap-2 mt-1 text-[10px] text-ink-soft">
+                    <span>+{r.dias_adicionados} días adic.</span>
+                    {r.fecha_firma && (
+                      <span>· firmado {r.fecha_firma.slice(0, 10)}</span>
+                    )}
+                    {r.estado && <span>· {r.estado}</span>}
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}
