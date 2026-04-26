@@ -74,22 +74,73 @@ ya están **DEPLOYED** y verificados en `VERIFICATION-REPORT-2026-04-25.md`
 
 ## Errores en vivo — formato `Error #N`
 
-> Slot vacío. Cuando aparezca el primer incidente real, llenar acá usando
-> el formato estricto de arriba. NO modificar el histórico.
+### Error #1 — FILTRO_BUSQUEDA_FALTA_NOTICE_UID
+**Proceso**: `CO1.NTC.1416630` (process_id en watch list es `CO1.PPI.10057597`)
+**Fecha / hora**: 2026-04-26 ~10:00 (Bogotá)
+**Reportado por**: Dra. Cami durante smoke test canónico
+**Síntoma exacto**: la Dra escribió `CO1.NTC.1416630` en el campo "Buscar" del dashboard, no apareció ningún resultado. El proceso SÍ existe en rpmr-utcd LIVE (`url_contrato LIKE %CO1.NTC.1416630%` devuelve 1 hit con proveedor "GESVALT E ISAZA", valor 12.023.760).
+**Causa**: `app/src/app/page.tsx:174-181` el blob de búsqueda concatenaba `id_contrato + process_id + objeto + proveedor` pero NO `notice_uid`. 276/491 items (56%) tienen `notice_uid != process_id`. La Dra los identifica por NTC pero el filtro solo busca por process_id.
+**Fix propuesto**: agregar `(r.notice_uid ?? "")` al blob, separado por espacios para evitar matches accidentales.
+**Impacto**: filtro de búsqueda · 276 items afectados (56% del watch list)
+**Test que regresione**: manual — buscar `CO1.NTC.1416630` debe devolver el row con `process_id=CO1.PPI.10057597`
+**Smoke test canónico**: proceso #2 del CLAUDE.md (`CO1.NTC.1416630` integrado)
+**Status**: **DEPLOYED** (commit `4760ff8`)
 
-<!--
-### Error #1 — NOMBRE_CORTO
-**Proceso (si aplica)**: ...
-**Fecha / hora**: ...
-**Reportado por**: ...
-**Síntoma exacto**: ...
-**Causa**: ...
-**Fix propuesto**: ...
-**Impacto**: ...
-**Test que regresione**: ...
-**Smoke test canónico**: ...
-**Status**: PENDIENTE_DIAGNÓSTICO
--->
+---
+
+### Error #2 — COUNTER_X_DE_773_INCLUYE_HUERFANOS
+**Proceso**: ninguno específico (afecta indicador del header)
+**Fecha / hora**: 2026-04-26 ~10:00 (Bogotá)
+**Reportado por**: Dra. Cami (capturado en screenshot del smoke test)
+**Síntoma exacto**: contador del header decía "1 de 773 mostrados" cuando `onlyMine=true` y la Dra solo administra 491 procesos. El "773" no encaja con ninguna métrica esperada.
+**Causa**: `page.tsx:777` el divisor era `allRows.length` que incluye 282 contratos huérfanos del SECOP (procesos del FEAB que no están en el watch list de la Dra). Con `onlyMine=true` esos quedan filtrados pero el counter los sumaba igual. Viola CLAUDE.md regla operacional 8: "vista por defecto = SUS 491 procesos del Excel".
+**Fix propuesto**: `{filtered.length} de {allRows.filter((r) => r.watched).length} mostrados`
+**Impacto**: UX del header · 0 datos cardinales afectados (solo cosmético, pero engañoso)
+**Test que regresione**: manual — sin filtros activos, contador debe ser "491 de 491 mostrados" (o `XXX de 491` si el filtro de hoja está activo)
+**Smoke test canónico**: cualquiera — el counter siempre debe mostrar `/491` como divisor máximo
+**Status**: **DEPLOYED** (commit `4760ff8`)
+
+---
+
+### Error #3 — CLAUDE_MD_VALORES_HARDCODED_DESACTUALIZADOS
+**Proceso**: `CO1.PCCNTR.8930451` (la Dra lo abrió en smoke test)
+**Fecha / hora**: 2026-04-26 ~10:30 (Bogotá)
+**Reportado por**: auto-detectado al cross-checkear LIVE durante diagnóstico de Error #1
+**Síntoma exacto**: el CLAUDE.md sección "Smoke test canónico" decía que `CO1.PCCNTR.8930451 → valor $276.830.000`. LIVE jbjy-vk9h hoy devuelve `valor=3700000` (`$3.700.000`, CONTRATO DE COMPRAVENTA FEAB 0001 DE 2026, "En ejecución", proveedor "GERMAN DAVID BOTERO RODRIGUEZ").
+**Causa**: durante refactor del CLAUDE.md (commit `e62d49f`) copié los valores del `AUDIT-REPORT-2026-04-25.md` sin verificar contra LIVE. El AUDIT-REPORT era de 1 día antes y los datos cambiaron. Esto viola directamente la **Regla Suprema #1** ("NUNCA inventar valores derivados del Excel" — y por extensión, ningún valor que no provenga de la fuente en vivo).
+**Fix propuesto**: smoke test del CLAUDE.md ahora especifica el MÉTODO de verificación (curl contra Socrata + comparar campo por campo en modal), no los valores esperados. Cada deploy se valida contra LIVE.
+**Impacto**: documentación · sample manual de la Dra fallaba con falsos negativos del propio doc
+**Test que regresione**: el smoke test canónico nuevo es self-validating — pide curl contra Socrata real, no compara contra valores fijos
+**Smoke test canónico**: proceso #1 (`CO1.PCCNTR.8930451`)
+**Status**: **DEPLOYED** (commit `59ffe35`)
+
+---
+
+### Error #4 — DIAGNOSTICO_FALSO_CO1.PPI.11758446_FN
+**Proceso**: `CO1.PPI.11758446`
+**Fecha / hora**: 2026-04-26 ~10:15 (Bogotá)
+**Reportado por**: yo mismo durante diagnóstico (declaré bug E que no era bug)
+**Síntoma exacto**: declaré que `CO1.PPI.11758446` era FN cardinal del dashboard porque "rpmr-utcd LIVE devuelve 2 hits" mientras dashboard mostraba "No en API público".
+**Causa**: error de lectura de respuesta Socrata. La query `?id_del_proceso=CO1.PPI.11758446` falla porque `id_del_proceso` no existe como campo en rpmr-utcd. Devuelve `{"error": true, "message": "Unrecognized arguments [id_del_proceso]"}` (un dict de 2 keys). Yo interpreté `len(d)=2` como "2 hits" cuando era "2 keys del dict de error". Re-verificado con queries correctas (`numero_de_proceso=` y `url_contrato LIKE`) → 0 hits real. El proceso NO está en ninguna API pública. El dashboard CORRECTAMENTE muestra "No en API público" — la Dra puede verlo en community.secop manualmente porque el portal SÍ lo tiene, pero las APIs públicas no lo exponen.
+**Fix propuesto**: ninguno del código del dashboard. Lección: siempre verificar el shape del response (`isinstance(data, list)`) antes de tratarlo como hits.
+**Impacto**: ninguno en código · me costó 1 ronda de diagnóstico falsa
+**Test que regresione**: el script `scripts/audit_dashboard_full.py` ahora valida `isinstance(data, list)` antes de contar hits
+**Smoke test canónico**: proceso #4 (`CO1.PPI.11758446`)
+**Status**: **INVALIDATED** (no era bug del dashboard, era error de mi diagnóstico)
+
+---
+
+### Error #5 — 265_PROCESOS_SIN_COBERTURA_API_PUBLICA
+**Proceso**: 265 procesos (todos los `coverage=none` excepto 8 borradores REQ/BDOS)
+**Fecha / hora**: 2026-04-26 ~11:00 (Bogotá)
+**Reportado por**: Dra. Cami con la frase "tu sistema es muy pobre y frágil... tienes los links! tienes que basicamente entrar y no puedes comerte datos"
+**Síntoma exacto**: 265 procesos del watch list aparecen con badge "No en API público" + celdas en `—`. La Dra puede abrirlos manualmente en community.secop y SÍ tienen datos completos (objeto, valor, proveedor, modificatorios, etc.). El dashboard no los refleja → la Dra termina abriendo cada link manualmente, anulando el propósito del dashboard.
+**Causa**: las 3 fuentes API consumibles desde frontend (datos.gov.co/jbjy-vk9h, datos.gov.co/rpmr-utcd, portal_opportunity_seed.json) NO exponen estos 265 procesos. Solo `community.secop.gov.co` (portal con captcha) los tiene. El frontend no puede scrapear directamente — necesita Playwright + captcha solver. Eso requiere correr `scripts/scrape_portal.py` LOCAL (no GitHub Action) en máquina con tiempo (~30-55s por proceso × 265 = ~2-4 horas).
+**Fix propuesto**: corrida masiva de `scripts/scrape_portal.py --watch-list` local, después commit del `app/public/data/portal_opportunity_seed.json` actualizado, deploy via Pages.
+**Impacto**: tabla principal · modal · Excel export · 265/491 (54%) items afectados — gap CARDINAL
+**Test que regresione**: re-correr `scripts/audit_dashboard_full.py`. Con scrape completo, severity `scrape` debe ir de 265 → 0 (o casi: algunos pueden no estar accesibles aún en SECOP).
+**Smoke test canónico**: cualquier proceso PPI no-borrador con `coverage=none` (sample en el JSON: `CO1.PPI.38453188`, `CO1.PPI.36786565`, etc.)
+**Status**: **PENDIENTE_DEPLOY** — requiere corrida local con `.venv` activado + Whisper modelo bajado + ~3 horas. La GitHub Action no puede correrlo (Playwright + audio no aplica bien en CI). IT (Sergio) o Dra ejecuta cuando pueda.
 
 ---
 
