@@ -42,6 +42,17 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
+# Cargar .env del repo - necesario para que portal_scraper.py vea
+# CAPSOLVER_API_KEY (cuando esta configurado, el solver lib pasa los
+# captchas que falla automaticamente al servicio CapSolver, ~$0.001/captcha,
+# 99.9% exito). Si .env no existe o no tiene la key, el solver opera en
+# modo gratuito (cookies + Whisper + manual). Ver SCRAPER_SETUP.md.
+try:
+    from dotenv import load_dotenv
+    load_dotenv(ROOT / ".env")
+except ImportError:
+    pass  # python-dotenv no instalado - operacion sin .env
+
 from secop_ii.paths import state_path  # noqa: E402  (post-sys.path setup)
 from secop_ii.portal_scraper import (  # noqa: E402  (post-sys.path setup)
     PortalScraper,
