@@ -83,17 +83,22 @@ Las observaciones manuales (Excel col 72 OBSERVACIONES) se muestran ÚNICAMENTE 
 > CAMION=NF). Después de cada deploy, abrir
 > https://smarroquinc10.github.io/14-SECOP-Dr-Camila-Mendoza/ con
 > passphrase `cami2026` y verificar **4 procesos canónicos**, uno por
-> tipo de cobertura. Si CUALQUIER campo discrepa con community.secop en
-> vivo → es FP/FN/comido → NO declarar deploy listo.
+> tipo de cobertura. Si CUALQUIER campo discrepa con community.secop /
+> Socrata LIVE → es FP/FN/comido → NO declarar deploy listo.
 
-| # | Proceso ID | Cobertura | Resultado esperado |
+> **⚠️ NUNCA hardcodear los valores esperados aquí** (Regla Suprema #1:
+> la verdad es SECOP en vivo, no este doc). Cada smoke test consulta
+> LIVE y compara contra lo que muestra el dashboard. Lección aprendida
+> en `_APRENDIZAJES_DASHBOARD_2026-04-25.md` Error #2.
+
+| # | Proceso ID | Cobertura esperada | Cómo verificar |
 |---|---|---|---|
-| 1 | `CO1.PCCNTR.8930451` (CONTRATO-FEAB-0011-2025) | `api` | Badge "Contrato firmado" · modal con 73 campos · valor `$276.830.000` · 6 hermanos en "Otros contratos del mismo proceso" |
-| 2 | `CO1.NTC.1416630` | `integrado` | Badge "Proceso verificado vía Integrado" · proveedor "GESVALT E ISAZA" · valor `$12.023.760` · objeto "REALIZAR EL AVALÚO" |
-| 3 | `CO1.NTC.5405127` | `portal` | Badge "vía portal cache · hoy" · objeto "TRACTOCAMION KENWORTH" · valor `$12.000.000` · 59 documentos listados |
-| 4 | `CO1.PPI.11758446` | `none` | Badge "No en API público" · modal con 829 instancias de `—` honesto · link "Abrir en SECOP II" funcional |
+| 1 | `CO1.PCCNTR.8930451` | `api` | Badge "Contrato firmado". `curl "https://www.datos.gov.co/resource/jbjy-vk9h.json?id_contrato=CO1.PCCNTR.8930451"` debe devolver 1 hit. Modal del dashboard debe mostrar valor, fecha_firma, proveedor IDÉNTICOS al curl. Sección "Otros campos del API SECOP" abierta por default con TODOS los campos. |
+| 2 | `CO1.NTC.1416630` | `integrado` | Badge "vía Integrado". `curl "https://www.datos.gov.co/resource/rpmr-utcd.json?\$where=url_contrato%20like%20'%25CO1.NTC.1416630%25'"` debe devolver hit. Modal debe mostrar proveedor, valor, objeto IDÉNTICOS. Filtro "Buscar" con ese código debe encontrarlo (Bug A fix). |
+| 3 | `CO1.NTC.5405127` | `portal` | Badge "vía portal cache · hoy". Proceso debe estar en `app/public/data/portal_opportunity_seed.json`. Modal con 27+ campos del portal y links a documentos. |
+| 4 | `CO1.PPI.11758446` | `none` | Badge "No en API público". Las 3 fuentes (jbjy, rpmr-utcd, portal_seed) NO lo deben tener. Modal con celdas en `—` honesto. Link "Abrir en SECOP II" funcional → la Dra puede ver el proceso en community.secop manualmente (limitación documentada de las 167 PPIs sin exposición en datos.gov.co). |
 
-**Cómo cross-checkear**: en otra pestaña, abrir community.secop con el process_id y comparar campo por campo el modal del dashboard vs lo que muestra el portal. Esto es **sample manual obligatorio** análogo al de Sergio en RUNT (`_APRENDIZAJES_LOTE_16647_v918.md` líneas 156-180).
+**Cómo cross-checkear**: en otra pestaña, abrir community.secop con el `process_id` y comparar campo por campo el modal del dashboard vs lo que muestra el portal. Esto es **sample manual obligatorio** análogo al de Sergio en RUNT (`_APRENDIZAJES_LOTE_16647_v918.md` líneas 156-180). Si la Dra detecta cualquier discrepancia → registrar como `Error #N` en `_APRENDIZAJES_DASHBOARD_*.md` y no declarar deploy listo.
 
 ---
 
