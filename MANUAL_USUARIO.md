@@ -1,0 +1,433 @@
+# Manual de Usuario — Dashboard FEAB · Dra Cami Contractual
+
+> Sistema de seguimiento contractual del SECOP II para auditoría legal.
+> Espejo automatizado de los 491 procesos del watch list de la Dra
+> María Camila Mendoza Zubiría, Jefe de Gestión Contractual del FEAB,
+> Fiscalía General de la Nación. NIT FEAB: 901148337.
+
+---
+
+## ¿Qué problema resuelve?
+
+**Antes**: la Dra abría 491 links de community.secop uno por uno, manualmente,
+para verificar estado, valor, modificatorios y documentos de cada contrato.
+
+**Ahora**: todos los 491 procesos espejados en un solo tablero, con datos
+extraídos automáticamente, sin abrir community.secop salvo para casos puntuales.
+
+---
+
+# 🎯 PARTE 1 — Para la Dra (Cliente final / Auditor)
+
+## 1.1 Cómo entrar al dashboard
+
+| | |
+|---|---|
+| **URL** | https://smarroquinc10.github.io/14-SECOP-Dr-Camila-Mendoza/ |
+| **Passphrase** | `cami2026` |
+| **Browser** | Chrome, Edge, Firefox, Safari (cualquiera moderno) |
+| **Dispositivo** | PC, iPad, celular — funciona igual |
+| **Conexión** | Internet (consume LIVE de datos.gov.co) |
+| **Instalación** | **Ninguna** — solo abrir URL |
+
+## 1.2 Qué ves al entrar (el Header)
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│ Auditoría · Gestión Contractual · SECOP                                 │
+│ Bienvenida, Dra. María Camila Mendoza Zubiría                          │
+│ [fecha de hoy en español]                                              │
+│                                                                         │
+│ [Refrescar desde SECOP] [Integrado (382)] [Leer del portal SECOP]     │
+│                                                                         │
+│ 288 contratos · 194 procesos · 491 en seguimiento                      │
+│ │ Última actividad: 26/04 15:06                                        │
+│ │ Cobertura automática: 491/491 · 100%                                 │
+│ │ Última firma SECOP: 13/04 (hace 13 días)                             │
+│ │ [✓ 1 entradas · íntegro]    ← Hash chain del audit log              │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+**Cada indicador**:
+- **Contratos / procesos / seguimiento**: contadores LIVE de Socrata
+- **Cobertura automática**: cuántos procesos del watch list tienen datos
+- **Última firma SECOP**: el contrato más reciente firmado del FEAB en API
+- **Audit log íntegro**: chain hash SHA-256 — tampering detectable
+
+## 1.3 La tabla principal (los 491 procesos)
+
+7 columnas, sin scroll horizontal:
+
+| Columna | Qué muestra |
+|---|---|
+| **Contrato** | ID del SECOP (CO1.NTC.X / CO1.PCCNTR.X) + número de contrato del Excel si la Dra lo escribió |
+| **Objeto / Proveedor** | Objeto del contrato + proveedor adjudicado |
+| **Valor / Firma** | Valor en pesos + fecha de firma |
+| **Estado** | Borrador / En ejecución / Modificado / Cancelado / etc. |
+| **Modificatorios** | Días adicionados + estado de liquidación |
+| **Origen** | Fuente del dato: API · Integrado · Portal cache · No en API público |
+| **Acciones** | [↗ Abrir] [✏ Editar] [🗑 Quitar] |
+
+Click cualquier fila → **modal detalle**.
+
+## 1.4 Filtros disponibles (arriba de la tabla)
+
+**Slicer pills** (click para filtrar):
+
+```
+VIGENCIA / AÑO DE FIRMA
+[2026] [2025] [2024] [2023] [2022] [2021] [2020] [2019] [2018]
+
+ESTADO DEL CONTRATO
+[Activo] [Aprobado] [Borrador] [Cancelado] [En aprobación]
+[En ejecución] [Modificado] [Publicado]
+
+MODALIDAD DE CONTRATACIÓN
+[Contratación régimen especial] [Contratación régimen especial (con ofertas)]
+
+HOJA EXCEL (donde la Dra registró el proceso)
+[FEAB 2026] [FEAB 2025] [FEAB 2024] [FEAB 2023] [FEAB 2022] [FEAB 2018-2021]
+```
+
+**Búsqueda libre**: campo "Buscar" arriba — busca en process_id, notice_uid,
+referencia_del_contrato, objeto, proveedor.
+
+**Toggle**: "Solo contratos modificados" arriba (atajos).
+
+**Botón** "Limpiar filtros" cuando hay filtros activos.
+
+## 1.5 Click en una fila → modal detalle completo
+
+Al clickear un proceso, se abre un modal con TODA la información del SECOP:
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│ CO1.NTC.5405127 · Subasta de vehículos                          [✕]    │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  IDENTIFICACIÓN                                                         │
+│  - Process ID: CO1.NTC.5405127                                         │
+│  - Notice UID: CO1.NTC.5405127                                         │
+│  - Referencia: FEAB-X-2024                                             │
+│  - Estado: En ejecución                                                │
+│                                                                         │
+│  VALORES                                                                │
+│  - Valor del contrato: $12.000.000                                     │
+│  - Valor adjudicado: $12.000.000                                       │
+│  - SMMLV equivalentes: 11.5                                            │
+│                                                                         │
+│  CONTRATISTA                                                            │
+│  - Proveedor: GERMAN DAVID BOTERO RODRIGUEZ                            │
+│  - NIT: ...                                                            │
+│                                                                         │
+│  > Otros campos del API SECOP (28)            [▼ abierto por default]  │
+│    Aquí TODOS los demás campos sin curar — descripcion_del_proceso,    │
+│    condiciones_de_entrega, codigo_de_categoria_principal, etc.         │
+│                                                                         │
+│  > Otros contratos del mismo proceso (6)      [▼]                      │
+│                                                                         │
+│  DOCUMENTOS DEL PROCESO (33)                                            │
+│  - MANIFESTACIÓN DE NECESIDAD.pdf      [Descargar]                     │
+│  - FICHA TÉCNICA.pdf                   [Descargar]                     │
+│  - MATRIZ DE RIESGOS.xlsx              [Descargar]                     │
+│  - ... (30 más)                                                         │
+│                                                                         │
+│  NOTIFICACIONES (5)                                                     │
+│  - SUBIR INFORME DE SUPERVISION No. 2 (1/12/2023)                      │
+│  - ...                                                                  │
+│                                                                         │
+│  OBSERVACIONES DE LA DRA (lo que escribió en el Excel col 72)          │
+│  > [editable inline]                                                   │
+│                                                                         │
+│  PROVENANCE                                                             │
+│  - Fuente: vía Integrado                                               │
+│  - secop_hash: SHA-256...                                              │
+│  - code_version: 27dbd8a                                               │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+**Cada proceso muestra cantidad DISTINTA de campos** (depende del tipo):
+- Contrato simple: ~60-70 campos
+- Subasta de vehículos con 16 grupos: ~350 campos
+- Borrador: ~30 campos
+
+El sistema **se adapta** a cada proceso. **NO usa schema fijo**.
+
+## 1.6 Exportar a Excel
+
+Botón "Descargar Excel (X)" — el número refleja los procesos filtrados.
+
+**El XLSX tiene 2 hojas**:
+
+1. **Vista** (16 columnas curadas):
+   - Para mandar por mail a Compliance / supervisores
+   - Familiar, fácil de leer
+   - Incluye Notas (modificatorios + observaciones internas)
+
+2. **Datos completos crudos** (86 columnas):
+   - 4 columnas ID (process_id, id_contrato, notice_uid, url)
+   - 73 columnas con prefijo `api_` (de jbjy-vk9h)
+   - 8 columnas con prefijo `integ_` (de rpmr-utcd)
+   - 1 columna con prefijo `portal_` (del portal cache)
+   - **Para auditoría forense** — cada fuente identificable, sin merging
+
+## 1.7 Watch list — agregar / editar / quitar URLs
+
+**Agregar URL nueva**: form arriba con input + botón "Agregar". Al agregar
+te pregunta a qué hoja del Excel pertenece (selector con FEAB 2026/2025/2024/...).
+
+**Editar URL existente**: lápiz inline en la fila. Enter para guardar, Esc cancela.
+
+**Quitar**: trash en la fila.
+
+**NO existe el botón "Importar del Excel"** — los 491 procesos ya están
+importados de una vez. Si la Dra necesita re-importar, **avisa a Sergio**
+(IT) y él lo corre por CLI.
+
+## 1.8 Botón "Refrescar desde SECOP"
+
+Click → recarga LIVE jbjy-vk9h + rpmr-utcd → datos frescos al instante.
+
+Útil cuando la Dra acaba de firmar un contrato y quiere ver si ya aparece
+en datos.gov.co (típicamente lag de 1-2 semanas, pero a veces antes).
+
+## 1.9 Garantías cardinales (qué puede confiar la Dra)
+
+| Garantía | Verificación |
+|---|---|
+| **Cero alucinaciones** | El sistema NO usa IA generativa. Solo lee fuentes oficiales literales. |
+| **Cero datos comidos** | Cada proceso muestra TODOS los campos disponibles. Si SECOP no expone un dato → `—` honesto |
+| **Cero falsos positivos** | Auditoría diaria con 13 checks valida cada celda contra LIVE Socrata |
+| **Cero falsos negativos** | Si la fuente tiene un dato y la UI lo descarta → la auditoría lo detecta |
+| **Audit log inmutable** | SHA-256 hash chain · tampering detectable en 6 escenarios |
+| **Provenance siempre clara** | Cada celda con badge "vía X" + secop_hash + code_version |
+
+## 1.10 Lo que la Dra le dice a Compliance
+
+> "Cada celda viene del SECOP en vivo o de un snapshot del portal con
+> badge de procedencia. Las celdas vacías son `—` honestos cuando la
+> fuente no expone el dato — no se inventan. Mis observaciones manuales
+> viven solo en el modal, no en la data oficial. El audit log
+> hash-chained certifica que nadie alteró el historial. Código fuente
+> público en GitHub, seeds versionados, workflows registrados."
+
+---
+
+# 🛠️ PARTE 2 — Para Sergio / IT (Mantenedor)
+
+## 2.1 Lo que se actualiza solo (cero acción)
+
+| Cron / Action | Cadencia | Qué hace |
+|---|---|---|
+| `Refrescar seeds (datos.gov.co)` | Cada día 06:00 UTC (01:00 Bogotá) | Sincroniza APIs jbjy-vk9h + rpmr-utcd |
+| `Auditoria diaria del Dashboard FEAB` | Cada día 07:00 UTC (02:00 Bogotá) | 13 checks por proceso · falla si FP/FN |
+| `Deploy a GitHub Pages` | En cada `git push` a `main` | ~40s, dashboard live actualizado |
+
+→ **La Dra ve datos frescos cada mañana sin que nadie haga nada**.
+
+## 2.2 Lo que requiere acción tuya OCASIONAL
+
+### Re-scrape del portal (1 vez al mes recomendado)
+
+**Cuándo**: cuando aparezcan procesos PPI nuevos en el watch list que viven
+solo en community.secop, o cuando la cobertura automática baje del 100%.
+
+**Cómo** (en TU PC con `.venv` + `.env` + Playwright):
+
+```powershell
+cd "C:\Users\FGN\01 Claude Repositorio\14 SECOP Dr Camila Mendoza"
+
+# Doble-click o desde shell:
+.\ejecutar_scraper.bat
+
+# Espera ~3-4 horas (CapSolver resuelve captchas automáticamente)
+
+# Cuando termine:
+copy .cache\portal_opportunity.json app\public\data\portal_opportunity_seed.json
+git add app\public\data\portal_opportunity_seed.json
+git commit -m "scrape: refresh mensual — N procesos"
+git push origin main
+```
+
+→ GitHub Action `Deploy a Pages` corre solo. La Dra ve datos nuevos al refrescar.
+
+### Re-importar desde Excel (raro, solo si la Dra te lo pide)
+
+Cuando la Dra agregue/quite URLs masivamente en su Excel:
+
+```powershell
+.\ejecutar_pro.bat                                    # arranca FastAPI :8000
+curl -X POST http://localhost:8000/watch/import-from-excel -d "{}"
+```
+
+Solo IT corre esto.
+
+## 2.3 Diagnosticar problemas
+
+### Si la Dra reporta "celda mal" / "modificatorio que no llega"
+
+1. Abrir `_APRENDIZAJES_DASHBOARD_<fecha>.md`
+2. Documentar como `Error #N` con formato fijo (proceso, síntoma, causa, fix, status)
+3. Verificar contra LIVE: `curl https://www.datos.gov.co/resource/jbjy-vk9h.json?...`
+4. Si la fuente tiene el dato pero el dashboard no → bug real, fixear código
+5. Si la fuente no lo tiene → es limitación de la API, comunicar a la Dra
+
+### Reportes de auditoría diaria
+
+GitHub Actions → run de `Auditoria diaria del Dashboard FEAB` →
+ver el output. Si dice `0 FP, 0 FN cardinales` → todo bien. Si dice errores
+→ revisar `_AUDITORIA_DASHBOARD_<fecha>.md` con detalle por proceso.
+
+### Logs locales
+
+```
+.cache/scrape_full.log              ← último scrape masivo
+.cache/portal_progress.jsonl        ← progreso del scrape en JSON
+.cache/portal_opportunity.json      ← cache de procesos scrapeados
+.cache/audit_log.jsonl              ← chain SHA-256 inmutable (NUNCA editar)
+.cache/feab_headers.json            ← cache HTTP headers
+```
+
+## 2.4 Costos operacionales
+
+| Servicio | Costo | Frecuencia |
+|---|---|---|
+| GitHub Pages | $0 | siempre |
+| GitHub Actions (cron diario) | $0 (free tier sobra) | siempre |
+| datos.gov.co (Socrata) | $0 | siempre |
+| **CapSolver** (re-scrape captchas) | **$0.27 USD/scrape** (~$3/año a cadencia mensual) | depende cadencia |
+
+**$6 USD inicial = ~5,000 captchas resueltos = ~18 scrapes completos = años de cobertura**.
+
+## 2.5 Zonas PROHIBIDAS de tocar (sin sesión dedicada)
+
+Si vas a tocar uno de estos archivos, **abrí una sesión Claude dedicada**
+y leé `CLAUDE.md` primero. Cada uno tiene auditorías cardinales detrás:
+
+```
+app/src/lib/state-store.ts::verifyAuditChain
+app/src/lib/state-store.ts::appendAuditLog
+app/src/components/unified-table.tsx::buildUnifiedRows
+app/src/lib/api.ts::getContracts / getIntegrado (Promise singleton)
+app/src/lib/security/passphrase.ts (PBKDF2 200k iter)
+app/src/lib/security/url.ts::assertSafeUrl
+CSP meta tag en app/src/app/layout.tsx
+next.config.mjs::basePath
+app/src/lib/export-excel.ts::COLUMNS
+src/secop_ii/portal_scraper.py::_try_solve_with_capsolver_direct
+```
+
+## 2.6 Pre-deploy 5 CHECKS (antes de cada `git push`)
+
+Estilo RUNT — mostrar los 5 con ✅/❌. Si alguno ❌ → no push:
+
+```powershell
+# 1. Tests Python
+.\.venv\Scripts\python.exe -X utf8 -m pytest -q
+# debe dar: 192/192 passed
+
+# 2. TypeScript
+cd app
+.\node_modules\.bin\tsc --noEmit
+# debe dar: 0 errors
+
+# 3. Audit log integrity
+cd ..
+.\.venv\Scripts\python.exe -m secop_ii audit-log
+# debe decir: íntegro
+
+# 4. Auditoría completa
+.\.venv\Scripts\python.exe -X utf8 scripts\audit_dashboard_full.py
+# debe dar: 0 FP, 0 FN cardinales
+
+# 5. Smoke test canónico (manual con la Dra)
+# Abrir https://smarroquinc10.github.io/14-SECOP-Dr-Camila-Mendoza/
+# Verificar 4 procesos canónicos vs community.secop
+```
+
+---
+
+# 🚦 PARTE 3 — Capacidades vs Limitaciones (transparencia)
+
+## ✅ Lo que SÍ puede hacer
+
+- Espejo de los 491 links del watch list de la Dra
+- Cada proceso con TODOS sus campos (61-354 según tipo)
+- Cada proceso con TODOS sus documentos (PDFs descargables)
+- Cada proceso con TODAS sus notificaciones
+- Filtros (vigencia, estado, modalidad, hoja, búsqueda libre)
+- Exportar Excel filtrado o completo (86 cols crudas)
+- Audit log inmutable verificable
+- Detección automática de drift / FP / FN
+- Refresh diario sin acción humana
+- Re-scrape mensual con captcha solver automático
+- Funcionar en cualquier dispositivo con browser
+
+## ❌ Lo que NO puede hacer
+
+- **Operar el SECOP** (firmar contratos, presentar ofertas, subir docs)
+  → eso sigue siendo en community.secop directo
+- **Tiempo real instantáneo** — hay lag inherente:
+  - APIs Socrata: 1-2 semanas
+  - Scrape portal: cuando se ejecuta (mensual o on-demand)
+- **Procesos de OTRAS entidades** que no son del FEAB
+  → solo NIT 901148337
+- **Datos de períodos sin watch list** (la Dra debe agregar URL si quiere seguimiento)
+
+## ⚠️ Limitaciones aceptadas
+
+- **Lag de Socrata vs portal**: si la Dra firmó un contrato hace 2 días,
+  posiblemente aún no aparezca en API. Solución: scrape manual on-demand
+  para ese proceso específico.
+- **Cookies de sesión expiran** ~30-60 días en el scraper. CapSolver maneja
+  los captchas que aparezcan después de eso.
+- **Cambios estructurales del portal SECOP**: si Vortal cambia el HTML,
+  el scraper puede romper temporalmente. La auditoría diaria lo detecta
+  como `error_red` y reporta.
+
+---
+
+# 📋 Resumen — quién hace qué
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                 │
+│  DRA CAMILA  →  abre URL · audita · filtra · exporta Excel    │
+│                 sample manual ocasional vs community.secop    │
+│                                                                 │
+│  SERGIO/IT   →  re-scrape mensual (1 click .bat + 3h)          │
+│                 fix de bugs cuando aparezcan                   │
+│                 mantenimiento del repo                         │
+│                                                                 │
+│  GITHUB      →  cron diario refresh + audit + deploy           │
+│  ACTIONS        sin intervención humana                        │
+│                                                                 │
+│  CAPSOLVER   →  resuelve captchas del portal automáticamente   │
+│                 ~$0.001/captcha · $6 dura años                 │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+# 🆘 Si algo se rompe
+
+1. **La Dra reporta** → Sergio escucha
+2. **Sergio abre Claude Code** en el repo del proyecto
+3. **Claude lee** `CLAUDE.md` + `_APRENDIZAJES_DASHBOARD_*.md` + reportes
+4. **Documenta** como `Error #N` con formato fijo
+5. **Fix** + commit + push → auto-deploy
+6. **Smoke test** con la Dra → confirma resolución
+
+Cada error documentado **construye memoria operacional permanente** — el
+próximo Claude que entre al repo lee la lección y NO repite el bug.
+
+---
+
+**Filosofía cardinal** (heredada del bot RUNT Pro de Sergio en producción):
+
+> "La verdad es SECOP. NO inventar. NO comer datos. Honesto cuando no sabe.
+> Audit log inmutable. Cada celda con su procedencia clara. **Sample manual
+> humano es la validación final** — ningún sistema automático reemplaza la
+> firma de la Dra diciendo 'verifiqué estos 5 procesos manualmente vs
+> community.secop, todos coinciden'."
