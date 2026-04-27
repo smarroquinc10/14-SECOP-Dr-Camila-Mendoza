@@ -33,6 +33,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import re
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
@@ -846,6 +847,9 @@ async def watch_update(payload: dict[str, str]) -> dict[str, Any]:
 
 _DEFAULT_WORKBOOK = "BASE DE DATOS FEAB CONTRATOS2.xlsx"
 _LINK_HEADER_KEYWORDS = ("LINK", "URL", "ENLACE")
+# Control characters embedded en URLs (\n, \r, \t, etc.) rompen Python
+# http.client. Vienen del Excel cuando el link fue copiado con line breaks.
+_CONTROL_CHARS_RE = re.compile(r"[\x00-\x1f\x7f]+")
 
 
 def _find_link_column(ws) -> tuple[int, int] | None:
@@ -1305,7 +1309,13 @@ def _import_workbook_urls(workbook_path: Path) -> dict[str, Any]:
                 v = row[link_col - 1]
                 if v is None:
                     continue
-                url = str(v).strip()
+                # CARDINAL · sanitización defensiva: el Excel puede tener
+                # control characters embedded en URLs (\n, \r, \t) por
+                # copy-paste con line breaks. Esos rompen Python http.client
+                # y otros consumers. Removerlos preserva la URL real del
+                # SECOP que es siempre un single-line. Detectado 2026-04-27
+                # con CO1.PPI.11758446 que tenía \n entre Vie y w en /View.
+                url = _CONTROL_CHARS_RE.sub("", str(v)).strip()
                 if not url or "secop.gov.co" not in url.lower():
                     continue
                 stats["found"] += 1
