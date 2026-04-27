@@ -13,7 +13,13 @@ import {
 } from "lucide-react";
 
 import { DetailDialog } from "@/components/detail-dialog";
-import { ModsPanel } from "@/components/mods-panel";
+// ModsPanel ELIMINADO 2026-04-27 (cardinal pura): el panel usaba
+// api.modificatoriosRecientes que internamente leía jbjy-vk9h
+// (dias_adicionados field). Generaba inconsistencia visible: panel arriba
+// decía "5 modificatorios" mientras la columna nueva decía "83" (cardinal
+// puro desde PDFs del link). La columna Modificatorios + filtros
+// "Solo modificados" / "Requieren atención" cumplen la misma función
+// con cardinal puro real desde el link community.secop.
 import { RefreshModal } from "@/components/refresh-modal";
 import { SlicerPills } from "@/components/slicer-pills";
 import {
@@ -28,7 +34,6 @@ import { Input } from "@/components/ui/input";
 import {
   api,
   withBasePath,
-  type Contract,
   type WatchedItem,
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -42,13 +47,11 @@ const TODAY = new Intl.DateTimeFormat("es-CO", {
 }).format(new Date());
 
 export default function HomePage() {
-  // ---- Live data from FastAPI ------------------------------------------
+  // ---- Live data ------------------------------------------
+  // CARDINAL PURO (Sergio 2026-04-27): SWR fetches a contracts (jbjy) y
+  // integradoBulk (rpmr) ELIMINADOS. La app solo lee del watch list +
+  // portal cache · cero datos derivados de fuentes que mienten.
   const { data: feab } = useSWR("feab", api.feab, { refreshInterval: 0 });
-  const {
-    data: contracts = [],
-    isLoading: loadingContracts,
-    mutate: reloadContracts,
-  } = useSWR<Contract[]>("contracts:500", () => api.contracts(500));
   const {
     data: watch,
     isLoading: loadingWatch,
@@ -81,37 +84,23 @@ export default function HomePage() {
     { refreshInterval: 5_000 }
   );
 
-  // SECOP Integrado bulk: enriquece la tabla principal con los procesos
-  // que el API estándar no expone, SIN captcha. Recargamos cada 5 min
-  // (el dataset rpmr-utcd no cambia más rápido que eso).
-  const { data: integradoBulk, mutate: reloadIntegradoBulk } = useSWR(
-    "integrado-bulk",
-    api.integradoBulk,
-    { refreshInterval: 300_000 }
-  );
+  // CARDINAL PURO (Sergio 2026-04-27): SWR fetches a integradoBulk
+  // (rpmr-utcd) y discrepanciasBulk fueron ELIMINADOS. La app ya no
+  // usa esos datasets en UI · cargarlos solo lentificaba el load inicial.
+  // Solo se carga el portal cache (verdad cardinal del link).
 
   // Portal cache (community.secop.gov.co) — seed estático bakeado al
-  // bundle. Cubre los procesos que ni el SECOP API ni el Integrado
-  // exponen (típicamente ~66 procs scrapeados del portal con captcha
-  // resuelto a mano cuando se generó el seed). Cero refresh — es read-
-  // only. Cuando deployes una versión nueva con seed actualizado, Cami
-  // ve la nueva data al refrescar.
+  // bundle. Cubre los procesos cuyos links fueron scrapeados con éxito
+  // del portal community.secop. Es la verdad cardinal: lo que la Dra
+  // vería abriendo el link manualmente.
   const { data: portalBulk } = useSWR<PortalBulk>(
     "portal-bulk",
     api.portalBulk,
     { refreshInterval: 0, revalidateOnFocus: false }
   );
 
-  // Discrepancias entre fuentes del SECOP — cardinal: detecta cuando el
-  // SECOP MISMO se contradice entre sus datasets. Generado por
-  // scripts/cross_check_fuentes.py · regenerado por el cron diario.
-  const { data: discrepanciasBulk } = useSWR(
-    "discrepancias-bulk",
-    api.discrepanciasBulk,
-    { refreshInterval: 0, revalidateOnFocus: false }
-  );
-
-  const isLoading = loadingContracts || loadingWatch;
+  // Loading state: solo dependemos del watch list ahora (cardinal puro).
+  const isLoading = loadingWatch;
 
   // ---- Filter state -----------------------------------------------------
   const [search, setSearch] = React.useState("");
@@ -497,42 +486,23 @@ export default function HomePage() {
     }
   }
 
-  /** Trae datos FRESCOS del SECOP — feedback Cami (2026-04-27): el boton
-   *  principal de "Actualizar datos del SECOP" tenia un BUG cardinal
-   *  porque solo refrescaba el dataset Integrado (rpmr-utcd) pero NO los
-   *  contratos firmados (jbjy-vk9h) — donde viven LOS MODIFICATORIOS,
-   *  que es lo MAS RELEVANTE para la Dra abogada. Fix: refrescar AMBOS
-   *  datasets en paralelo. Toma ~1-2 segundos total porque los dos
-   *  fetches a Socrata corren en simultaneo. */
-  const [syncingInteg, setSyncingInteg] = React.useState(false);
-  async function handleIntegradoSync() {
-    setSyncingInteg(true);
-    try {
-      // Refrescar AMBOS datasets en paralelo: Integrado (cobertura adicional
-      // sin captcha) + Contratos (modificatorios). Ambos via fetch directo
-      // a Socrata desde el browser — funciona local y en GitHub Pages.
-      await Promise.all([
-        api.integradoSync(),
-        reloadContracts(),  // ← FIX: trae los modificatorios actualizados
-      ]);
-      // Pequena espera para que el subprocess escriba (~1-2s) + refrescar.
-      await new Promise((r) => setTimeout(r, 1500));
-      await reloadIntegradoBulk();
-      setFeedback({
-        kind: "ok",
-        text: "Datos del SECOP actualizados — contratos, modificatorios y todo lo demás.",
-      });
-    } catch (err) {
-      setFeedback({
-        kind: "error",
-        text:
-          err instanceof Error
-            ? err.message
-            : "No pude actualizar los datos del SECOP.",
-      });
-    } finally {
-      setSyncingInteg(false);
-    }
+  /** CARDINAL PURO (Sergio 2026-04-27): el botón principal "Actualizar
+   *  datos del SECOP" antes refrescaba jbjy + rpmr (datasets que la app
+   *  ya NO usa en UI). Era acción inútil que ofrecía actualizar datos
+   *  derivados de fuentes que mienten.
+   *
+   *  Reemplazo cardinal: el botón ahora abre el modal de refresh selectivo
+   *  del scrape del portal community.secop (que SÍ es la verdad cardinal
+   *  · los links de la Dra). Refrescar = volver a leer los links visibles
+   *  para detectar cambios reales (modificatorios nuevos, fechas
+   *  actualizadas, etc).
+   */
+  function handleRefreshAllVisible() {
+    // Tomar todos los notice_uid visibles (post filtros) y abrir modal
+    const uids = filtered
+      .map((r: UnifiedRow) => r.notice_uid ?? r.process_id)
+      .filter((u): u is string => !!u);
+    setRefreshModal({ uids, mode: "all_visible" });
   }
 
   async function handleAdd(url: string) {
@@ -702,20 +672,15 @@ export default function HomePage() {
           <Button
             size="lg"
             variant="outline"
-            onClick={handleIntegradoSync}
-            disabled={syncingInteg}
+            onClick={handleRefreshAllVisible}
             className="gap-2 border-emerald-300 bg-emerald-50/50 hover:bg-emerald-50 text-ink"
-            title="Pide al SECOP los datos más recientes de tus 491 contratos. Toma ~1 segundo. Te trae todo lo que cambió en SECOP desde la última vez."
+            title="Vuelve a leer todos los links visibles en la tabla para detectar cambios reales (modificatorios nuevos, fechas actualizadas). Cada link tarda ~30 segundos en releerse."
           >
-            {syncingInteg ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Database className="h-4 w-4" />
-            )}
-            {syncingInteg ? "Actualizando…" : "Actualizar datos del SECOP"}
+            <RefreshCcw className="h-4 w-4" />
+            Refrescar mis links del SECOP
           </Button>
           <span className="text-[10px] text-ink-soft text-center max-w-[260px] leading-tight">
-            Click acá cuando quieras los datos frescos del SECOP · ~1 segundo
+            Vuelve a leer cada link de la tabla · detecta modificatorios nuevos y cambios reales
           </span>
         </div>
 
@@ -741,21 +706,19 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* Cobertura DUAL — total confianza cardinal (2026-04-27 r3):
-            distinguir entre "confiable" (api + portal · lo que la Dra ve
-            si abre el link) vs "detectado" (incluye rpmr-only que puede
-            tener drift). Transparencia total para Compliance. */}
+        {/* Cobertura cardinal pura (2026-04-27): solo cuenta los procesos
+            cuyos links fueron leídos exitosamente del portal community.secop.
+            El resto son honestos: borradores SECOP II, links que requieren
+            login, o procesos sin publicar. */}
         {coverageStats.total > 0 && (
           <div
             className="flex flex-col text-[11px] text-ink-soft border-l border-rule pl-3"
             title={
               `De los ${coverageStats.total} procesos que vos seguís:\n\n` +
-              `  ✅ ${coverageStats.confiable} (${coverageStats.pctConfiable}%) tienen datos VERIFICADOS\n` +
-              `     contra el portal community.secop · 100% confiables\n\n` +
-              `  ⚠️ ${coverageStats.integrado} están solo en SECOP Integrado (rpmr-utcd)\n` +
-              `     sin verificar contra portal · valores pueden tener drift\n\n` +
-              `  ❌ ${coverageStats.none} son borradores REQ o PPI sin notice_uid\n` +
-              `     que el SECOP no expone públicamente · cardinal-imposibles`
+              `  ✅ ${coverageStats.confiable} (${coverageStats.pctConfiable}%) tienen datos LEÍDOS del link\n` +
+              `     espejo cardinal del portal · 100% confiables\n\n` +
+              `  ❌ ${coverageStats.none} son borradores o procesos en limbo\n` +
+              `     que el SECOP no expone públicamente · revisar con tu login`
             }
           >
             <span className="eyebrow">Procesos con datos del SECOP</span>
@@ -1128,10 +1091,10 @@ export default function HomePage() {
           </div>
         )}
 
-      {/* Modificatorios summary panel — context first */}
-      <div className="mx-auto max-w-7xl px-8 mb-6">
-        <ModsPanel onPickContract={(id) => setSelected(id)} />
-      </div>
+      {/* ModsPanel ELIMINADO 2026-04-27 (cardinal pura) · ver comentario en
+          el import. La columna Modificatorios de la tabla + el filtro
+          "Solo contratos modificados" cumplen la misma función sin
+          inconsistencia con el cardinal puro. */}
 
       {/* FILTROS arriba — antes de la tabla unificada. Labels en lenguaje
           legal cotidiano para Cami abogada cero tech. */}
@@ -1510,8 +1473,7 @@ export default function HomePage() {
                 Sistema de Seguimiento de Contratos · SECOP II
               </div>
               <div className="text-ink-soft mt-0.5">
-                Espejo automático del SECOP — datos oficiales{" "}
-                <code className="font-mono">datos.gov.co</code>
+                Espejo automático del portal SECOP — lee cada link de tu lista
               </div>
             </div>
             <div>

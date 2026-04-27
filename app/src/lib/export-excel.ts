@@ -120,58 +120,31 @@ export async function exportRowsToExcel(
 
   // ──────────────────────────────────────────────────────────────────
   // SHEET 2 — "Datos completos crudos": dump exhaustivo de TODOS los
-  // campos que cada fila trae de cada fuente. Es la columna vertebral
-  // del cardinal "ver todo": el Excel le muestra a la Dra cada valor
-  // que el SECOP devolvió, sin curado, con prefijo de origen para que
-  // sepa de dónde viene cada cosa.
+  // campos que el scrape del link community.secop extrajo. Cardinal
+  // puro (Sergio 2026-04-27): solo portal_* · NO incluye api_* ni
+  // integ_* (jbjy/rpmr ya no son fuente · sólo el link es la verdad).
   // ──────────────────────────────────────────────────────────────────
-  const noiseFields = new Set<string>([
-    "_id", "_notas",
-    ":@computed_region_y8tx_xa3w",
-    ":@computed_region_b8mb_y23g",
-    ":@computed_region_kpa3_pdzn",
-    ":@computed_region_ck25_dyt8",
-    ":@computed_region_g8jr_8txm",
-    ":@computed_region_yyfu_pwt8",
-  ]);
-  const apiKeys = new Set<string>();
-  const integKeys = new Set<string>();
+  // CARDINAL PURO (Sergio 2026-04-27): el Excel solo exporta datos del
+  // scrape del link community.secop. _raw_api (jbjy) y _raw_integrado
+  // (rpmr) ya no se usan en UI · NO se exportan tampoco. El Excel pasa
+  // de ~99 columnas vacías a solo las del portal scrape · ~9× más liviano.
   const portalKeys = new Set<string>();
   for (const r of rows) {
-    if (r._raw_api) {
-      for (const k of Object.keys(r._raw_api)) {
-        if (!noiseFields.has(k)) apiKeys.add(k);
-      }
-    }
-    if (r._raw_integrado) {
-      for (const k of Object.keys(r._raw_integrado)) {
-        if (!noiseFields.has(k)) integKeys.add(k);
-      }
-    }
     if (r._raw_portal) {
-      // Para portal, nos interesan los `fields` (claves curadas por
-      // el scraper) y `all_labels` (raw del HTML). Aplanamos ambos
-      // bajo prefijos distintos para que sea explícito.
       const fields = (r._raw_portal.fields ?? {}) as Record<string, unknown>;
       const allLabels = (r._raw_portal.all_labels ?? {}) as Record<string, unknown>;
       for (const k of Object.keys(fields)) portalKeys.add(`field.${k}`);
       for (const k of Object.keys(allLabels)) portalKeys.add(`label.${k}`);
-      // Metadata del scrape
       portalKeys.add("scraped_at");
       portalKeys.add("status");
     }
   }
-  const sortedApiKeys = Array.from(apiKeys).sort();
-  const sortedIntegKeys = Array.from(integKeys).sort();
   const sortedPortalKeys = Array.from(portalKeys).sort();
 
-  // Headers: identificación primero (process_id / contrato), luego
-  // todos los api_* / integ_* / portal_* en orden alfa.
-  const idHeaders = ["process_id", "id_contrato", "notice_uid", "url"];
+  // Headers: identificación primero, luego todos los portal_* en orden alfa.
+  const idHeaders = ["process_id", "notice_uid", "url"];
   const headers = [
     ...idHeaders,
-    ...sortedApiKeys.map((k) => `api_${k}`),
-    ...sortedIntegKeys.map((k) => `integ_${k}`),
     ...sortedPortalKeys.map((k) => `portal_${k}`),
   ];
 
@@ -179,7 +152,6 @@ export async function exportRowsToExcel(
     if (v === null || v === undefined) return "";
     if (typeof v === "string" || typeof v === "number") return v;
     if (typeof v === "boolean") return v ? "Si" : "No";
-    // Objetos/arrays se serializan a JSON para no perder data.
     try {
       return JSON.stringify(v);
     } catch {
@@ -190,16 +162,9 @@ export async function exportRowsToExcel(
   const rawData = rows.map((r) => {
     const out: Record<string, string | number | null> = {
       process_id: r.process_id ?? "",
-      id_contrato: r.id_contrato ?? "",
       notice_uid: r.notice_uid ?? "",
       url: r.url ?? "",
     };
-    for (const k of sortedApiKeys) {
-      out[`api_${k}`] = r._raw_api ? flat(r._raw_api[k]) : "";
-    }
-    for (const k of sortedIntegKeys) {
-      out[`integ_${k}`] = r._raw_integrado ? flat(r._raw_integrado[k]) : "";
-    }
     for (const k of sortedPortalKeys) {
       if (!r._raw_portal) {
         out[`portal_${k}`] = "";
