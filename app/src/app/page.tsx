@@ -230,6 +230,27 @@ export default function HomePage() {
     return { total: seenKeys.size, mods, expiring };
   }, [allRows]);
 
+  // Feature I (2026-04-26): "Último scrape del portal" — fecha más reciente
+  // de scraped_at entre todos los procesos del watch list cubiertos por
+  // portal_seed. Esto le dice a la Dra "los datos del portal community.secop
+  // se actualizaron por última vez el día X". El cron mensual de GitHub
+  // Action lo refresca automáticamente.
+  const lastPortalScrape = React.useMemo(() => {
+    if (!portalBulk) return { fecha: null as string | null, diasDesde: null as number | null };
+    const fechas = Object.values(portalBulk)
+      .map((p) => p?.scraped_at)
+      .filter((s): s is string => !!s)
+      .sort()
+      .reverse();
+    const fecha = fechas[0] ?? null;
+    let diasDesde: number | null = null;
+    if (fecha) {
+      const d = new Date(fecha);
+      diasDesde = Math.floor((Date.now() - d.getTime()) / (1000 * 60 * 60 * 24));
+    }
+    return { fecha, diasDesde };
+  }, [portalBulk]);
+
   // ---- Distinct option sets for slicers --------------------------------
   const yearOptions = React.useMemo(
     () =>
@@ -687,6 +708,40 @@ export default function HomePage() {
                 : `hace ${freshnessStats.diasDesde} días`}
             </span>
           </div>
+        )}
+
+        {/* Feature I (2026-04-26): "Último scrape portal" — cuándo se
+            actualizó el cache de community.secop por última vez. Verde
+            si reciente (<30d), ámbar (30-60d), rojo (>60d). Click navega
+            a la GitHub Action mensual para que la Dra/IT puedan triggear
+            un refresh manual sin esperar el cron. */}
+        {lastPortalScrape.fecha && (
+          <a
+            href="https://github.com/smarroquinc10/14-SECOP-Dr-Camila-Mendoza/actions/workflows/scrape-portal-mensual.yml"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(
+              "flex flex-col text-[11px] border-l border-rule pl-3 hover:underline",
+              lastPortalScrape.diasDesde != null && lastPortalScrape.diasDesde < 30
+                ? "text-emerald-700"
+                : lastPortalScrape.diasDesde != null && lastPortalScrape.diasDesde < 60
+                ? "text-amber-700"
+                : "text-rose-700"
+            )}
+            title={`Último scrape del portal community.secop: ${lastPortalScrape.fecha}. Cron mensual día 1 04:00 UTC. Click → ir a GitHub Actions para refrescar manual.`}
+          >
+            <span className="eyebrow">Último refresh portal</span>
+            <span className="font-mono">
+              {lastPortalScrape.fecha.slice(0, 10)}
+            </span>
+            <span className="text-[10px] mt-0.5">
+              {lastPortalScrape.diasDesde === 0
+                ? "hoy 🔄"
+                : lastPortalScrape.diasDesde === 1
+                ? "ayer"
+                : `hace ${lastPortalScrape.diasDesde} días`}
+            </span>
+          </a>
         )}
 
         {/* Feature A (2026-04-26): "Requieren atención" — la Dra como
