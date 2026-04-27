@@ -15,7 +15,10 @@ dependencies = [
     "requests>=2.32",
     "httpx>=0.28",
     "requests-cache>=1.2",
-    "tenacity>=9.0",
+    # Loosen >=8.1 (era >=9.0) para compatibilidad con playwright-recaptcha
+    # 0.5.x que pinea tenacity==8.3.0. secop_client.py usa solo la API estable
+    # disponible en 8 y 9 (retry/stop_after_attempt/wait_exponential).
+    "tenacity>=8.1",
 
     # ---- Excel ----
     "openpyxl>=3.1",
