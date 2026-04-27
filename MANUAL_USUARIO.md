@@ -42,8 +42,9 @@ extraídos automáticamente, sin abrir community.secop salvo para casos puntuale
 │                                                                         │
 │ 288 contratos · 194 procesos · 491 en seguimiento                      │
 │ │ Última actividad: 26/04 15:06                                        │
-│ │ Cobertura automática: 491/491 · 100%                                 │
+│ │ Cobertura automática: 480/491 · 98%   ← honesto, no maquillado       │
 │ │ Última firma SECOP: 13/04 (hace 13 días)                             │
+│ │ Último refresh portal: hace 3 días                                    │
 │ │ [✓ 1 entradas · íntegro]    ← Hash chain del audit log              │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
@@ -56,19 +57,20 @@ extraídos automáticamente, sin abrir community.secop salvo para casos puntuale
 
 ## 1.3 La tabla principal (los 491 procesos)
 
-7 columnas, sin scroll horizontal:
+7 columnas + checkbox de selección, sin scroll horizontal:
 
 | Columna | Qué muestra |
 |---|---|
+| **☑** | Checkbox para seleccionar procesos individuales (ver § 1.7.5) |
 | **Contrato** | ID del SECOP (CO1.NTC.X / CO1.PCCNTR.X) + número de contrato del Excel si la Dra lo escribió |
 | **Objeto / Proveedor** | Objeto del contrato + proveedor adjudicado |
 | **Valor / Firma** | Valor en pesos + fecha de firma |
 | **Estado** | Borrador / En ejecución / Modificado / Cancelado / etc. |
 | **Modificatorios** | Días adicionados + estado de liquidación |
-| **Origen** | Fuente del dato: API · Integrado · Portal cache · No en API público |
+| **Origen** | Fuente del dato: API · Integrado · Portal cache · No en API público. Para los del portal, segunda línea muestra fecha exacta `Actualizado: YYYY-MM-DD` |
 | **Acciones** | [↗ Abrir] [✏ Editar] [🗑 Quitar] |
 
-Click cualquier fila → **modal detalle**.
+Click cualquier fila → **modal detalle**. El checkbox NO abre el modal (sirve solo para marcar).
 
 ## 1.4 Filtros disponibles (arriba de la tabla)
 
@@ -184,6 +186,54 @@ te pregunta a qué hoja del Excel pertenece (selector con FEAB 2026/2025/2024/..
 importados de una vez. Si la Dra necesita re-importar, **avisa a Sergio**
 (IT) y él lo corre por CLI.
 
+## 1.7.5 Refrescar procesos selectivamente del portal SECOP
+
+Hay 2 botones nuevos en el encabezado de la tabla (al lado de "Descargar Excel"):
+
+### "Refrescar visibles (N)"
+Click → modal con la lista de N procesos visibles tras los filtros activos
++ 3 caminos para disparar el refresh:
+
+1. **Disparar GitHub Action** (preferido, requiere a Sergio o IT):
+   - Modal copia los IDs al clipboard automáticamente
+   - Botón abre la página del workflow `scrape-portal-mensual.yml`
+   - Sergio click "Run workflow" → pega los IDs en el campo `uids` → click "Run workflow"
+   - Toma ~30-45s por proceso (CapSolver resuelve los captchas solo)
+   - Al terminar, el seed se actualiza solo y el dashboard muestra datos frescos
+
+2. **mailto Sergio** (fallback): cuando Sergio no está al lado para clickear,
+   el modal abre el cliente de mail con asunto y la lista de UIDs prellenados.
+
+3. **Copiar IDs**: para casos donde la Dra/IT quieran usar otro flujo (ej.
+   correr `scripts/scrape_portal.py --uids-file ...` localmente).
+
+### "Refrescar seleccionados (N)"
+Aparece SOLO cuando la Dra marcó al menos un checkbox en la tabla. Funciona
+igual que "Refrescar visibles" pero solo procesa los marcados.
+
+**Cuándo usarlo**:
+- Quieren refrescar UN proceso específico que firmaron ayer.
+- Quieren refrescar UN GRUPO (ej. todos los activos del FEAB 2025).
+- NO quieren gastar CapSolver en los 386 procesos del portal cuando solo
+  les interesa refrescar 5.
+
+### Costo y tiempo (CapSolver)
+El modal muestra al instante el costo estimado y ETA:
+- Costo: ~$0.001 USD por proceso (CapSolver resuelve captchas automáticamente)
+- Tiempo: ~30-45s por proceso (5 procesos = ~3 min · 50 = ~30 min · 386 = ~3 h)
+- Crédito de $5 USD inicial cubre años de scrapes.
+
+### Restricciones (espejo cardinal)
+- Solo aparecen checkboxes en filas con `notice_uid` resuelto o `process_id`
+  formato `CO1.NTC.*`. Los borradores REQ/BDOS y PCCNTR sin notice_uid no
+  son scrapeables del portal community.secop, entonces no los muestra
+  como seleccionables.
+- El modal NUNCA dispara el scrape automáticamente — siempre requiere acción
+  humana (Sergio click "Run workflow" o mandar el mail). Esto evita gastar
+  CapSolver por accidente.
+
+---
+
 ## 1.8 Botón "Refrescar desde SECOP"
 
 Click → recarga LIVE jbjy-vk9h + rpmr-utcd → datos frescos al instante.
@@ -247,10 +297,25 @@ podés clickear "Abrir" y va al portal directamente — pero rara vez es
 necesario porque el dashboard ya tiene casi todo.
 
 ### "¿Por qué algunos procesos dicen 'No en API público'?"
-Significa que ese proceso vive solo en `community.secop.gov.co` (portal con
-captcha) y aún no lo pasamos al sistema. El cron mensual lo recoge.
-Si necesitás verlo urgente antes del cron, click "Abrir" en la fila →
-te lleva al portal.
+Significa que ese proceso **el SECOP NO lo expone** en sus APIs públicas.
+Casos típicos:
+- **Borradores en preparación** (`CO1.REQ.*`): el SECOP NO publica borradores
+  hasta que pasan a `NTC` (publicado) o `PCCNTR` (firmado). Cuando suceda,
+  el sistema los captura solos automáticamente — vos no hacés nada.
+- **PPI sin notice_uid resuelto**: procesos en limbo SECOP (cancelados antes
+  de publicarse o que nunca pasaron a NTC).
+
+**Esto NO es error del dashboard, es honestidad cardinal**: te muestra `—`
+en vez de inventar valores. Si la Dra ve uno y quiere consultarlo manualmente,
+click `↗ Abrir` → va al portal community.secop directamente. Detalle forense
+en `_CARDINAL_IMPOSIBLES_*.md` (commiteado al repo).
+
+### "¿Cómo refresco un proceso específico que firmé ayer?"
+Usá la nueva **Feature G** (ver § 1.7.5):
+1. En la tabla, marcá el checkbox del proceso (primera columna, izquierda)
+2. Click el botón "Refrescar seleccionados (1)" arriba de la tabla
+3. Modal se abre con 3 caminos: GitHub Action / mailto Sergio / copiar IDs
+4. Sergio dispara el refresh; en ~30-45s tu dashboard muestra datos frescos.
 
 ### "Quiero el contrato firmado de uno de los procesos. ¿Dónde está?"
 1. Click en la fila → modal se abre
