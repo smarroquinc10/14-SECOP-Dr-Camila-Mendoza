@@ -332,20 +332,20 @@ export function buildUnifiedRows(
     }
     if (contract?.id_contrato) usedContracts.add(contract.id_contrato);
 
-    // CASCADA NUEVA (2026-04-27 r2 · feedback Sergio: "el link es lo que mira
-    // la Dra Camila"):
-    //   1. SECOP API contracts dataset (jbjy-vk9h)   →  data_source = "api"
-    //   2. Portal cache (community.secop)            →  data_source = "portal"
-    //   3. SECOP Integrado (rpmr-utcd)               →  data_source = "integrado"
-    //   4. ninguna  →  data_source = null
+    // CASCADA CARDINAL r5 (2026-04-27 · feedback Sergio: "necesitamos 100%
+    // o la Dra en su ansiedad vuelve a perder tiempo con trabajo manual"):
     //
-    // CARDINAL: el portal community.secop es la verdad porque es lo que la
-    // entidad sube directamente y es lo que la Dra ve cuando entra al SECOP.
-    // El rpmr-utcd es un dataset agregado y puede tener valores corruptos
-    // (caso CO1.NTC.5933103: rpmr=$481 vs portal=$890.400 — diff 99.95%).
-    // Cuando ambos están disponibles, PREFERIMOS portal.
+    // Restauramos la cascada api > portal > integrado para máxima cobertura
+    // visible (480/491 · 98%). PERO con sistema de confianza explícita
+    // visual:
+    //   - api + portal (322) → confiable cardinal · sin disclaimer
+    //   - rpmr-only sin drift detectado (~9) → badge amber suave
+    //   - rpmr-only con drift detectado (149) → badge ROJO + valor TACHADO
+    //     visualmente · la Dra ve el dato pero sabe que es DUDOSO · click
+    //     Abrir para verificar en el link
     //
-    // Cargamos AMBOS para poder cross-checkear y mostrar discrepancias:
+    // Esto da TOTAL cobertura sin hacer perder tiempo manual + máxima
+    // honestidad cardinal con disclaimers visuales claros por celda.
     const integ =
       contract == null
         ? lookupIntegrado(w.notice_uid, w.process_id)
@@ -356,7 +356,7 @@ export function buildUnifiedRows(
       const key2 = w.process_id ?? "";
       portalSnap = portalBulk[key1] ?? portalBulk[key2] ?? null;
     }
-    // Cascada nueva: api > portal > integrado > none
+    // Cascada: api > portal > integrado > none
     const dataSource: UnifiedRow["data_source"] = contract
       ? "api"
       : portalSnap
@@ -379,9 +379,8 @@ export function buildUnifiedRows(
         .trim()
         .toLowerCase() === "si";
 
-    // Valor: del API si hay contrato, sino PORTAL (cardinal) sino integrado.
-    // Razón: el portal community.secop tiene los valores reales de los
-    // contratos firmados; el rpmr-utcd a veces tiene valores corruptos.
+    // Valor: del API si hay contrato, sino PORTAL (cardinal · verdad de la
+    // Dra), sino integrado (con disclaimer en UI). Cobertura máxima 98%.
     let valor: number | null = null;
     if (contract) {
       const valorRaw = contract.valor_del_contrato;
@@ -418,7 +417,9 @@ export function buildUnifiedRows(
       // numero_contrato: del API si hay (referencia_del_contrato); del
       // Integrado si no hay (numero_de_proceso = CONTRATO-FEAB-XXXX o
       // numero_del_contrato = CO1.PCCNTR.X). NUNCA del Excel.
-      // Cascada NUEVA: api > portal > integrado (preferimos portal sobre rpmr)
+      // CARDINAL r5: cascada api > portal > integrado · valores VISIBLES
+      // siempre que existan en alguna fuente · disclaimers visuales por
+      // celda cuando data_source = "integrado" (con o sin drift detectado)
       numero_contrato:
         (contract?.referencia_del_contrato as string) ??
         portalSnap?.fields?.numero_contrato ??
@@ -753,12 +754,35 @@ export function UnifiedTable({
         },
         cell: ({ row }) => {
           const r = row.original;
+          // Cardinal r5 (2026-04-27): si hay drift detectado entre fuentes
+          // del SECOP en este campo, mostrar el valor TACHADO visualmente.
+          // La Dra lo ve pero sabe que NO confiar y verificar en el link.
+          const driftValor = r.discrepancias?.some(d => d.campo === "valor_del_contrato");
+          const driftFecha = r.discrepancias?.some(d => d.campo === "fecha_de_firma");
           return (
             <div className="text-right">
-              <div className="font-mono text-xs text-ink">
+              <div
+                className={cn(
+                  "font-mono text-xs text-ink",
+                  driftValor && "line-through decoration-rose-600 decoration-2 text-rose-700",
+                )}
+                title={driftValor
+                  ? "🚨 Drift detectado: el SECOP Integrado y el portal reportan valores distintos para este contrato. Click la fila → modal → ver tabla de discrepancias. Verificá en el link antes de confiar."
+                  : undefined
+                }
+              >
                 {r.valor != null ? moneyCO.format(r.valor) : "—"}
               </div>
-              <div className="font-mono text-[10px] text-ink-soft mt-0.5">
+              <div
+                className={cn(
+                  "font-mono text-[10px] text-ink-soft mt-0.5",
+                  driftFecha && "line-through decoration-rose-500 text-rose-600",
+                )}
+                title={driftFecha
+                  ? "🚨 Drift detectado en fecha de firma · verificá en el link"
+                  : undefined
+                }
+              >
                 {r.fecha_firma ?? "—"}
               </div>
             </div>
