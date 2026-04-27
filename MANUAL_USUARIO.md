@@ -213,6 +213,88 @@ en datos.gov.co (típicamente lag de 1-2 semanas, pero a veces antes).
 
 ---
 
+## 1.11 FAQ — Camila preguntando en lenguaje normal
+
+> Sin tecnicismos. Esto es para vos, Camila, cuando dudes algo.
+
+### "¿Tengo que instalar algo?"
+**No.** Abre el navegador en cualquier dispositivo (PC, iPad, celular),
+escribe la URL y la contraseña. Listo.
+
+### "¿Tengo que actualizar el sistema cada cierto tiempo?"
+**No.** El sistema se actualiza solo:
+- **Cada día a la 1 AM**: refresca contratos firmados nuevos del SECOP
+- **Cada mes el día 1**: refresca todos los procesos del portal
+- **Vos** solo abrís y ves los datos al día
+
+### "¿Cómo sé si los datos están al día?"
+Mirá los **indicadores del header** arriba:
+- 🟢 **"Última firma SECOP: hoy"** o "hace 2 días" = datos frescos
+- 🟢 **"Último refresh portal: hoy"** o "hace 5 días" = todo bien
+- 🟠 **Si dice "hace 35 días"** = el cron mensual falló, pasale a Sergio
+- 🔴 **Si dice "hace 60+ días"** = urgente, pasale a Sergio
+
+### "Hice click en una fila y veo muchos campos. ¿Eso es todo lo que tiene el SECOP?"
+**Sí, literalmente todo.** El sistema lee TODOS los campos que el portal
+de community.secop muestra para ese proceso. Si un proceso tiene 70
+campos, ves los 70. Si tiene 350 (subastas grandes), ves los 350.
+Nada se filtra ni se oculta.
+
+### "Veo procesos con celdas vacías ('—'). ¿Es un error?"
+**No.** Significa que el SECOP NO expone ese dato. El sistema es honesto
+y te muestra `—` cuando la fuente no lo tiene. Si quisieras buscar más,
+podés clickear "Abrir" y va al portal directamente — pero rara vez es
+necesario porque el dashboard ya tiene casi todo.
+
+### "¿Por qué algunos procesos dicen 'No en API público'?"
+Significa que ese proceso vive solo en `community.secop.gov.co` (portal con
+captcha) y aún no lo pasamos al sistema. El cron mensual lo recoge.
+Si necesitás verlo urgente antes del cron, click "Abrir" en la fila →
+te lleva al portal.
+
+### "Quiero el contrato firmado de uno de los procesos. ¿Dónde está?"
+1. Click en la fila → modal se abre
+2. Bajá a la sección **"Documentos del proceso"**
+3. Vas a ver una lista con los PDFs/Excel del proceso (puede haber 9, 30, 50)
+4. Click en el documento que necesitás → se descarga directo
+
+### "Quiero mandar a Compliance un Excel de los contratos modificados de 2026"
+1. En el header, click el toggle "🔔 Requieren tu atención" o "Solo modificados"
+2. Click en el slicer "Vigencia 2026"
+3. Click "Descargar Excel (X)" — solo trae los filtrados
+4. El Excel tiene 2 hojas: **Vista** (formato bonito para mail) y **Datos
+   completos crudos** (86 columnas para auditoría forense)
+
+### "Veo un proceso con datos raros. ¿Qué hago?"
+1. **Anota el proceso ID** (ej. CO1.NTC.5405127)
+2. **Mandale un mensaje a Sergio**: "Cami: en CO1.NTC.5405127 veo X pero
+   en SECOP veo Y. Revisar."
+3. Sergio investiga, documenta como `Error #N` en el sistema, lo arregla,
+   te avisa.
+
+### "El sistema me pide la contraseña otra vez. ¿La cambio?"
+La contraseña actual es `cami2026`. Solo Sergio puede cambiarla (es un
+proceso técnico). Si querés cambiarla, pedíselo.
+
+### "¿Quién más puede ver mis datos?"
+Solo quien tenga la contraseña `cami2026`. El sistema NO está indexado
+en Google. Si compartís la URL sin la contraseña, nadie ve nada.
+
+### "Quiero agregar 30 contratos nuevos al watch list desde mi Excel"
+**Eso sí necesita Sergio** (es un proceso de importación masiva, ~1 minuto
+para él). Pero si querés agregar UN proceso, podés:
+1. Buscar el botón "Agregar URL" arriba en el dashboard
+2. Pegar la URL de community.secop
+3. Te pregunta a qué hoja del Excel pertenece (FEAB 2026, 2025, etc.)
+4. Click "Agregar"
+
+### "El indicador 'Audit log íntegro' está rojo. ¿Qué pasa?"
+Significa que alguien o algo modificó el log de auditoría. **Avisá a Sergio
+inmediatamente** — es un evento crítico de seguridad. (Probablemente nunca
+pase, está diseñado para detectar tampering).
+
+---
+
 # 🛠️ PARTE 2 — Para Sergio / IT (Mantenedor)
 
 ## 2.1 Lo que se actualiza solo (cero acción)
