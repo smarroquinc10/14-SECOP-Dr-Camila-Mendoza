@@ -14,12 +14,15 @@ name: Scrape Portal SECOP (mensual)
 on:
   schedule:
     # Dia 1 de cada mes 04:00 UTC = 23:00 Bogota del ultimo dia del mes
-    # Con weekday=any (al inicio del mes el cron de actualizacion)
     - cron: '0 4 1 * *'
   workflow_dispatch:
     inputs:
+      uids:
+        description: 'Lista de notice_uids separados por coma (ej: CO1.NTC.X,CO1.NTC.Y). Vacio = todos pendientes'
+        required: false
+        default: ''
       limit:
-        description: 'Limit (vacio = todos los pendientes)'
+        description: 'Limit cuando uids esta vacio (numero o vacio = todos)'
         required: false
         default: ''
 
@@ -70,13 +73,26 @@ jobs:
           Xvfb :99 -screen 0 1920x1080x24 &
           echo "DISPLAY=:99" >> $GITHUB_ENV
 
-      - name: Correr scrape masivo
+      - name: Correr scrape (selectivo si uids, masivo si vacio)
         env:
           CAPSOLVER_API_KEY: ${{ secrets.CAPSOLVER_API_KEY }}
           PYTHONUNBUFFERED: "1"
         run: |
-          # Limite opcional para tests rapidos. Sin limit = procesa todos.
-          if [ -n "${{ inputs.limit }}" ]; then
+          # 3 modos:
+          #   (a) inputs.uids="CO1.NTC.X,CO1.NTC.Y" → solo esos procesos
+          #       (la Dra los selecciono desde el dashboard)
+          #   (b) inputs.limit="N" → primeros N pendientes (testing)
+          #   (c) ambos vacios → todos los pendientes (cron mensual)
+          if [ -n "${{ inputs.uids }}" ]; then
+            mkdir -p /tmp/scrape
+            echo "${{ inputs.uids }}" | tr ',' '\n' | sed 's/^[ \t]*//;s/[ \t]*$//' | grep -v '^$' > /tmp/scrape/uids.txt
+            echo "Procesando UIDs especificos:"
+            cat /tmp/scrape/uids.txt
+            python -X utf8 scripts/scrape_portal.py \
+              --uids-file /tmp/scrape/uids.txt \
+              --progress-file .cache/portal_progress.jsonl \
+              --force
+          elif [ -n "${{ inputs.limit }}" ]; then
             python -X utf8 scripts/scrape_portal.py \
               --limit ${{ inputs.limit }} \
               --progress-file .cache/portal_progress.jsonl

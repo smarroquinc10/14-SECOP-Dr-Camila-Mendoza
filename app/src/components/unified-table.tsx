@@ -573,6 +573,8 @@ export function UnifiedTable({
   onRemove,
   busy,
   totalAppearances,
+  selectedIds,
+  onToggleSelect,
 }: {
   rows: UnifiedRow[];
   onPick: (id: string) => void;
@@ -581,6 +583,11 @@ export function UnifiedTable({
   onRemove: (url: string) => Promise<void>;
   busy: boolean;
   totalAppearances: number;
+  // Feature G (2026-04-26): seleccion granular para "refrescar los que la
+  // Dra elija" en lugar de masivo. Selectable solo si el row tiene
+  // notice_uid o process_id formato CO1.NTC.* (scrapeables).
+  selectedIds: Set<string>;
+  onToggleSelect: (uid: string) => void;
 }) {
   const [addUrl, setAddUrl] = React.useState("");
   const [editingKey, setEditingKey] = React.useState<string | null>(null);
@@ -598,6 +605,41 @@ export function UnifiedTable({
   //     sorts numerically by valor but filters by the year of firma).
   const columns = React.useMemo<ColumnDef<UnifiedRow>[]>(
     () => [
+      {
+        // Feature G (2026-04-26): columna de seleccion para refrescar
+        // procesos especificos sin gastar CapSolver en todos. Solo
+        // habilitable para rows scrapeables (con notice_uid o process_id
+        // formato NTC). REQ y PCCNTR no se pueden re-scrapear.
+        id: "select",
+        header: () => (
+          <span className="text-[10px] text-ink-soft" title="Seleccioná procesos para refrescar">
+            ✓
+          </span>
+        ),
+        enableSorting: false,
+        enableColumnFilter: false,
+        cell: ({ row }) => {
+          const r = row.original;
+          const uid =
+            r.notice_uid ??
+            (r.process_id?.startsWith("CO1.NTC.") ? r.process_id : null);
+          if (!uid || !r.watched) {
+            return null;
+          }
+          const checked = selectedIds.has(uid);
+          return (
+            <input
+              type="checkbox"
+              checked={checked}
+              onClick={(e) => e.stopPropagation()}
+              onChange={() => onToggleSelect(uid)}
+              className="rounded cursor-pointer"
+              title={`Marcar ${uid} para refrescar desde el portal SECOP`}
+            />
+          );
+        },
+        size: 36,
+      },
       {
         id: "contrato",
         header: "Contrato",

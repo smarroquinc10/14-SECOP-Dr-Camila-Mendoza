@@ -124,6 +124,20 @@ export default function HomePage() {
   // modificatorios recientes (últimos 7 días) o que vencen en 30 días.
   // Ayuda a estar pendiente sin abrumar.
   const [onlyAttention, setOnlyAttention] = React.useState(false);
+  // Feature G (2026-04-26): selección granular para refresh selectivo.
+  // Set de notice_uids que la Dra marcó. Usados después por el botón
+  // "Refrescar seleccionados" para disparar GitHub Action con esos uids.
+  const [selectedIds, setSelectedIds] = React.useState<Set<string>>(
+    new Set()
+  );
+  const toggleSelect = React.useCallback((uid: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(uid)) next.delete(uid);
+      else next.add(uid);
+      return next;
+    });
+  }, []);
 
   // ---- Build unified rows + busy/feedback state for actions -----------
   // Cardinal rule: cada celda con su procedencia clara.
@@ -1188,6 +1202,8 @@ export default function HomePage() {
             onRemove={handleRemove}
             busy={busy}
             totalAppearances={totalAppearances}
+            selectedIds={selectedIds}
+            onToggleSelect={toggleSelect}
           />
         )}
       </div>
