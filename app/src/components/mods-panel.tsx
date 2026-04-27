@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import useSWR from "swr";
-import { ExternalLink, Plus, TrendingUp } from "lucide-react";
+import { ExternalLink, TrendingUp } from "lucide-react";
 
 import { api, type ModSummary } from "@/lib/api";
 import { fmtDate, moneyCO } from "@/lib/utils";
@@ -37,30 +37,40 @@ export function ModsPanel({
   }
 
   return (
-    <div className="border border-rule rounded-lg bg-surface overflow-hidden">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-rule">
-        <div className="bg-surface p-5">
+    <div className="border-2 border-amber-300 rounded-lg bg-amber-50/30 overflow-hidden shadow-sm">
+      {/* Header explicativo — feedback de la Dra: "los modificatorios son
+          lo más relevante, ella no tiene que abrir link por link". Esta
+          sección le permite ver de un vistazo qué contratos cambiaron sin
+          ir al SECOP. */}
+      <div className="bg-amber-100/60 px-5 py-3 border-b border-amber-200">
+        <h3 className="serif text-base font-semibold text-amber-900 flex items-center gap-2">
+          <TrendingUp className="h-4 w-4" />
+          Modificatorios — lo más relevante a revisar
+        </h3>
+        <p className="text-xs text-amber-800 mt-0.5">
+          Contratos del FEAB que cambiaron en SECOP (prórrogas, días adicionados,
+          adiciones de valor, etc). Acá los ves todos sin abrir link por link.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-rule">
+        <div
+          className="bg-surface p-5"
+          title="Cantidad de contratos del FEAB que tienen al menos una modificación registrada en SECOP (prórroga, adición de valor, cambio de plazo o estado 'modificado')."
+        >
           <div className="eyebrow flex items-center gap-1.5">
             <TrendingUp className="h-3 w-3" />
-            Modificatorios
+            Contratos modificados
           </div>
           <div className="serif text-3xl font-semibold text-ink mt-1">
             {data.total_modificados}
           </div>
-          <div className="text-xs text-ink-soft">contratos con modificación</div>
+          <div className="text-xs text-ink-soft">
+            del FEAB con cambios registrados en SECOP
+          </div>
         </div>
         <div className="bg-surface p-5">
-          <div className="eyebrow flex items-center gap-1.5">
-            <Plus className="h-3 w-3" />
-            Días adicionados
-          </div>
-          <div className="serif text-3xl font-semibold text-ink mt-1">
-            {data.total_dias_adicionados.toLocaleString("es-CO")}
-          </div>
-          <div className="text-xs text-ink-soft">total agregado en prórrogas</div>
-        </div>
-        <div className="bg-surface p-5">
-          <div className="eyebrow">Último modificatorio</div>
+          <div className="eyebrow">Último modificatorio detectado</div>
           {data.ultimo ? (
             <>
               <div className="font-mono text-base text-ink mt-1">
@@ -72,11 +82,14 @@ export function ModsPanel({
               </div>
               <button
                 onClick={() => onPickContract(data.ultimo!.id_contrato)}
-                className="text-xs text-burgundy hover:underline truncate block max-w-full mt-0.5"
-                title={data.ultimo.objeto}
+                className="text-xs text-burgundy hover:underline truncate block max-w-full mt-0.5 text-left"
+                title={`Click para ver detalle completo · ${data.ultimo.objeto ?? ""}`}
               >
                 {data.ultimo.proveedor} — {data.ultimo.referencia}
               </button>
+              <div className="text-[10px] text-ink-soft mt-1 italic">
+                Click el nombre → ver detalle del contrato
+              </div>
             </>
           ) : (
             <div className="text-sm text-ink-soft italic mt-1">Sin registros.</div>
@@ -86,8 +99,11 @@ export function ModsPanel({
 
       {data.items.length > 0 && (
         <details className="border-t border-rule">
-          <summary className="px-5 py-3 cursor-pointer text-xs uppercase tracking-wider text-burgundy hover:bg-background/50 select-none">
-            Ver últimos {data.items.length} modificatorios
+          <summary className="px-5 py-3 cursor-pointer text-xs uppercase tracking-wider text-burgundy hover:bg-background/50 select-none flex items-center gap-2">
+            <span>▶ Ver detalle de los últimos {data.items.length} modificatorios</span>
+            <span className="text-[10px] normal-case tracking-normal text-ink-soft italic">
+              fecha · contrato · proveedor · días añadidos · valor
+            </span>
           </summary>
           <div className="border-t border-rule">
             <table className="w-full text-sm">

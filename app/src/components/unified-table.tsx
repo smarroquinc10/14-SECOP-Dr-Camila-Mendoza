@@ -519,24 +519,30 @@ function StatusBadge({ status }: { status: UnifiedRow["verifyStatus"] }) {
     contrato_firmado: {
       label: "Contrato firmado",
       cls: "bg-emerald-50 text-emerald-700 border-emerald-200",
-      title: "Contrato existe en el dataset jbjy-vk9h de datos.gov.co",
+      title:
+        "Este proceso ya tiene contrato firmado y publicado en SECOP. Tenés todos los datos: " +
+        "valor, proveedor, fechas, etc.",
     },
     verificado: {
-      label: "Proceso verificado",
+      label: "Publicado en SECOP",
       cls: "bg-sky-50 text-sky-700 border-sky-200",
-      title: "Proceso publicado con notice_uid resuelto en datos.gov.co",
+      title:
+        "Este proceso está publicado en SECOP (con su código oficial NTC). Tiene los datos del " +
+        "proceso aunque puede que aún no tenga contrato firmado.",
     },
     borrador: {
-      label: "Borrador SECOP",
+      label: "Borrador (no publicado)",
       cls: "bg-amber-50 text-amber-700 border-amber-200",
       title:
-        "CO1.REQ.* / CO1.BDOS.* — proceso en preparación, sin notice_uid público todavía",
+        "Este proceso está en preparación dentro de SECOP — todavía no se publicó. " +
+        "Cuando se publique, el sistema lo detecta solo y trae sus datos.",
     },
     no_en_api: {
-      label: "No en API público",
+      label: "Aún sin publicar",
       cls: "bg-rose-50 text-rose-700 border-rose-200",
       title:
-        "El process_id no aparece en datos.gov.co. Validá manualmente abriendo el link al portal.",
+        "Este proceso todavía no aparece publicado en SECOP. Puede ser un borrador en preparación, " +
+        "un proceso cancelado, o uno en limbo. Click en \"Abrir\" para verlo manualmente en SECOP.",
     },
   };
   const c = config[status];
@@ -606,41 +612,11 @@ export function UnifiedTable({
   const columns = React.useMemo<ColumnDef<UnifiedRow>[]>(
     () => [
       {
-        // Feature G (2026-04-26): columna de seleccion para refrescar
-        // procesos especificos sin gastar CapSolver en todos. Solo
-        // habilitable para rows scrapeables (con notice_uid o process_id
-        // formato NTC). REQ y PCCNTR no se pueden re-scrapear.
-        id: "select",
-        header: () => (
-          <span className="text-[10px] text-ink-soft" title="Seleccioná procesos para refrescar">
-            ✓
-          </span>
-        ),
-        enableSorting: false,
-        enableColumnFilter: false,
-        cell: ({ row }) => {
-          const r = row.original;
-          const uid =
-            r.notice_uid ??
-            (r.process_id?.startsWith("CO1.NTC.") ? r.process_id : null);
-          if (!uid || !r.watched) {
-            return null;
-          }
-          const checked = selectedIds.has(uid);
-          return (
-            <input
-              type="checkbox"
-              checked={checked}
-              onClick={(e) => e.stopPropagation()}
-              onChange={() => onToggleSelect(uid)}
-              className="rounded cursor-pointer"
-              title={`Marcar ${uid} para refrescar desde el portal SECOP`}
-            />
-          );
-        },
-        size: 36,
-      },
-      {
+        // Feature G (2026-04-26 r2): columna Contrato ahora incluye el
+        // checkbox de seleccion a la izquierda — eliminamos columna "Sel."
+        // separada para evitar scroll lateral (regla cardinal "max 6-8
+        // columnas" del CLAUDE.md). El checkbox solo se renderiza para
+        // procesos scrapeables (con notice_uid o process_id formato NTC).
         id: "contrato",
         header: "Contrato",
         accessorFn: (r) =>
@@ -650,40 +626,60 @@ export function UnifiedTable({
           const vigencia =
             r.vigencias.join(", ") ||
             (r.fecha_firma ? r.fecha_firma.slice(0, 4) : null);
+          const uid =
+            r.notice_uid ??
+            (r.process_id?.startsWith("CO1.NTC.") ? r.process_id : null);
+          const isScrapeable = !!uid && r.watched;
           return (
-            <div className="font-mono text-[11px]">
-              {vigencia && (
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-burgundy/10 text-burgundy mb-1 text-[10px]">
-                  {vigencia}
-                </span>
+            <div className="flex items-start gap-2 font-mono text-[11px]">
+              {/* Checkbox a la izquierda · solo para procesos scrapeables.
+                  Spacer del mismo ancho cuando no aplica para alinear filas. */}
+              {isScrapeable ? (
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(uid!)}
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={() => onToggleSelect(uid!)}
+                  className="rounded cursor-pointer mt-1 shrink-0"
+                  title={`Marcar ${uid} para refrescar desde el portal SECOP`}
+                />
+              ) : (
+                <span className="w-4 mt-1 shrink-0" aria-hidden="true" />
               )}
-              <button
-                onClick={() =>
-                  onPick(r.id_contrato ?? r.process_id ?? r.key)
-                }
-                className="block text-burgundy hover:underline text-left break-all"
-              >
-                {r.numero_contrato ?? r.id_contrato ?? r.process_id ?? "—"}
-              </button>
-              {r.numero_contrato && (r.id_contrato ?? r.process_id) && (
-                <span className="block text-[10px] text-ink-soft mt-0.5 break-all">
-                  {r.id_contrato ?? r.process_id}
-                </span>
-              )}
-              {r.notice_uid && (
-                <span className="block text-[10px] text-ink-soft/70 mt-0.5 break-all">
-                  {r.notice_uid}
-                </span>
-              )}
-              {r.appearances_count > 1 && (
-                <span className="block text-[10px] text-ink-soft italic mt-0.5">
-                  {r.appearances_count} apariciones
-                </span>
-              )}
+              <div className="flex-1 min-w-0">
+                {vigencia && (
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-burgundy/10 text-burgundy mb-1 text-[10px]">
+                    {vigencia}
+                  </span>
+                )}
+                <button
+                  onClick={() =>
+                    onPick(r.id_contrato ?? r.process_id ?? r.key)
+                  }
+                  className="block text-burgundy hover:underline text-left break-all"
+                >
+                  {r.numero_contrato ?? r.id_contrato ?? r.process_id ?? "—"}
+                </button>
+                {r.numero_contrato && (r.id_contrato ?? r.process_id) && (
+                  <span className="block text-[10px] text-ink-soft mt-0.5 break-all">
+                    {r.id_contrato ?? r.process_id}
+                  </span>
+                )}
+                {r.notice_uid && (
+                  <span className="block text-[10px] text-ink-soft/70 mt-0.5 break-all">
+                    {r.notice_uid}
+                  </span>
+                )}
+                {r.appearances_count > 1 && (
+                  <span className="block text-[10px] text-ink-soft italic mt-0.5">
+                    {r.appearances_count} apariciones
+                  </span>
+                )}
+              </div>
             </div>
           );
         },
-        size: 200,
+        size: 220,
       },
       {
         id: "objeto",
@@ -699,7 +695,7 @@ export function UnifiedTable({
               <div className="text-ink line-clamp-3">
                 {r.objeto ?? (
                   <span className="text-ink-soft italic">
-                    (sin contrato firmado)
+                    (contrato aún no firmado)
                   </span>
                 )}
               </div>
@@ -740,7 +736,7 @@ export function UnifiedTable({
             </div>
           );
         },
-        size: 140,
+        size: 115,
       },
       {
         id: "estado",
@@ -751,7 +747,7 @@ export function UnifiedTable({
           return (
             <div className="text-xs">
               {r.estado ? (
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-stone-100 text-ink whitespace-nowrap text-[10px]">
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-stone-100 text-ink text-[10px] break-words">
                   {r.estado}
                 </span>
               ) : (
@@ -765,7 +761,7 @@ export function UnifiedTable({
             </div>
           );
         },
-        size: 130,
+        size: 105,
       },
       {
         id: "modificatorios",
@@ -807,11 +803,11 @@ export function UnifiedTable({
             </div>
           );
         },
-        size: 170,
+        size: 130,
       },
       {
         id: "origen",
-        header: "Origen",
+        header: "Estado en SECOP",
         accessorFn: (r) => r.verifyStatus,
         meta: {
           // Show human-friendly labels in the filter list.
@@ -827,9 +823,9 @@ export function UnifiedTable({
               {r.data_source === "integrado" && (
                 <div
                   className="mt-1 inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-medium"
-                  title="Datos del dataset SECOP Integrado (rpmr-utcd) — fuente pública sin captcha. La API estándar (p6dx-8zbt/jbjy-vk9h) no expone este proceso."
+                  title="Los datos vienen del SECOP en vivo. Se actualizaron en la última sincronización."
                 >
-                  vía Integrado
+                  Datos SECOP en vivo
                 </div>
               )}
               {r.data_source === "portal" && (() => {
@@ -837,20 +833,16 @@ export function UnifiedTable({
                 const fechaCorta =
                   r.data_source_scraped_at?.slice(0, 10) ?? null;
                 const tooltip = r.data_source_scraped_at
-                  ? `Cache del portal community.secop.gov.co — leído ${fechaCorta} (${age ?? "fecha desconocida"}). Se refresca con el cron mensual o con "Refrescar seleccionados" cuando lo necesités.`
-                  : "Datos del cache estático del portal community.secop.gov.co. Se actualiza con un scrape periódico (no en vivo).";
+                  ? `Foto del SECOP tomada el ${fechaCorta} (${age ?? "fecha desconocida"}). Cuando Sergio corra "Búsqueda profunda" o el cron mensual, esta foto se actualiza con datos frescos.`
+                  : "Foto del SECOP guardada de una búsqueda anterior. Se actualiza periódicamente.";
                 return (
                   <>
                     <div
                       className="mt-1 inline-flex items-center px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 text-[9px] font-medium"
                       title={tooltip}
                     >
-                      vía portal cache{age ? ` · ${age}` : ""}
+                      Foto SECOP{age ? ` · ${age}` : ""}
                     </div>
-                    {/* Feature G (2026-04-26): fecha exacta del ultimo
-                        scrape VISIBLE (no en tooltip). La Dra ve cuando
-                        cada celda fue actualizada por ultima vez sin
-                        tener que pasar el mouse encima. */}
                     {fechaCorta && (
                       <div className="text-[9px] text-ink-soft mt-0.5 font-mono">
                         Actualizado: {fechaCorta}
@@ -869,7 +861,7 @@ export function UnifiedTable({
             </div>
           );
         },
-        size: 150,
+        size: 130,
       },
       {
         id: "acciones",
@@ -967,7 +959,7 @@ export function UnifiedTable({
             </div>
           );
         },
-        size: 220,
+        size: 170,
       },
     ],
     [editingKey, editDraft, busy, onPick, onUpdate, onRemove],
@@ -1042,10 +1034,10 @@ export function UnifiedTable({
       <div className="px-5 py-4 border-b border-rule">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <div className="eyebrow">Procesos / Contratos</div>
+            <div className="eyebrow">Tus procesos del SECOP</div>
             <p className="text-xs text-ink-soft mt-1">
-              {rows.length} procesos en lista · {totalAppearances} apariciones
-              en el Excel · contratos firmados confirmados contra SECOP
+              {rows.length} procesos que vos seguís · cada fila es uno de tus
+              links del SECOP, con todos sus datos extraídos automáticamente
             </p>
           </div>
         </div>
@@ -1059,7 +1051,7 @@ export function UnifiedTable({
                 onAdd(addUrl.trim()).then(() => setAddUrl(""));
               }
             }}
-            placeholder="Pega URL del SECOP II para agregar otro proceso a tu lista…"
+            placeholder="¿Sumar otro proceso? Pegá acá la dirección (URL) del SECOP II…"
             className="flex-1"
             disabled={busy}
           />
@@ -1069,9 +1061,10 @@ export function UnifiedTable({
             }
             disabled={busy || !addUrl.trim()}
             className="gap-2"
+            title="Suma este proceso a tus 491 que ya seguís"
           >
             <Plus className="h-4 w-4" />
-            Agregar
+            Sumar a mi lista
           </Button>
         </div>
       </div>
@@ -1098,7 +1091,11 @@ export function UnifiedTable({
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          {/* Feature G r2 (2026-04-27): table-fixed evita que las celdas
+              empujen el ancho de columnas. Junto con sizes reducidos, la
+              tabla cabe sin scroll lateral en pantallas >=1280px. Cardinal:
+              max 6-8 columnas + sin scroll horizontal (regla del CLAUDE.md). */}
+          <table className="w-full text-sm table-fixed">
             <thead className="bg-background text-[11px] uppercase tracking-wider text-ink-soft">
               {table.getHeaderGroups().map((hg) => (
                 <tr key={hg.id}>
@@ -1165,13 +1162,13 @@ export function UnifiedTable({
 
 /** Human-friendly label for a verifyStatus — used by the Origen column
  *  filter so the popover lists "Contrato firmado" instead of the raw
- *  enum value "contrato_firmado". */
+ *  enum value "contrato_firmado". Lenguaje cero tech para Cami abogada. */
 function statusLabel(s: UnifiedRow["verifyStatus"]): string {
   switch (s) {
     case "contrato_firmado": return "Contrato firmado";
-    case "verificado":       return "Proceso verificado";
-    case "borrador":         return "Borrador SECOP";
-    case "no_en_api":        return "No en API público";
+    case "verificado":       return "Publicado en SECOP";
+    case "borrador":         return "Borrador (no publicado)";
+    case "no_en_api":        return "Aún sin publicar";
   }
 }
 

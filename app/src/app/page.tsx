@@ -452,20 +452,30 @@ export default function HomePage() {
     }
   }
 
-  /** Sincroniza el dataset SECOP Integrado (rpmr-utcd) — fuente pública
-   *  sin captcha. Toma ~1s. Resuelve un montón de procesos sin tener
-   *  que abrir el scraper del portal. */
+  /** Trae datos FRESCOS del SECOP — feedback Cami (2026-04-27): el boton
+   *  principal de "Actualizar datos del SECOP" tenia un BUG cardinal
+   *  porque solo refrescaba el dataset Integrado (rpmr-utcd) pero NO los
+   *  contratos firmados (jbjy-vk9h) — donde viven LOS MODIFICATORIOS,
+   *  que es lo MAS RELEVANTE para la Dra abogada. Fix: refrescar AMBOS
+   *  datasets en paralelo. Toma ~1-2 segundos total porque los dos
+   *  fetches a Socrata corren en simultaneo. */
   const [syncingInteg, setSyncingInteg] = React.useState(false);
   async function handleIntegradoSync() {
     setSyncingInteg(true);
     try {
-      await api.integradoSync();
-      // Esperar que el subprocess escriba (~1-2s típico) + refrescar.
-      await new Promise((r) => setTimeout(r, 2500));
+      // Refrescar AMBOS datasets en paralelo: Integrado (cobertura adicional
+      // sin captcha) + Contratos (modificatorios). Ambos via fetch directo
+      // a Socrata desde el browser — funciona local y en GitHub Pages.
+      await Promise.all([
+        api.integradoSync(),
+        reloadContracts(),  // ← FIX: trae los modificatorios actualizados
+      ]);
+      // Pequena espera para que el subprocess escriba (~1-2s) + refrescar.
+      await new Promise((r) => setTimeout(r, 1500));
       await reloadIntegradoBulk();
       setFeedback({
         kind: "ok",
-        text: "SECOP Integrado actualizado desde datos.gov.co.",
+        text: "Datos del SECOP actualizados — contratos, modificatorios y todo lo demás.",
       });
     } catch (err) {
       setFeedback({
@@ -473,7 +483,7 @@ export default function HomePage() {
         text:
           err instanceof Error
             ? err.message
-            : "No pude sincronizar SECOP Integrado.",
+            : "No pude actualizar los datos del SECOP.",
       });
     } finally {
       setSyncingInteg(false);
@@ -636,91 +646,71 @@ export default function HomePage() {
 
       <div className="rule mx-auto max-w-7xl mb-8" />
 
-      {/* Action bar + audit chip */}
-      <div className="mx-auto max-w-7xl px-8 mb-8 flex flex-wrap items-center gap-4">
-        <Button
-          size="lg"
-          variant="outline"
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className="gap-2"
-        >
-          {refreshing ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <RefreshCcw className="h-4 w-4" />
-          )}
-          {refreshing ? "Refrescando…" : "Refrescar desde SECOP"}
-        </Button>
-
-        <Button
-          size="lg"
-          variant="outline"
-          onClick={handleIntegradoSync}
-          disabled={syncingInteg}
-          className="gap-2"
-          title="Sincroniza el dataset SECOP Integrado (rpmr-utcd) — fuente pública sin captcha. Tarda ~1 segundo."
-        >
-          {syncingInteg ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Database className="h-4 w-4" />
-          )}
-          {syncingInteg
-            ? "Sincronizando…"
-            : `Integrado (${integradoBulk?.total_rows ?? "—"})`}
-        </Button>
-
-        <Button
-          size="lg"
-          variant="outline"
-          onClick={handleScrapePortalAll}
-          disabled={refreshing || (portalProgress?.running ?? false)}
-          className="gap-2"
-          title="Lee directo del portal community.secop.gov.co los procesos que el API público no expone"
-        >
-          {portalProgress?.running ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Globe className="h-4 w-4" />
-          )}
-          {portalProgress?.running
-            ? `Leyendo portal… (${portalProgress.processed}/${portalProgress.total})`
-            : "Leer del portal SECOP"}
-        </Button>
+      {/* Action bar — feedback Dra cero tech (2026-04-27 v3): UN solo botón
+          visible para la Dra. Los 2 botones de "verificar links" y "búsqueda
+          profunda" son operaciones de mantenimiento que sólo Sergio corre
+          (o el cron automático). Mover a sección colapsada "Sergio · Operaciones
+          avanzadas" más abajo elimina la confusión cardinal: la Dra clickea
+          UN botón claro y obtiene datos frescos. */}
+      <div className="mx-auto max-w-7xl px-8 mb-8 flex flex-wrap items-start gap-3">
+        <div className="flex flex-col items-stretch gap-1">
+          <Button
+            size="lg"
+            variant="outline"
+            onClick={handleIntegradoSync}
+            disabled={syncingInteg}
+            className="gap-2 border-emerald-300 bg-emerald-50/50 hover:bg-emerald-50 text-ink"
+            title="Pide al SECOP los datos más recientes de tus 491 contratos. Toma ~1 segundo. Te trae todo lo que cambió en SECOP desde la última vez."
+          >
+            {syncingInteg ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Database className="h-4 w-4" />
+            )}
+            {syncingInteg ? "Actualizando…" : "Actualizar datos del SECOP"}
+          </Button>
+          <span className="text-[10px] text-ink-soft text-center max-w-[260px] leading-tight">
+            Click acá cuando quieras los datos frescos del SECOP · ~1 segundo
+          </span>
+        </div>
 
         {feab && (
-          <div className="text-sm text-ink-soft">
+          <div className="text-sm text-ink-soft border-l border-rule pl-3" title="Resumen de tu watch list: contratos firmados que el SECOP ya publicó, procesos totales del FEAB, y los 491 links que vos seguís del Excel.">
             <span className="font-mono">{feab.contratos}</span> contratos ·{" "}
             <span className="font-mono">{feab.procesos}</span> procesos ·{" "}
-            <span className="font-mono">{watched.length}</span> en seguimiento
+            <span className="font-mono">{watched.length}</span> que vos seguís
           </div>
         )}
 
         {ultActualiz?.ultima_consulta && (
-          <div className="flex flex-col text-[11px] text-ink-soft border-l border-rule pl-3">
+          <div className="flex flex-col text-[11px] text-ink-soft border-l border-rule pl-3" title="Cuándo fue la última vez que el sistema hizo una operación (consulta o actualización de datos).">
             <span className="eyebrow">Última actividad</span>
             <span className="font-mono text-ink">
               {fmtTimestamp(ultActualiz.ultima_consulta)}
             </span>
             {ultActualiz.ultimo_replace && (
               <span className="text-[10px] mt-0.5">
-                Refresh: {fmtTimestamp(ultActualiz.ultimo_replace)}
+                Actualización: {fmtTimestamp(ultActualiz.ultimo_replace)}
               </span>
             )}
           </div>
         )}
 
-        {/* Cobertura SECOP — Bug F UX (2026-04-26): indicador prominente
-            de qué porcentaje del watch list tiene datos automáticos vs
-            muestra "—" honesto. Cumple regla cardinal "honestidad cuando
-            no sabe" + da claridad operativa a la Dra. */}
+        {/* Cobertura del watch list — re-etiquetada para la Dra abogada
+            cero tech: "Procesos con datos del SECOP" en lugar de
+            "Cobertura automática" tecnicismo. */}
         {coverageStats.total > 0 && (
           <div
             className="flex flex-col text-[11px] text-ink-soft border-l border-rule pl-3"
-            title={`API jbjy-vk9h: ${coverageStats.api} · SECOP Integrado: ${coverageStats.integrado} · Portal cache: ${coverageStats.portal} · Sin cobertura API (viven solo en community.secop): ${coverageStats.none}`}
+            title={
+              `De los ${coverageStats.total} procesos que vos seguís, ` +
+              `${coverageStats.cubierto} ya tienen datos extraídos del SECOP automáticamente. ` +
+              `Los ${coverageStats.none} restantes son casos especiales: borradores que el SECOP ` +
+              `aún no publica, o procesos en limbo. Para esos podés clickear "Abrir" y ver el ` +
+              `proceso en SECOP a mano.`
+            }
           >
-            <span className="eyebrow">Cobertura automática</span>
+            <span className="eyebrow">Procesos con datos del SECOP</span>
             <span className="font-mono text-ink">
               <span
                 className={cn(
@@ -737,18 +727,23 @@ export default function HomePage() {
               <span className="text-ink-soft">{coverageStats.pct}%</span>
             </span>
             <span className="text-[10px] mt-0.5">
-              {coverageStats.none} sin API · click "Abrir" en la fila
+              {coverageStats.none} sin datos públicos · click &ldquo;Abrir&rdquo; para verlos a mano
             </span>
           </div>
         )}
 
-        {/* Frescura datos.gov.co — última firma de contrato detectada. */}
+        {/* Última firma — re-etiquetada para la Dra cero tech. */}
         {freshnessStats.ultimaFirma && (
           <div
             className="flex flex-col text-[11px] text-ink-soft border-l border-rule pl-3"
-            title={`Última firma de contrato del FEAB en datos.gov.co: ${freshnessStats.ultimaFirma}. Las APIs públicas tienen lag de ~1-2 semanas vs community.secop. Cron 'Refrescar seeds' corre cada día 06:00 UTC.`}
+            title={
+              `Fecha en que se firmó el contrato más reciente del FEAB que ` +
+              `aparece en SECOP (${freshnessStats.ultimaFirma}). Si dice "hace muchos ` +
+              `días" significa que el SECOP va atrasado vs la realidad: a veces los ` +
+              `contratos firmados tardan 1-2 semanas en aparecer publicados.`
+            }
           >
-            <span className="eyebrow">Última firma SECOP</span>
+            <span className="eyebrow">Último contrato firmado</span>
             <span className="font-mono text-ink">
               {freshnessStats.ultimaFirma.slice(0, 10)}
             </span>
@@ -762,11 +757,7 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* Feature I (2026-04-26): "Último scrape portal" — cuándo se
-            actualizó el cache de community.secop por última vez. Verde
-            si reciente (<30d), ámbar (30-60d), rojo (>60d). Click navega
-            a la GitHub Action mensual para que la Dra/IT puedan triggear
-            un refresh manual sin esperar el cron. */}
+        {/* Última búsqueda profunda — re-etiquetada para la Dra cero tech. */}
         {lastPortalScrape.fecha && (
           <a
             href="https://github.com/smarroquinc10/14-SECOP-Dr-Camila-Mendoza/actions/workflows/scrape-portal-mensual.yml"
@@ -780,14 +771,19 @@ export default function HomePage() {
                 ? "text-amber-700"
                 : "text-rose-700"
             )}
-            title={`Último scrape del portal community.secop: ${lastPortalScrape.fecha}. Cron mensual día 1 04:00 UTC. Click → ir a GitHub Actions para refrescar manual.`}
+            title={
+              `Última vez que se hizo una "búsqueda profunda" en SECOP ` +
+              `(${lastPortalScrape.fecha}). Es la operación que toma 3-4 horas que ` +
+              `Sergio corre o se corre automática el día 1 de cada mes. Verde = reciente, ` +
+              `amarillo = pendiente, rojo = urgente refrescar. Click → ir a GitHub Actions.`
+            }
           >
-            <span className="eyebrow">Último refresh portal</span>
+            <span className="eyebrow">Última búsqueda profunda</span>
             <span className="font-mono">
               {lastPortalScrape.fecha.slice(0, 10)}
             </span>
             <span className="text-[10px] mt-0.5">
-              {lastPortalScrape.diasDesde === 0
+              {lastPortalScrape.diasDesde != null && lastPortalScrape.diasDesde <= 0
                 ? "hoy 🔄"
                 : lastPortalScrape.diasDesde === 1
                 ? "ayer"
@@ -806,14 +802,22 @@ export default function HomePage() {
               window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
             }}
             className="flex flex-col text-[11px] text-amber-700 border-l border-rule pl-3 cursor-pointer hover:text-amber-900 text-left"
-            title={`${attentionStats.mods} con modificatorios + ${attentionStats.expiring} por vencer en 30 días. Click → activa el filtro.`}
+            title={
+              "Tus contratos del FEAB que necesitan revisión prioritaria:\n\n" +
+              `  • ${attentionStats.mods} fueron MODIFICADOS recientemente ` +
+              "(prórroga, adición de valor o cambio de plazo)\n" +
+              `  • ${attentionStats.expiring} están PRÓXIMOS A VENCER ` +
+              "(fecha de fin en los próximos 30 días)\n\n" +
+              "Click acá → filtra la tabla y te muestra solo estos procesos. " +
+              "Es lo que conviene mirar primero al iniciar la jornada."
+            }
           >
-            <span className="eyebrow text-amber-700">🔔 Requieren atención</span>
+            <span className="eyebrow text-amber-700">🔔 Requieren tu revisión</span>
             <span className="font-mono font-bold text-amber-900 text-base">
               {attentionStats.total}
             </span>
             <span className="text-[10px] mt-0.5">
-              {attentionStats.mods} mods · {attentionStats.expiring} por vencer
+              {attentionStats.mods} modificados · {attentionStats.expiring} por vencer
             </span>
           </button>
         )}
@@ -831,8 +835,8 @@ export default function HomePage() {
             )}
             title={
               audit.intact
-                ? "Hash-chain del audit log íntegro"
-                : "ALERTA: chain rota — revisar problemas"
+                ? `Registro de auditoría seguro · ${audit.total} eventos firmados criptográficamente. Nadie alteró el historial. Verificable ante Compliance.`
+                : "ALERTA: el registro de auditoría tiene alteraciones — avisar a Sergio inmediatamente"
             }
           >
             {audit.intact ? (
@@ -840,10 +844,74 @@ export default function HomePage() {
             ) : (
               <ShieldAlert className="h-3.5 w-3.5" />
             )}
-            {audit.total} entradas · {audit.intact ? "íntegro" : "alerta"}
+            {audit.intact
+              ? `Registro auditado · ${audit.total} ${audit.total === 1 ? "evento" : "eventos"}`
+              : `⚠️ Registro alterado · ${audit.total} eventos`}
           </a>
         )}
       </div>
+
+      {/* Sección colapsable "Sergio · Operaciones avanzadas" — feedback Dra
+          (2026-04-27 v3): los 2 botones de mantenimiento que confunden a la
+          Dra (verificar 491 links + búsqueda profunda) viven acá, oculto
+          por defecto. Solo Sergio los necesita. La Dra los puede ignorar
+          completamente — el cron mensual y el verify automático corren solos. */}
+      <details className="mx-auto max-w-7xl px-8 mb-6 group">
+        <summary className="cursor-pointer text-[11px] uppercase tracking-wider text-ink-soft hover:text-burgundy select-none inline-flex items-center gap-1.5 transition-colors">
+          <span className="group-open:rotate-90 transition-transform inline-block">▶</span>
+          🔧 Sergio · Operaciones avanzadas
+          <span className="normal-case tracking-normal text-[10px] italic opacity-70">
+            (Cami no necesita usar esto · Sergio o automático)
+          </span>
+        </summary>
+        <div className="mt-4 flex flex-wrap items-start gap-3 pl-5 border-l-2 border-ink-soft/10">
+          {/* Verificar 491 links — semanal, 17 min */}
+          <div className="flex flex-col items-stretch gap-1">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="gap-2 text-ink-soft"
+              title="Vuelve a chequear cada uno de los 491 links del Excel contra el SECOP. Toma ~17 minutos. Útil 1 vez por semana. Sergio normalmente lo dispara o el cron lo corre solo."
+            >
+              {refreshing ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RefreshCcw className="h-3.5 w-3.5" />
+              )}
+              {refreshing ? "Verificando…" : "Verificar 491 links"}
+            </Button>
+            <span className="text-[10px] text-ink-soft/70 max-w-[210px] leading-tight">
+              ~17 min · 1 vez por semana · revisa que cada link esté OK
+            </span>
+          </div>
+
+          {/* Búsqueda profunda del portal — mensual, 3-4 h */}
+          <div className="flex flex-col items-stretch gap-1">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleScrapePortalAll}
+              disabled={refreshing || (portalProgress?.running ?? false)}
+              className="gap-2 text-ink-soft"
+              title="Búsqueda profunda en el portal community.secop con captcha solver. Toma 3-4 horas. El cron mensual lo corre solo el día 1 — no es necesario disparar a mano."
+            >
+              {portalProgress?.running ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Globe className="h-3.5 w-3.5" />
+              )}
+              {portalProgress?.running
+                ? `Buscando… (${portalProgress.processed}/${portalProgress.total})`
+                : "Búsqueda profunda"}
+            </Button>
+            <span className="text-[10px] text-ink-soft/70 max-w-[210px] leading-tight">
+              ~3-4 h · automático el día 1 de cada mes
+            </span>
+          </div>
+        </div>
+      </details>
 
       {/* Verify progress bar — only visible while a refresh is in flight,
           OR for ~30s after a completed run so the Dra sees the result.
@@ -1009,14 +1077,15 @@ export default function HomePage() {
         <ModsPanel onPickContract={(id) => setSelected(id)} />
       </div>
 
-      {/* FILTROS arriba — antes de la tabla unificada */}
+      {/* FILTROS arriba — antes de la tabla unificada. Labels en lenguaje
+          legal cotidiano para Cami abogada cero tech. */}
       <div className="mx-auto max-w-7xl px-8 mb-6">
         <div className="border border-rule rounded-lg bg-surface p-5 space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2">
-              <span className="eyebrow mb-2 block">Buscar</span>
+              <span className="eyebrow mb-2 block">Buscar un proceso</span>
               <Input
-                placeholder="Proveedor, objeto, código…"
+                placeholder="Escribí proveedor, objeto del contrato o el código (ej: CONTRATO-FEAB-0011-2025)"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -1024,26 +1093,26 @@ export default function HomePage() {
           </div>
 
           <SlicerPills
-            label="Vigencia / Año de firma"
+            label="Año del contrato (vigencia / firma)"
             options={yearOptions}
             selected={years}
             onChange={setYears}
           />
           <SlicerPills
-            label="Estado del contrato"
+            label="Estado actual del contrato"
             options={stateOptions}
             selected={states}
             onChange={setStates}
           />
           <SlicerPills
-            label="Modalidad de contratación"
+            label="Tipo de contratación"
             options={modalityOptions}
             selected={modalities}
             onChange={setModalities}
           />
           {sheetOptions.length > 0 && (
             <SlicerPills
-              label="Hoja Excel (donde la Dra registró el proceso)"
+              label="Período (cómo los organizaste originalmente)"
               options={sheetOptions}
               selected={sheets}
               onChange={setSheets}
@@ -1051,50 +1120,91 @@ export default function HomePage() {
           )}
 
           {/* Features A+D (2026-04-26): toggles para "estar pendiente"
-              sin abrumar a la Dra. Combinan modificatorios + vencimientos. */}
-          <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-rule mt-2">
-            <span className="eyebrow text-ink-soft">ATAJOS</span>
-            <label className="flex items-center gap-2 cursor-pointer text-sm text-ink-soft hover:text-ink">
-              <input
-                type="checkbox"
-                checked={onlyAttention}
-                onChange={(e) => setOnlyAttention(e.target.checked)}
-                className="rounded"
-              />
-              <span>
-                🔔 Requieren tu atención{" "}
-                {attentionStats.total > 0 && (
-                  <span className="font-mono text-[11px] text-amber-700">
-                    ({attentionStats.total})
-                  </span>
-                )}
+              sin abrumar a la Dra. Combinan modificatorios + vencimientos.
+              Cada uno con sublabel explicando exactamente qué incluye —
+              feedback de la Dra: "esos botones no se entienden para qué sirven". */}
+          <div className="pt-2 border-t border-rule mt-2 space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="eyebrow text-ink-soft">ATAJOS DE SEGUIMIENTO</span>
+              <span className="text-[10px] text-ink-soft/70 italic">
+                — Filtran la tabla para mostrar solo los procesos que necesitás revisar primero
               </span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer text-sm text-ink-soft hover:text-ink">
-              <input
-                type="checkbox"
-                checked={onlyMod}
-                onChange={(e) => setOnlyMod(e.target.checked)}
-                className="rounded"
-              />
-              <span>Solo contratos modificados</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer text-sm text-ink-soft hover:text-ink">
-              <input
-                type="checkbox"
-                checked={onlyExpiringSoon}
-                onChange={(e) => setOnlyExpiringSoon(e.target.checked)}
-                className="rounded"
-              />
-              <span>
-                ⏰ Vencen en 30 días{" "}
-                {attentionStats.expiring > 0 && (
-                  <span className="font-mono text-[11px] text-rose-700">
-                    ({attentionStats.expiring})
+            </div>
+
+            <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
+              {/* Atajo principal: combina modificados + por vencer */}
+              <label className="flex flex-col gap-0.5 cursor-pointer text-sm text-ink-soft hover:text-ink">
+                <span className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={onlyAttention}
+                    onChange={(e) => setOnlyAttention(e.target.checked)}
+                    className="rounded"
+                  />
+                  <span>
+                    🔔 Requieren tu atención{" "}
+                    {attentionStats.total > 0 && (
+                      <span className="font-mono text-[11px] text-amber-700 font-semibold">
+                        ({attentionStats.total})
+                      </span>
+                    )}
                   </span>
-                )}
-              </span>
-            </label>
+                </span>
+                <span className="text-[10px] text-ink-soft/70 ml-6 leading-snug max-w-xs">
+                  Suma de los siguientes 2 atajos: contratos con modificatorios{" "}
+                  <span className="font-semibold">+</span> que vencen en los próximos 30 días.
+                  Lo que la Dra debe revisar primero al inicio del día.
+                </span>
+              </label>
+
+              {/* Atajo: solo modificatorios */}
+              <label className="flex flex-col gap-0.5 cursor-pointer text-sm text-ink-soft hover:text-ink">
+                <span className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={onlyMod}
+                    onChange={(e) => setOnlyMod(e.target.checked)}
+                    className="rounded"
+                  />
+                  <span>
+                    📝 Solo contratos modificados{" "}
+                    {attentionStats.mods > 0 && (
+                      <span className="font-mono text-[11px] text-amber-700 font-semibold">
+                        ({attentionStats.mods})
+                      </span>
+                    )}
+                  </span>
+                </span>
+                <span className="text-[10px] text-ink-soft/70 ml-6 leading-snug max-w-xs">
+                  Contratos con días adicionados (prórrogas) o estado &ldquo;modificado&rdquo;
+                  en SECOP. Pueden requerir liquidación o nueva acta.
+                </span>
+              </label>
+
+              {/* Atajo: solo por vencer */}
+              <label className="flex flex-col gap-0.5 cursor-pointer text-sm text-ink-soft hover:text-ink">
+                <span className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={onlyExpiringSoon}
+                    onChange={(e) => setOnlyExpiringSoon(e.target.checked)}
+                    className="rounded"
+                  />
+                  <span>
+                    ⏰ Vencen en 30 días{" "}
+                    {attentionStats.expiring > 0 && (
+                      <span className="font-mono text-[11px] text-rose-700 font-semibold">
+                        ({attentionStats.expiring})
+                      </span>
+                    )}
+                  </span>
+                </span>
+                <span className="text-[10px] text-ink-soft/70 ml-6 leading-snug max-w-xs">
+                  Contratos con fecha de fin entre hoy y los próximos 30 días.
+                  Anticipa renovaciones, prórrogas o liquidaciones.
+                </span>
+              </label>
+            </div>
           </div>
 
           {pageFiltersActive && (
@@ -1185,7 +1295,7 @@ export default function HomePage() {
       <div className="mx-auto max-w-7xl px-8 pb-12">
         <div className="flex flex-wrap items-center justify-between mb-4 gap-3">
           <h2 className="serif text-2xl font-semibold text-ink">
-            {onlyMine ? "Mis procesos seguidos" : "Inventario completo"}
+            {onlyMine ? "Mis procesos del SECOP" : "Todos los procesos del FEAB"}
           </h2>
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs text-ink-soft mr-1">
