@@ -169,38 +169,33 @@ export interface PortalBulk {
 
 
 /**
- * When a sheet filter is active, expand each watched row to ONE ROW
- * per appearance in the matching sheet(s). This makes the count
- * match the Excel exactly — if FEAB 2024 has 85 rows pointing at
- * SECOP URLs, the table shows 85 lines, not the 66 dedup-by-process.
+ * CARDINAL PURO (Sergio 2026-04-27): un link = una fila visible.
+ *
+ * Antes esta función expandía cada proceso a N filas si aparecía N veces
+ * en el Excel (ej. CO1.NTC.6343203 aparecía 13 veces idéntica porque la
+ * Dra registró 13 sub-rodantes de la misma subasta). Era ruido visual
+ * puro: 13 filas con datos del SECOP IDÉNTICOS · cardinal violation
+ * porque el LINK es uno solo.
+ *
+ * Ahora: filtramos por hoja PERO NUNCA duplicamos filas. El conteo de
+ * apariciones en el Excel se preserva como `appearances_count` (visible
+ * en el modal · "Apariciones en tu Excel: 13"). Cardinal honesto.
  */
 export function expandRowsByAppearance(
   rows: UnifiedRow[],
   selectedSheets: string[],
 ): UnifiedRow[] {
   if (selectedSheets.length === 0) return rows;
-  const out: UnifiedRow[] = [];
-  for (const r of rows) {
+  return rows.filter((r) => {
     if (!r.watched || r.appearances.length === 0) {
-      // Orphan or empty: keep as one line if any of its sheets matches
-      const hit = r.sheets.some((s) => selectedSheets.includes(s));
-      if (hit || r.sheets.length === 0) out.push(r);
-      continue;
+      // Orphan o sin appearances: incluir si alguna de sus hojas matchea
+      // o si no tiene hoja (manual add)
+      return r.sheets.some((s) => selectedSheets.includes(s)) || r.sheets.length === 0;
     }
-    const matching = r.appearances.filter((a) =>
-      selectedSheets.includes(a.sheet),
-    );
-    for (const a of matching) {
-      out.push({
-        ...r,
-        key: `${r.key}#${a.sheet}#${a.row ?? "manual"}`,
-        // Override sheet/vigencia to the appearance's specific values
-        sheets: [a.sheet],
-        vigencias: a.vigencia ? [a.vigencia] : r.vigencias,
-      });
-    }
-  }
-  return out;
+    // Watched row: incluir si tiene al menos una appearance en las hojas
+    // seleccionadas. UNA fila por proceso · NO N filas por aparición.
+    return r.appearances.some((a) => selectedSheets.includes(a.sheet));
+  });
 }
 
 
@@ -678,8 +673,11 @@ export function UnifiedTable({
                   </span>
                 )}
                 {r.appearances_count > 1 && (
-                  <span className="block text-[10px] text-ink-soft italic mt-0.5">
-                    {r.appearances_count} apariciones
+                  <span
+                    className="inline-flex items-center px-1.5 py-0.5 rounded bg-stone-100 text-ink-soft border border-rule text-[10px] mt-0.5"
+                    title={`Este proceso aparece ${r.appearances_count} veces en tu Excel (sub-items de la misma subasta o contrato). El link del SECOP es uno solo · click para ver detalle de las apariciones.`}
+                  >
+                    {r.appearances_count} apariciones en tu Excel
                   </span>
                 )}
               </div>
