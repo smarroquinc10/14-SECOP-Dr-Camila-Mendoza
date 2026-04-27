@@ -386,6 +386,43 @@ async function getPortalBulk(): Promise<PortalBulk> {
   return _portalBulkPromise;
 }
 
+/** Cross-check entre fuentes del SECOP (jbjy / rpmr / portal). Detecta
+ *  cuando el SECOP MISMO se contradice entre sus datasets. Generado por
+ *  `scripts/cross_check_fuentes.py` y commiteado al deploy. */
+export interface DiscrepanciaCampo {
+  campo: string;
+  fuente_a: string;
+  valor_a: string | number | null;
+  fuente_b: string;
+  valor_b: string | number | null;
+  diff_pct?: number;
+}
+
+export interface DiscrepanciasBulk {
+  generated_at: string;
+  total_procesos_con_discrepancia: number;
+  total_discrepancias: number;
+  by_process_id: Record<string, DiscrepanciaCampo[]>;
+}
+
+let _discrepanciasPromise: Promise<DiscrepanciasBulk | null> | null = null;
+
+async function getDiscrepanciasBulk(): Promise<DiscrepanciasBulk | null> {
+  if (!_discrepanciasPromise) {
+    _discrepanciasPromise = (async () => {
+      try {
+        const url = withBasePath("/data/discrepancias_fuentes_seed.json");
+        const res = await fetch(url, { cache: "no-store" });
+        if (!res.ok) return null;
+        return (await res.json()) as DiscrepanciasBulk;
+      } catch {
+        return null;
+      }
+    })();
+  }
+  return _discrepanciasPromise;
+}
+
 function toContract(row: SocrataContrato): Contract {
   return row as Contract; // mismo shape exacto en runtime
 }
@@ -907,6 +944,14 @@ export const api = {
    * como tercer nivel de fallback cuando ni el SECOP API ni Integrado
    * tienen datos del proceso. La key es el `notice_uid`.
    */
+  /** Bulk de discrepancias entre fuentes del SECOP. Permite a la UI
+   *  alertar cuando los datos del SECOP no son consistentes entre sus
+   *  propios datasets (jbjy / rpmr / portal). Cardinal: detectado por
+   *  scripts/cross_check_fuentes.py · regenerado por el cron diario. */
+  discrepanciasBulk: async (): Promise<DiscrepanciasBulk | null> => {
+    return getDiscrepanciasBulk();
+  },
+
   portalBulk: async (): Promise<PortalBulk> => {
     return getPortalBulk();
   },

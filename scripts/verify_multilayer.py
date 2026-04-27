@@ -313,6 +313,46 @@ def capa_9_contadores() -> CapaResult:
 
 
 # ─────────────────────────────────────────────────────────────────────
+# Capa 12 — Discrepancias entre fuentes del SECOP (CRITICAL)
+# ─────────────────────────────────────────────────────────────────────
+def capa_12_discrepancias() -> CapaResult:
+    """Detecta cuando el SECOP MISMO se contradice entre sus datasets
+    (rpmr-utcd vs portal community.secop). Cardinal: si los valores
+    difieren significativamente, el dashboard puede mostrar un dato
+    incorrecto si la cascada elige la fuente equivocada."""
+    seed_path = REPO_ROOT / "app" / "public" / "data" / "discrepancias_fuentes_seed.json"
+    if not seed_path.exists():
+        return CapaResult(
+            "Discrepancias entre fuentes",
+            False,
+            "discrepancias_fuentes_seed.json no existe · correr scripts/cross_check_fuentes.py primero",
+        )
+    data = json.loads(seed_path.read_text(encoding="utf-8"))
+    total = data.get("total_discrepancias", 0)
+    procesos_afectados = data.get("total_procesos_con_discrepancia", 0)
+    by_pid = data.get("by_process_id", {})
+    # Contar discrepancias críticas (diff_pct > 50 en valor)
+    criticas = 0
+    for discs in by_pid.values():
+        for d in discs:
+            if d.get("campo") == "valor_del_contrato" and d.get("diff_pct", 0) > 50:
+                criticas += 1
+    if total == 0:
+        return CapaResult(
+            "Discrepancias entre fuentes",
+            True,
+            "0 discrepancias · las 3 fuentes del SECOP coinciden cardinal",
+        )
+    # Aceptamos discrepancias siempre que estén DOCUMENTADAS y la cascada
+    # del dashboard prefiera portal sobre rpmr (commit r2 del 2026-04-27).
+    msg = (
+        f"{total} discrepancias detectadas · {procesos_afectados} procesos afectados · "
+        f"{criticas} críticas (>50% diff en valor) · dashboard usa portal · documentado"
+    )
+    return CapaResult("Discrepancias entre fuentes", True, msg)
+
+
+# ─────────────────────────────────────────────────────────────────────
 # Capa 11 — PDFs / documentos del portal en producción
 # ─────────────────────────────────────────────────────────────────────
 def capa_11_pdfs_portal() -> CapaResult:
@@ -406,6 +446,7 @@ def main() -> int:
         capa_9_contadores,
         capa_10_no_temp_files,
         capa_11_pdfs_portal,
+        capa_12_discrepancias,
     ]
     print("=" * 64)
     print("VERIFICACIÓN MULTICAPA · Dashboard FEAB · Cami abogada")

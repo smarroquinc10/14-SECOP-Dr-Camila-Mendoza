@@ -1,0 +1,2177 @@
+{
+  "generated_at": "2026-04-27T03:46:36.774132+00:00",
+  "total_procesos_con_discrepancia": 149,
+  "total_discrepancias": 234,
+  "by_process_id": {
+    "CO1.PPI.38799613": [
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2025-05-29",
+        "fuente_b": "portal",
+        "valor_b": "2025-05-09",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.39293770": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 13550.0,
+        "fuente_b": "portal",
+        "valor_b": 235157.2,
+        "diff_pct": 94.24
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2025-06-12",
+        "fuente_b": "portal",
+        "valor_b": "2025-06-03",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.39259834": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 423.0,
+        "fuente_b": "portal",
+        "valor_b": 237372.8,
+        "diff_pct": 99.82
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2025-06-12",
+        "fuente_b": "portal",
+        "valor_b": "2025-05-27",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.40257904": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 731934542.0,
+        "fuente_b": "portal",
+        "valor_b": 473437608.22,
+        "diff_pct": 35.32
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2025-08-27",
+        "fuente_b": "portal",
+        "valor_b": "2025-08-06",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.40909333": [
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2025-09-11",
+        "fuente_b": "portal",
+        "valor_b": "2025-08-20",
+        "diff_pct": null
+      }
+    ],
+    "CO1.NTC.5841046": [
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2024-04-30",
+        "fuente_b": "portal",
+        "valor_b": "2024-04-08",
+        "diff_pct": null
+      }
+    ],
+    "CO1.NTC.5933103": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 481.0,
+        "fuente_b": "portal",
+        "valor_b": 890400.0,
+        "diff_pct": 99.95
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2024-05-29",
+        "fuente_b": "portal",
+        "valor_b": "2024-05-06",
+        "diff_pct": null
+      }
+    ],
+    "CO1.NTC.5934044": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 500.0,
+        "fuente_b": "portal",
+        "valor_b": 978.0,
+        "diff_pct": 48.88
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2024-05-29",
+        "fuente_b": "portal",
+        "valor_b": "2024-05-06",
+        "diff_pct": null
+      }
+    ],
+    "CO1.NTC.5870742": [
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2024-05-20",
+        "fuente_b": "portal",
+        "valor_b": "2024-04-25",
+        "diff_pct": null
+      }
+    ],
+    "CO1.NTC.6106913": [
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2024-07-05",
+        "fuente_b": "portal",
+        "valor_b": "2024-05-31",
+        "diff_pct": null
+      }
+    ],
+    "CO1.NTC.6203868": [
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2024-07-04",
+        "fuente_b": "portal",
+        "valor_b": "2024-06-24",
+        "diff_pct": null
+      }
+    ],
+    "CO1.NTC.6414971": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 2886400100.0,
+        "fuente_b": "portal",
+        "valor_b": 2862023543.0,
+        "diff_pct": 0.84
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2024-09-19",
+        "fuente_b": "portal",
+        "valor_b": "2024-08-21",
+        "diff_pct": null
+      }
+    ],
+    "CO1.NTC.6535964": [
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2024-09-23",
+        "fuente_b": "portal",
+        "valor_b": "2024-09-09",
+        "diff_pct": null
+      }
+    ],
+    "CO1.NTC.6343203": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 16300000.0,
+        "fuente_b": "portal",
+        "valor_b": 617732375.0,
+        "diff_pct": 97.36
+      }
+    ],
+    "CO1.NTC.6689409": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 51163800.0,
+        "fuente_b": "portal",
+        "valor_b": 49621.0,
+        "diff_pct": 99.9
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2024-10-21",
+        "fuente_b": "portal",
+        "valor_b": "2024-10-04",
+        "diff_pct": null
+      }
+    ],
+    "CO1.NTC.6884202": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 346021286.0,
+        "fuente_b": "portal",
+        "valor_b": 63571453.31,
+        "diff_pct": 81.63
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2024-12-04",
+        "fuente_b": "portal",
+        "valor_b": "2024-11-06",
+        "diff_pct": null
+      }
+    ],
+    "CO1.NTC.7133101": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 39984.0,
+        "fuente_b": "portal",
+        "valor_b": 14286127.61,
+        "diff_pct": 99.72
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2024-12-31",
+        "fuente_b": "portal",
+        "valor_b": "2024-12-30",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.23774552": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 62832000.0,
+        "fuente_b": "portal",
+        "valor_b": 3264000.0,
+        "diff_pct": 94.81
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2023-05-08",
+        "fuente_b": "portal",
+        "valor_b": "2023-04-11",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.24202869": [
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2023-05-08",
+        "fuente_b": "portal",
+        "valor_b": "2023-05-02",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.23332784": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 64000000.0,
+        "fuente_b": "portal",
+        "valor_b": 1123878707.0,
+        "diff_pct": 94.31
+      }
+    ],
+    "CO1.PPI.23285297": [
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2023-05-12",
+        "fuente_b": "portal",
+        "valor_b": "2023-04-12",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.24151982": [
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2023-05-16",
+        "fuente_b": "portal",
+        "valor_b": "2023-04-25",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.23894545": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 1141594000.0,
+        "fuente_b": "portal",
+        "valor_b": 956750864.0,
+        "diff_pct": 16.19
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2023-05-23",
+        "fuente_b": "portal",
+        "valor_b": "2023-04-14",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.24139852": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 800.0,
+        "fuente_b": "portal",
+        "valor_b": 143.0,
+        "diff_pct": 82.12
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2023-06-05",
+        "fuente_b": "portal",
+        "valor_b": "2023-05-09",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.24833408": [
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2023-06-23",
+        "fuente_b": "portal",
+        "valor_b": "2023-06-06",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.25539623": [
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2023-08-28",
+        "fuente_b": "portal",
+        "valor_b": "2023-07-05",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.26396219": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 6183359.0,
+        "fuente_b": "portal",
+        "valor_b": 7925043.0,
+        "diff_pct": 21.98
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2023-08-25",
+        "fuente_b": "portal",
+        "valor_b": "2023-08-14",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.26411082": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 6400000.0,
+        "fuente_b": "portal",
+        "valor_b": 6474947.0,
+        "diff_pct": 1.16
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2023-08-25",
+        "fuente_b": "portal",
+        "valor_b": "2023-08-15",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.26289293": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 1221020.0,
+        "fuente_b": "portal",
+        "valor_b": 450000.0,
+        "diff_pct": 63.15
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2023-09-25",
+        "fuente_b": "portal",
+        "valor_b": "2023-08-18",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.26779991": [
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2023-09-25",
+        "fuente_b": "portal",
+        "valor_b": "2023-09-11",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.27523055": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 14343380.0,
+        "fuente_b": "portal",
+        "valor_b": 31567924.0,
+        "diff_pct": 54.56
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2023-11-16",
+        "fuente_b": "portal",
+        "valor_b": "2023-10-21",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.27832634": [
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2023-11-24",
+        "fuente_b": "portal",
+        "valor_b": "2023-11-14",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.28107700": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 15767500.0,
+        "fuente_b": "portal",
+        "valor_b": 18434886.0,
+        "diff_pct": 14.47
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2023-11-28",
+        "fuente_b": "portal",
+        "valor_b": "2023-11-14",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.27942182": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 296040000.0,
+        "fuente_b": "portal",
+        "valor_b": 1479362562.0,
+        "diff_pct": 79.99
+      }
+    ],
+    "CO1.PPI.28827910": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 3570000.0,
+        "fuente_b": "portal",
+        "valor_b": 3717581.0,
+        "diff_pct": 3.97
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2023-12-19",
+        "fuente_b": "portal",
+        "valor_b": "2023-12-15",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.17251566": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 0.0,
+        "fuente_b": "portal",
+        "valor_b": 18753210.0,
+        "diff_pct": 100.0
+      }
+    ],
+    "CO1.PPI.17387010": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 15000000.0,
+        "fuente_b": "portal",
+        "valor_b": 10000000.0,
+        "diff_pct": 33.33
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2022-02-14",
+        "fuente_b": "portal",
+        "valor_b": "2022-02-09",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.16958132": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 8400000.0,
+        "fuente_b": "portal",
+        "valor_b": 8000000.0,
+        "diff_pct": 4.76
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2022-03-02",
+        "fuente_b": "portal",
+        "valor_b": "2022-02-11",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.15803264": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 193110000.0,
+        "fuente_b": "portal",
+        "valor_b": 627598810.0,
+        "diff_pct": 69.23
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2022-03-22",
+        "fuente_b": "portal",
+        "valor_b": "2022-02-17",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.17495414": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 1355895222.0,
+        "fuente_b": "portal",
+        "valor_b": 1442977530.0,
+        "diff_pct": 6.03
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2022-04-13",
+        "fuente_b": "portal",
+        "valor_b": "2022-04-18",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.18143740": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 2043944.0,
+        "fuente_b": "portal",
+        "valor_b": 2400796.0,
+        "diff_pct": 14.86
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2022-04-27",
+        "fuente_b": "portal",
+        "valor_b": "2022-04-22",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.18049662": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 450.0,
+        "fuente_b": "portal",
+        "valor_b": 59685233.0,
+        "diff_pct": 100.0
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2022-04-29",
+        "fuente_b": "portal",
+        "valor_b": "2022-05-02",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.18236669": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 90440000.0,
+        "fuente_b": "portal",
+        "valor_b": 96992875.0,
+        "diff_pct": 6.76
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2022-05-12",
+        "fuente_b": "portal",
+        "valor_b": "2022-05-06",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.18282575": [
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2022-05-24",
+        "fuente_b": "portal",
+        "valor_b": "2022-05-09",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.18903397": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 72977851.0,
+        "fuente_b": "portal",
+        "valor_b": 89029919.0,
+        "diff_pct": 18.03
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2022-06-29",
+        "fuente_b": "portal",
+        "valor_b": "2022-06-21",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.18487167": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 2760000.0,
+        "fuente_b": "portal",
+        "valor_b": 399785620.0,
+        "diff_pct": 99.31
+      }
+    ],
+    "CO1.PPI.19091459": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 8295400.0,
+        "fuente_b": "portal",
+        "valor_b": 10632670.0,
+        "diff_pct": 21.98
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2022-07-28",
+        "fuente_b": "portal",
+        "valor_b": "2022-07-15",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.19136503": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 61020060.0,
+        "fuente_b": "portal",
+        "valor_b": 74765113.0,
+        "diff_pct": 18.38
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2022-07-28",
+        "fuente_b": "portal",
+        "valor_b": "2022-07-15",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.19296056": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 3900000.0,
+        "fuente_b": "portal",
+        "valor_b": 10940066.0,
+        "diff_pct": 64.35
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2022-08-10",
+        "fuente_b": "portal",
+        "valor_b": "2022-08-01",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.19172196": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 139111000.0,
+        "fuente_b": "portal",
+        "valor_b": 155437800.0,
+        "diff_pct": 10.5
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2022-08-16",
+        "fuente_b": "portal",
+        "valor_b": "2022-07-25",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.19836768": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 178354409.0,
+        "fuente_b": "portal",
+        "valor_b": 196189850.0,
+        "diff_pct": 9.09
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2022-09-01",
+        "fuente_b": "portal",
+        "valor_b": "2022-08-26",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.19738651": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 75000000.0,
+        "fuente_b": "portal",
+        "valor_b": 50000000.0,
+        "diff_pct": 33.33
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2022-09-02",
+        "fuente_b": "portal",
+        "valor_b": "2022-08-29",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.19700863": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 1618160.0,
+        "fuente_b": "portal",
+        "valor_b": 22330.0,
+        "diff_pct": 98.62
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2022-09-13",
+        "fuente_b": "portal",
+        "valor_b": "2022-08-26",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.20048679": [
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2022-09-09",
+        "fuente_b": "portal",
+        "valor_b": "2022-09-02",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.20006186": [
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2022-09-20",
+        "fuente_b": "portal",
+        "valor_b": "2022-09-13",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.20234504": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 14339500.0,
+        "fuente_b": "portal",
+        "valor_b": 17091375.0,
+        "diff_pct": 16.1
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2022-09-28",
+        "fuente_b": "portal",
+        "valor_b": "2022-09-16",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.20381988": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 9961842.0,
+        "fuente_b": "portal",
+        "valor_b": 7026241.0,
+        "diff_pct": 29.47
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2022-09-28",
+        "fuente_b": "portal",
+        "valor_b": "2022-09-15",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.20786365": [
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2022-11-04",
+        "fuente_b": "portal",
+        "valor_b": "2022-10-18",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.20638411": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 2358090.0,
+        "fuente_b": "portal",
+        "valor_b": 2344300.0,
+        "diff_pct": 0.58
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2022-11-10",
+        "fuente_b": "portal",
+        "valor_b": "2022-10-10",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.21398423": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 33053808.0,
+        "fuente_b": "portal",
+        "valor_b": 36270974.0,
+        "diff_pct": 8.87
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2022-11-30",
+        "fuente_b": "portal",
+        "valor_b": "2022-11-24",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.21564988": [
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2022-11-30",
+        "fuente_b": "portal",
+        "valor_b": "2022-11-28",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.21478240": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 66283000.0,
+        "fuente_b": "portal",
+        "valor_b": 69853000.0,
+        "diff_pct": 5.11
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2022-12-01",
+        "fuente_b": "portal",
+        "valor_b": "2022-11-24",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.21271731": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 6750000.0,
+        "fuente_b": "portal",
+        "valor_b": 9414000.0,
+        "diff_pct": 28.3
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2022-12-05",
+        "fuente_b": "portal",
+        "valor_b": "2022-11-24",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.21563113": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 9685708.0,
+        "fuente_b": "portal",
+        "valor_b": 9972692.0,
+        "diff_pct": 2.88
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2022-12-05",
+        "fuente_b": "portal",
+        "valor_b": "2022-11-22",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.21696295": [
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2022-12-13",
+        "fuente_b": "portal",
+        "valor_b": "2022-12-02",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.21226195": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 75150000.0,
+        "fuente_b": "portal",
+        "valor_b": 25500000.0,
+        "diff_pct": 66.07
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2022-12-23",
+        "fuente_b": "portal",
+        "valor_b": "2022-11-15",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.21684264": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 1993002480.0,
+        "fuente_b": "portal",
+        "valor_b": 1835951267.0,
+        "diff_pct": 7.88
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2022-12-23",
+        "fuente_b": "portal",
+        "valor_b": "2022-12-21",
+        "diff_pct": null
+      }
+    ],
+    "CO1.NTC.1183655": [
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2020-04-22",
+        "fuente_b": "portal",
+        "valor_b": "2020-04-20",
+        "diff_pct": null
+      }
+    ],
+    "CO1.NTC.1252131": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 26477500.0,
+        "fuente_b": "portal",
+        "valor_b": 26908875.0,
+        "diff_pct": 1.6
+      }
+    ],
+    "CO1.NTC.1252313": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 12102547.0,
+        "fuente_b": "portal",
+        "valor_b": 12834727.0,
+        "diff_pct": 5.7
+      }
+    ],
+    "CO1.NTC.1250738": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 57663235.0,
+        "fuente_b": "portal",
+        "valor_b": 76995241.0,
+        "diff_pct": 25.11
+      }
+    ],
+    "CO1.NTC.1240625": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 44982000.0,
+        "fuente_b": "portal",
+        "valor_b": 48875160.0,
+        "diff_pct": 7.97
+      }
+    ],
+    "CO1.NTC.1255953": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 12129670.0,
+        "fuente_b": "portal",
+        "valor_b": 19150704.0,
+        "diff_pct": 36.66
+      }
+    ],
+    "CO1.NTC.1284355": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 55528960.0,
+        "fuente_b": "portal",
+        "valor_b": 62286980.0,
+        "diff_pct": 10.85
+      }
+    ],
+    "CO1.NTC.1284537": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 65967650.0,
+        "fuente_b": "portal",
+        "valor_b": 77928486.0,
+        "diff_pct": 15.35
+      }
+    ],
+    "CO1.NTC.1295204": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 45111117.0,
+        "fuente_b": "portal",
+        "valor_b": 50686709.0,
+        "diff_pct": 11.0
+      }
+    ],
+    "CO1.NTC.1293666": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 16295860.0,
+        "fuente_b": "portal",
+        "valor_b": 16422000.0,
+        "diff_pct": 0.77
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2020-07-08",
+        "fuente_b": "portal",
+        "valor_b": "2020-07-07",
+        "diff_pct": null
+      }
+    ],
+    "CO1.NTC.1255660": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 268215226.0,
+        "fuente_b": "portal",
+        "valor_b": 253653152.0,
+        "diff_pct": 5.43
+      }
+    ],
+    "CO1.NTC.1316516": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 16168570.0,
+        "fuente_b": "portal",
+        "valor_b": 19695580.0,
+        "diff_pct": 17.91
+      }
+    ],
+    "CO1.NTC.1328107": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 22586200.0,
+        "fuente_b": "portal",
+        "valor_b": 31867673.0,
+        "diff_pct": 29.13
+      }
+    ],
+    "CO1.NTC.1329421": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 11538450.0,
+        "fuente_b": "portal",
+        "valor_b": 20304375.0,
+        "diff_pct": 43.17
+      }
+    ],
+    "CO1.NTC.1339016": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 9996000.0,
+        "fuente_b": "portal",
+        "valor_b": 10177502.0,
+        "diff_pct": 1.78
+      }
+    ],
+    "CO1.NTC.1339018": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 22624280.0,
+        "fuente_b": "portal",
+        "valor_b": 26239500.0,
+        "diff_pct": 13.78
+      }
+    ],
+    "CO1.NTC.1348945": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 11453750.0,
+        "fuente_b": "portal",
+        "valor_b": 14083451.0,
+        "diff_pct": 18.67
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2020-08-11",
+        "fuente_b": "portal",
+        "valor_b": "2020-08-10",
+        "diff_pct": null
+      }
+    ],
+    "CO1.NTC.1353823": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 300349336.0,
+        "fuente_b": "portal",
+        "valor_b": 399488401.0,
+        "diff_pct": 24.82
+      }
+    ],
+    "CO1.PPI.9608276": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 150597141.0,
+        "fuente_b": "portal",
+        "valor_b": 155254812.0,
+        "diff_pct": 3.0
+      }
+    ],
+    "CO1.PPI.9574406": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 43317126.0,
+        "fuente_b": "portal",
+        "valor_b": 94966173.0,
+        "diff_pct": 54.39
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2020-09-01",
+        "fuente_b": "portal",
+        "valor_b": "2020-08-31",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.9636847": [
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2020-09-01",
+        "fuente_b": "portal",
+        "valor_b": "2020-08-31",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.9581469": [
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2020-09-07",
+        "fuente_b": "portal",
+        "valor_b": "2020-09-04",
+        "diff_pct": null
+      }
+    ],
+    "CO1.NTC.1391748": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 361.0,
+        "fuente_b": "portal",
+        "valor_b": 345242994.0,
+        "diff_pct": 100.0
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2020-09-15",
+        "fuente_b": "portal",
+        "valor_b": "2020-09-14",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.10060532": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 28655399.0,
+        "fuente_b": "portal",
+        "valor_b": 29849375.0,
+        "diff_pct": 4.0
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2020-09-18",
+        "fuente_b": "portal",
+        "valor_b": "2020-09-17",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.10060672": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 25942000.0,
+        "fuente_b": "portal",
+        "valor_b": 33158958.0,
+        "diff_pct": 21.76
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2020-09-18",
+        "fuente_b": "portal",
+        "valor_b": "2020-09-17",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.9769370": [
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2020-09-22",
+        "fuente_b": "portal",
+        "valor_b": "2020-09-11",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.10057597": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 12023760.0,
+        "fuente_b": "portal",
+        "valor_b": 15029700.0,
+        "diff_pct": 20.0
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2020-09-28",
+        "fuente_b": "portal",
+        "valor_b": "2020-09-17",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.9954490": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 4025718384.0,
+        "fuente_b": "portal",
+        "valor_b": 3290000000.0,
+        "diff_pct": 18.28
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2020-10-02",
+        "fuente_b": "portal",
+        "valor_b": "2020-09-28",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.9681506": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 1307111992.0,
+        "fuente_b": "portal",
+        "valor_b": 1337883485000.0,
+        "diff_pct": 99.9
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2020-10-02",
+        "fuente_b": "portal",
+        "valor_b": "2020-09-28",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.10283289": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 12786848.0,
+        "fuente_b": "portal",
+        "valor_b": 15610701.0,
+        "diff_pct": 18.09
+      }
+    ],
+    "CO1.NTC.1462776": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 163300000.0,
+        "fuente_b": "portal",
+        "valor_b": 199532640.0,
+        "diff_pct": 18.16
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2020-10-27",
+        "fuente_b": "portal",
+        "valor_b": "2020-10-13",
+        "diff_pct": null
+      }
+    ],
+    "CO1.NTC.1481841": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 94678974.0,
+        "fuente_b": "portal",
+        "valor_b": 372346726.0,
+        "diff_pct": 74.57
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2020-11-09",
+        "fuente_b": "portal",
+        "valor_b": "2020-11-03",
+        "diff_pct": null
+      }
+    ],
+    "CO1.NTC.1470253": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 185498704.0,
+        "fuente_b": "portal",
+        "valor_b": 236540393.0,
+        "diff_pct": 21.58
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2020-11-09",
+        "fuente_b": "portal",
+        "valor_b": "2020-10-20",
+        "diff_pct": null
+      }
+    ],
+    "CO1.NTC.1470168": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 336018163.0,
+        "fuente_b": "portal",
+        "valor_b": 429092605.0,
+        "diff_pct": 21.69
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2020-11-09",
+        "fuente_b": "portal",
+        "valor_b": "2020-10-22",
+        "diff_pct": null
+      }
+    ],
+    "CO1.NTC.1470252": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 107165963.0,
+        "fuente_b": "portal",
+        "valor_b": 136517150.0,
+        "diff_pct": 21.5
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2020-11-09",
+        "fuente_b": "portal",
+        "valor_b": "2020-10-20",
+        "diff_pct": null
+      }
+    ],
+    "CO1.NTC.1494813": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 27280273.0,
+        "fuente_b": "portal",
+        "valor_b": 32346917.0,
+        "diff_pct": 15.66
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2020-11-10",
+        "fuente_b": "portal",
+        "valor_b": "2020-11-03",
+        "diff_pct": null
+      }
+    ],
+    "CO1.NTC.1521512": [
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2020-11-25",
+        "fuente_b": "portal",
+        "valor_b": "2020-11-18",
+        "diff_pct": null
+      }
+    ],
+    "CO1.NTC.1595763": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 66244029.0,
+        "fuente_b": "portal",
+        "valor_b": 67595956.0,
+        "diff_pct": 2.0
+      }
+    ],
+    "CO1.NTC.1595948": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 150000000.0,
+        "fuente_b": "portal",
+        "valor_b": 154236612.0,
+        "diff_pct": 2.75
+      }
+    ],
+    "CO1.NTC.1595957": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 18000000.0,
+        "fuente_b": "portal",
+        "valor_b": 24522930.0,
+        "diff_pct": 26.6
+      }
+    ],
+    "CO1.PPI.11374230": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 1241.0,
+        "fuente_b": "portal",
+        "valor_b": 256577104.0,
+        "diff_pct": 100.0
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2021-02-10",
+        "fuente_b": "portal",
+        "valor_b": "2021-02-04",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.11421049": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 5654149.0,
+        "fuente_b": "portal",
+        "valor_b": 8246386.0,
+        "diff_pct": 31.43
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2021-02-18",
+        "fuente_b": "portal",
+        "valor_b": "2021-02-16",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.12092581": [
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2021-03-03",
+        "fuente_b": "portal",
+        "valor_b": "2021-03-02",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.11520741": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 385131600.0,
+        "fuente_b": "portal",
+        "valor_b": 387884059.0,
+        "diff_pct": 0.71
+      }
+    ],
+    "CO1.PPI.11516869": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 2122948165.0,
+        "fuente_b": "portal",
+        "valor_b": 2173373476.0,
+        "diff_pct": 2.32
+      }
+    ],
+    "CO1.PPI.12459914": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 2334780.0,
+        "fuente_b": "portal",
+        "valor_b": 2532558.0,
+        "diff_pct": 7.81
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2021-03-29",
+        "fuente_b": "portal",
+        "valor_b": "2021-03-26",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.11727289": [
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2021-03-29",
+        "fuente_b": "portal",
+        "valor_b": "2021-03-26",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.12050643": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 10989975833.0,
+        "fuente_b": "portal",
+        "valor_b": 8904348488.0,
+        "diff_pct": 18.98
+      }
+    ],
+    "CO1.PPI.12409525": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 65916707.0,
+        "fuente_b": "portal",
+        "valor_b": 77782206.0,
+        "diff_pct": 15.25
+      }
+    ],
+    "CO1.PPI.12483416": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 9996000.0,
+        "fuente_b": "portal",
+        "valor_b": 10245904.0,
+        "diff_pct": 2.44
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2021-04-12",
+        "fuente_b": "portal",
+        "valor_b": "2021-04-09",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.12651547": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 45997441.0,
+        "fuente_b": "portal",
+        "valor_b": 49997218.0,
+        "diff_pct": 8.0
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2021-04-28",
+        "fuente_b": "portal",
+        "valor_b": "2021-04-26",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.12710673": [
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2021-04-28",
+        "fuente_b": "portal",
+        "valor_b": "2021-04-26",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.12663978": [
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2021-04-27",
+        "fuente_b": "portal",
+        "valor_b": "2021-04-26",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.12534131": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 140731780.0,
+        "fuente_b": "portal",
+        "valor_b": 148345964.0,
+        "diff_pct": 5.13
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2021-05-03",
+        "fuente_b": "portal",
+        "valor_b": "2021-04-26",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.13188326": [
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2021-06-01",
+        "fuente_b": "portal",
+        "valor_b": "2021-05-28",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.13220321": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 5474000.0,
+        "fuente_b": "portal",
+        "valor_b": 6842500.0,
+        "diff_pct": 20.0
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2021-06-01",
+        "fuente_b": "portal",
+        "valor_b": "2021-05-28",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.13177258": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 8925000.0,
+        "fuente_b": "portal",
+        "valor_b": 12328138.0,
+        "diff_pct": 27.6
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2021-06-08",
+        "fuente_b": "portal",
+        "valor_b": "2021-05-28",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.13286747": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 50484560.0,
+        "fuente_b": "portal",
+        "valor_b": 69394850.0,
+        "diff_pct": 27.25
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2021-06-11",
+        "fuente_b": "portal",
+        "valor_b": "2021-06-04",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.13265779": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 18242700.0,
+        "fuente_b": "portal",
+        "valor_b": 19702235.0,
+        "diff_pct": 7.41
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2021-06-11",
+        "fuente_b": "portal",
+        "valor_b": "2021-06-04",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.13362989": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 10190111.0,
+        "fuente_b": "portal",
+        "valor_b": 10726438.0,
+        "diff_pct": 5.0
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2021-06-17",
+        "fuente_b": "portal",
+        "valor_b": "2021-06-15",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.13442567": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 98370160.0,
+        "fuente_b": "portal",
+        "valor_b": 200296023.0,
+        "diff_pct": 50.89
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2021-07-21",
+        "fuente_b": "portal",
+        "valor_b": "2021-07-09",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.13657646": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 30385460.0,
+        "fuente_b": "portal",
+        "valor_b": 32839050.0,
+        "diff_pct": 7.47
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2021-07-23",
+        "fuente_b": "portal",
+        "valor_b": "2021-07-09",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.13851943": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 11372000.0,
+        "fuente_b": "portal",
+        "valor_b": 11460000.0,
+        "diff_pct": 0.77
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2021-07-28",
+        "fuente_b": "portal",
+        "valor_b": "2021-07-16",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.13915707": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 50947470.0,
+        "fuente_b": "portal",
+        "valor_b": 66221406.0,
+        "diff_pct": 23.06
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2021-07-29",
+        "fuente_b": "portal",
+        "valor_b": "2021-07-23",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.13789208": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 14076510.0,
+        "fuente_b": "portal",
+        "valor_b": 18693710.0,
+        "diff_pct": 24.7
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2021-08-05",
+        "fuente_b": "portal",
+        "valor_b": "2021-07-26",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.14072066": [
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2021-08-06",
+        "fuente_b": "portal",
+        "valor_b": "2021-08-02",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.13891678": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 153673640.0,
+        "fuente_b": "portal",
+        "valor_b": 355286185.0,
+        "diff_pct": 56.75
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2021-08-17",
+        "fuente_b": "portal",
+        "valor_b": "2021-08-09",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.14097120": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 4170.0,
+        "fuente_b": "portal",
+        "valor_b": 253379655.0,
+        "diff_pct": 100.0
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2021-08-26",
+        "fuente_b": "portal",
+        "valor_b": "2021-08-17",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.14534762": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 403478425.0,
+        "fuente_b": "portal",
+        "valor_b": 409944218.0,
+        "diff_pct": 1.58
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2021-09-22",
+        "fuente_b": "portal",
+        "valor_b": "2021-09-09",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.14568902": [
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2021-10-11",
+        "fuente_b": "portal",
+        "valor_b": "2021-09-20",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.14664421": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 1669000.0,
+        "fuente_b": "portal",
+        "valor_b": 53728930.0,
+        "diff_pct": 96.89
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2021-10-08",
+        "fuente_b": "portal",
+        "valor_b": "2021-09-28",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.14839710": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 680.0,
+        "fuente_b": "portal",
+        "valor_b": 6630000.0,
+        "diff_pct": 99.99
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2021-10-12",
+        "fuente_b": "portal",
+        "valor_b": "2021-10-04",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.15094588": [
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2021-10-13",
+        "fuente_b": "portal",
+        "valor_b": "2021-10-01",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.15088862": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 44992734.0,
+        "fuente_b": "portal",
+        "valor_b": 54862882.0,
+        "diff_pct": 17.99
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2021-10-13",
+        "fuente_b": "portal",
+        "valor_b": "2021-10-08",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.15378815": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 49638529.0,
+        "fuente_b": "portal",
+        "valor_b": 145906944.0,
+        "diff_pct": 65.98
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2021-11-05",
+        "fuente_b": "portal",
+        "valor_b": "2021-10-29",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.15582305": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 23321620.0,
+        "fuente_b": "portal",
+        "valor_b": 24595120.0,
+        "diff_pct": 5.18
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2021-11-18",
+        "fuente_b": "portal",
+        "valor_b": "2021-11-12",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.15220911": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 139057569.0,
+        "fuente_b": "portal",
+        "valor_b": 146477100.0,
+        "diff_pct": 5.07
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2021-11-24",
+        "fuente_b": "portal",
+        "valor_b": "2021-11-12",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.16249067": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 0.0,
+        "fuente_b": "portal",
+        "valor_b": 36401248.0,
+        "diff_pct": 100.0
+      }
+    ],
+    "CO1.PPI.15447445": [
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2021-12-09",
+        "fuente_b": "portal",
+        "valor_b": "2021-11-22",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.16227984": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 4152300.0,
+        "fuente_b": "portal",
+        "valor_b": 5283800.0,
+        "diff_pct": 21.41
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2021-12-15",
+        "fuente_b": "portal",
+        "valor_b": "2021-12-14",
+        "diff_pct": null
+      }
+    ],
+    "CO1.NTC.2405090": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 340922473.0,
+        "fuente_b": "portal",
+        "valor_b": 281971329.0,
+        "diff_pct": 17.29
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2021-12-23",
+        "fuente_b": "portal",
+        "valor_b": "2021-12-17",
+        "diff_pct": null
+      }
+    ],
+    "CO1.PPI.16004777": [
+      {
+        "campo": "valor_del_contrato",
+        "fuente_a": "rpmr",
+        "valor_a": 680.0,
+        "fuente_b": "portal",
+        "valor_b": 1423800.0,
+        "diff_pct": 99.95
+      },
+      {
+        "campo": "fecha_de_firma",
+        "fuente_a": "rpmr",
+        "valor_a": "2021-12-28",
+        "fuente_b": "portal",
+        "valor_b": "2021-12-24",
+        "diff_pct": null
+      }
+    ]
+  }
+}

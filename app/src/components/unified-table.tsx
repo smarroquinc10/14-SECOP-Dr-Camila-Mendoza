@@ -128,6 +128,20 @@ export interface UnifiedRow {
   _raw_api: Record<string, unknown> | null;
   _raw_integrado: Record<string, unknown> | null;
   _raw_portal: Record<string, unknown> | null;
+
+  // Discrepancias detectadas entre fuentes del SECOP — cardinal:
+  // cuando rpmr-utcd dice "valor=481" pero el portal dice "valor=890.400"
+  // para el mismo contrato, hay un drift INTERNO del SECOP. La UI alerta
+  // a la Dra para que NO confíe ciegamente en el dato de la cascada y
+  // verifique vs el portal. Generado por scripts/cross_check_fuentes.py.
+  discrepancias: Array<{
+    campo: string;
+    fuente_a: string;
+    valor_a: string | number | null;
+    fuente_b: string;
+    valor_b: string | number | null;
+    diff_pct?: number;
+  }>;
 }
 
 /** Mapa del bulk Portal cache pasado por la página — cada entry es el
@@ -264,6 +278,7 @@ export function buildUnifiedRows(
   contracts: Contract[],
   integradoBulk?: IntegradoBulk | null,
   portalBulk?: PortalBulk | null,
+  discrepanciasBulk?: import("@/lib/api").DiscrepanciasBulk | null,
 ): UnifiedRow[] {
   // Index contracts by every key we may match against
   const byIdContrato = new Map<string, Contract>();
@@ -317,36 +332,44 @@ export function buildUnifiedRows(
     }
     if (contract?.id_contrato) usedContracts.add(contract.id_contrato);
 
-    // Cascada de fuentes (regla cardinal: cada celda con su procedencia clara):
-    //   1. SECOP API contracts dataset       →  data_source = "api"
-    //   2. SECOP Integrado (rpmr-utcd)       →  data_source = "integrado"
-    //   3. Portal cache (community.secop)    →  data_source = "portal"
-    //   4. ninguna  →  data_source = null, campos null, UI muestra "—"
+    // CASCADA NUEVA (2026-04-27 r2 · feedback Sergio: "el link es lo que mira
+    // la Dra Camila"):
+    //   1. SECOP API contracts dataset (jbjy-vk9h)   →  data_source = "api"
+    //   2. Portal cache (community.secop)            →  data_source = "portal"
+    //   3. SECOP Integrado (rpmr-utcd)               →  data_source = "integrado"
+    //   4. ninguna  →  data_source = null
     //
-    // NO se mergean: el primer match gana entero. La Dra siempre sabe
-    // de qué fuente viene cada fila gracias al badge en la columna Origen.
+    // CARDINAL: el portal community.secop es la verdad porque es lo que la
+    // entidad sube directamente y es lo que la Dra ve cuando entra al SECOP.
+    // El rpmr-utcd es un dataset agregado y puede tener valores corruptos
+    // (caso CO1.NTC.5933103: rpmr=$481 vs portal=$890.400 — diff 99.95%).
+    // Cuando ambos están disponibles, PREFERIMOS portal.
+    //
+    // Cargamos AMBOS para poder cross-checkear y mostrar discrepancias:
     const integ =
       contract == null
         ? lookupIntegrado(w.notice_uid, w.process_id)
         : null;
-    // Portal cache: clave es notice_uid (formato CO1.NTC.X). Si el watch
-    // ya tiene notice_uid lo usamos; si no, el process_id puede ser un
-    // NTC también (mismo agujero que ya tapamos en lookupIntegrado).
     let portalSnap: PortalBulk[string] | null = null;
-    if (contract == null && integ == null && portalBulk) {
+    if (contract == null && portalBulk) {
       const key1 = w.notice_uid ?? "";
       const key2 = w.process_id ?? "";
       portalSnap = portalBulk[key1] ?? portalBulk[key2] ?? null;
     }
+    // Cascada nueva: api > portal > integrado > none
     const dataSource: UnifiedRow["data_source"] = contract
       ? "api"
-      : integ
-      ? "integrado"
       : portalSnap
       ? "portal"
+      : integ
+      ? "integrado"
       : null;
     const dataSourceScrapedAt =
       dataSource === "portal" ? portalSnap?.scraped_at ?? null : null;
+
+    // Discrepancias detectadas para este proceso · vienen del cross_check_fuentes.py
+    const discrepKey = w.notice_uid ?? w.process_id ?? "";
+    const discrepancias = discrepanciasBulk?.by_process_id?.[discrepKey] ?? [];
 
     const apiDias = parseInt(String(contract?.dias_adicionados ?? "0"), 10);
     const dias =
@@ -356,7 +379,9 @@ export function buildUnifiedRows(
         .trim()
         .toLowerCase() === "si";
 
-    // Valor: del API si hay contrato, sino del Integrado, sino del Portal.
+    // Valor: del API si hay contrato, sino PORTAL (cardinal) sino integrado.
+    // Razón: el portal community.secop tiene los valores reales de los
+    // contratos firmados; el rpmr-utcd a veces tiene valores corruptos.
     let valor: number | null = null;
     if (contract) {
       const valorRaw = contract.valor_del_contrato;
@@ -364,11 +389,11 @@ export function buildUnifiedRows(
         const n = Number(valorRaw);
         if (Number.isFinite(n)) valor = n;
       }
+    } else if (portalSnap?.fields?.valor_total) {
+      valor = parsePortalValor(portalSnap.fields.valor_total);
     } else if (integ?.valor_contrato) {
       const n = Number(integ.valor_contrato);
       if (Number.isFinite(n)) valor = n;
-    } else if (portalSnap?.fields?.valor_total) {
-      valor = parsePortalValor(portalSnap.fields.valor_total);
     }
 
     // Notas: la regla cardinal del CLAUDE.md dice que las observaciones
@@ -393,41 +418,42 @@ export function buildUnifiedRows(
       // numero_contrato: del API si hay (referencia_del_contrato); del
       // Integrado si no hay (numero_de_proceso = CONTRATO-FEAB-XXXX o
       // numero_del_contrato = CO1.PCCNTR.X). NUNCA del Excel.
+      // Cascada NUEVA: api > portal > integrado (preferimos portal sobre rpmr)
       numero_contrato:
         (contract?.referencia_del_contrato as string) ??
-        integ?.numero_de_proceso ??
-        integ?.numero_del_contrato ??
         portalSnap?.fields?.numero_contrato ??
         portalSnap?.fields?.numero_proceso ??
+        integ?.numero_de_proceso ??
+        integ?.numero_del_contrato ??
         null,
       url: w.url,
       objeto:
         (contract?.objeto_del_contrato as string) ??
-        integ?.objeto_a_contratar ??
         portalSnap?.fields?.descripcion ??
         portalSnap?.fields?.objeto ??
+        integ?.objeto_a_contratar ??
         null,
       proveedor:
         (contract?.proveedor_adjudicado as string) ??
-        integ?.nom_raz_social_contratista ??
         portalSnap?.fields?.proveedor ??
+        integ?.nom_raz_social_contratista ??
         null,
       valor,
       fecha_firma:
         ((contract?.fecha_de_firma as string) ??
-          integ?.fecha_de_firma_del_contrato ??
           parsePortalFecha(portalSnap?.fields?.fecha_firma_contrato ?? portalSnap?.fields?.fecha_firma) ??
+          integ?.fecha_de_firma_del_contrato ??
           "")
           .slice(0, 10) || null,
       estado:
         (contract?.estado_contrato as string) ??
-        integ?.estado_del_proceso ??
         portalSnap?.fields?.estado ??
+        integ?.estado_del_proceso ??
         null,
       modalidad:
         (contract?.modalidad_de_contratacion as string) ??
-        integ?.modalidad_de_contrataci_n ??
         portalSnap?.fields?.modalidad ??
+        integ?.modalidad_de_contrataci_n ??
         null,
       notas,
       dias_adicionados: dias,
@@ -444,6 +470,7 @@ export function buildUnifiedRows(
       _raw_api: contract ? (contract as Record<string, unknown>) : null,
       _raw_integrado: integ ? (integ as Record<string, unknown>) : null,
       _raw_portal: portalSnap ? (portalSnap as Record<string, unknown>) : null,
+      discrepancias,
     });
   }
 
@@ -483,6 +510,7 @@ export function buildUnifiedRows(
       _raw_api: c as Record<string, unknown>,
       _raw_integrado: null,
       _raw_portal: null,
+      discrepancias: [],
     });
   }
 
@@ -820,6 +848,18 @@ export function UnifiedTable({
           return (
             <div className="text-[10px]">
               <StatusBadge status={r.verifyStatus} />
+              {/* Alerta cardinal: discrepancia entre fuentes del SECOP.
+                  Cuando rpmr-utcd y portal community.secop reportan datos
+                  distintos para el mismo contrato, marca con icono visible
+                  para que la Dra abra el modal y vea ambos valores. */}
+              {r.discrepancias && r.discrepancias.length > 0 && (
+                <div
+                  className="mt-1 inline-flex items-center px-1.5 py-0.5 rounded bg-rose-50 text-rose-800 border border-rose-300 text-[9px] font-semibold"
+                  title={`⚠️ Las fuentes del SECOP (rpmr-utcd y portal community.secop) reportan datos distintos para este contrato en ${r.discrepancias.length} ${r.discrepancias.length === 1 ? "campo" : "campos"}. Click la fila para ver los valores de cada fuente y verificar contra el portal.`}
+                >
+                  ⚠️ {r.discrepancias.length} discrepancia{r.discrepancias.length !== 1 ? "s" : ""}
+                </div>
+              )}
               {r.data_source === "integrado" && (
                 <div
                   className="mt-1 inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-medium"

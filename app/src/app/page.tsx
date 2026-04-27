@@ -102,6 +102,15 @@ export default function HomePage() {
     { refreshInterval: 0, revalidateOnFocus: false }
   );
 
+  // Discrepancias entre fuentes del SECOP — cardinal: detecta cuando el
+  // SECOP MISMO se contradice entre sus datasets. Generado por
+  // scripts/cross_check_fuentes.py · regenerado por el cron diario.
+  const { data: discrepanciasBulk } = useSWR(
+    "discrepancias-bulk",
+    api.discrepanciasBulk,
+    { refreshInterval: 0, revalidateOnFocus: false }
+  );
+
   const isLoading = loadingContracts || loadingWatch;
 
   // ---- Filter state -----------------------------------------------------
@@ -153,8 +162,14 @@ export default function HomePage() {
   //   - data_source = "integrado"  → SECOP Integrado (sin captcha)
   //   - data_source = null         → ninguno; UI muestra "—" honesto
   const allRows = React.useMemo(
-    () => buildUnifiedRows(watched, contracts, integradoBulk ?? null, portalBulk ?? null),
-    [watched, contracts, integradoBulk, portalBulk]
+    () => buildUnifiedRows(
+      watched,
+      contracts,
+      integradoBulk ?? null,
+      portalBulk ?? null,
+      discrepanciasBulk ?? null,
+    ),
+    [watched, contracts, integradoBulk, portalBulk, discrepanciasBulk]
   );
 
   const totalAppearances = React.useMemo(

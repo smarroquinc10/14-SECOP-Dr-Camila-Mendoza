@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { api, type Contract, type ContractDetail, type PortalSnapshot } from "@/lib/api";
+import { api, type Contract, type ContractDetail, type DiscrepanciasBulk, type PortalSnapshot } from "@/lib/api";
 import { cn, confidenceColor, fmtDate, moneyCO } from "@/lib/utils";
 
 interface Props {
@@ -186,6 +186,27 @@ export function DetailDialog({ contractId, open, onOpenChange }: Props) {
     open && contractId ? `contract:${contractId}` : null,
     () => api.contract(contractId!)
   );
+
+  // Cargar las discrepancias entre fuentes del SECOP para este contrato.
+  // Cardinal: si rpmr-utcd dice valor=X y portal dice valor=Y, la Dra
+  // necesita ver ambos para verificar contra el portal community.secop.
+  const { data: discrepanciasBulk } = useSWR<DiscrepanciasBulk | null>(
+    "discrepancias-bulk",
+    api.discrepanciasBulk,
+    { refreshInterval: 0, revalidateOnFocus: false }
+  );
+  const discrepancias = React.useMemo(() => {
+    if (!discrepanciasBulk?.by_process_id || !contractId) return [];
+    // Buscar por contractId, process_id, o notice_uid
+    const byPid = discrepanciasBulk.by_process_id;
+    const direct = byPid[contractId];
+    if (direct) return direct;
+    // Si data está cargada, intentar también con notice_uid
+    if (data?.notice_uid && byPid[data.notice_uid]) {
+      return byPid[data.notice_uid];
+    }
+    return [];
+  }, [discrepanciasBulk, contractId, data]);
 
   // Cuando un proceso tiene varios contratos firmados (típico en subastas
   // con múltiples ganadores), `data.contratos` trae todos los que comparten
@@ -626,6 +647,78 @@ export function DetailDialog({ contractId, open, onOpenChange }: Props) {
                   </section>
                 );
               })()}
+
+              {/* DISCREPANCIAS ENTRE FUENTES DEL SECOP — cardinal absoluto:
+                  cuando el SECOP MISMO se contradice entre rpmr-utcd y el
+                  portal community.secop, alertamos visiblemente. La Dra
+                  debe verificar contra el portal (que es la verdad cardinal
+                  porque es lo que la entidad sube directamente). El dashboard
+                  ahora prefiere portal sobre rpmr en la cascada (commit r2),
+                  pero seguimos mostrando la discrepancia para total
+                  transparencia ante Compliance. */}
+              {discrepancias.length > 0 && (
+                <section className="border-2 border-rose-300 bg-rose-50/50 rounded-md overflow-hidden">
+                  <div className="bg-rose-100/60 px-4 py-2.5 border-b border-rose-200">
+                    <h3 className="serif text-base font-semibold text-rose-900 flex items-center gap-2">
+                      ⚠️ Las fuentes del SECOP reportan datos distintos
+                    </h3>
+                    <p className="text-[11px] text-rose-800 mt-0.5">
+                      Para este contrato, los datasets del SECOP no coinciden entre sí.
+                      El dashboard usa el valor del <strong>portal community.secop</strong>{" "}
+                      (la verdad cardinal · lo que la entidad sube directamente). Verificá
+                      contra el portal antes de presentar a Compliance.
+                    </p>
+                  </div>
+                  <div className="p-4">
+                    <table className="w-full text-sm">
+                      <thead className="text-[10px] uppercase tracking-wider text-ink-soft border-b border-rose-200">
+                        <tr>
+                          <th className="text-left px-2 py-1">Campo</th>
+                          <th className="text-left px-2 py-1">rpmr-utcd dice</th>
+                          <th className="text-left px-2 py-1">portal dice</th>
+                          <th className="text-right px-2 py-1">Diferencia</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {discrepancias.map((d, i) => {
+                          // Mostrar siempre rpmr a la izquierda y portal a la derecha
+                          const rpmr = d.fuente_a === "rpmr" ? d.valor_a : d.valor_b;
+                          const portal = d.fuente_a === "portal" ? d.valor_a : d.valor_b;
+                          return (
+                            <tr key={i} className="border-b border-rose-100/50 last:border-0">
+                              <td className="px-2 py-1.5 text-xs font-medium text-ink">
+                                {d.campo}
+                              </td>
+                              <td className="px-2 py-1.5 text-xs text-ink-soft font-mono">
+                                {rpmr ?? "—"}
+                              </td>
+                              <td className="px-2 py-1.5 text-xs text-ink font-mono font-semibold">
+                                {portal ?? "—"}
+                              </td>
+                              <td className="px-2 py-1.5 text-xs text-right">
+                                {d.diff_pct != null && (
+                                  <span className={cn(
+                                    "font-mono",
+                                    d.diff_pct > 50 ? "text-rose-700 font-bold" : "text-amber-700",
+                                  )}>
+                                    {d.diff_pct.toFixed(1)}%
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                    <div className="mt-3 pt-2 border-t border-rose-200 text-[10px] text-rose-800 italic">
+                      💡 Cardinal: el portal community.secop tiene los datos REALES
+                      que la entidad subió. Si necesitás verificar manualmente, abrí el
+                      proceso en el portal con el botón &ldquo;Abrir en SECOP II&rdquo;
+                      arriba.
+                    </div>
+                  </div>
+                </section>
+              )}
 
               {/* ALERTAS LEGALES — feedback Cami: que la herramienta sea CLAVE
                   para ella. Las alertas le dicen QUÉ ACCIÓN tomar al ver el
