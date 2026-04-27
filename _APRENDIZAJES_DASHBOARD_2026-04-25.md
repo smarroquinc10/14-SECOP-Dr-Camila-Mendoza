@@ -230,6 +230,100 @@ Toda la suite del batch fail-fast.
 
 ---
 
+### Error #10 — SCROLL_LATERAL_TABLA_8_COLUMNAS
+**Proceso (si aplica)**: ninguno (afecta toda la tabla)
+**Fecha / hora**: 2026-04-27 ~07:30 (Bogotá)
+**Reportado por**: Sergio durante review de Feature G en producción
+**Síntoma exacto**: Sergio capturó screenshot mostrando que la tabla principal hacía scroll horizontal — la columna "Acciones" quedaba parcialmente cortada a la derecha. La regla cardinal "máximo 6-8 columnas, sin scroll horizontal" del CLAUDE.md se rompía cuando agregamos la columna "Sel." (8va columna).
+**Causa**: con la nueva columna de checkboxes "Sel." el total de columnas pasó de 7 a 8. Sumando los `size` definidos: 36+200+(flex)+140+130+170+150+220 ≈ 1046+objeto > 1216px disponibles. La tabla sin `table-fixed` permitía que las celdas empujaran el ancho de columnas y el wrapper `overflow-x-auto` mostraba scroll lateral.
+**Fix propuesto**:
+- Eliminar columna "Sel." separada → mover el checkbox dentro de la columna "Contrato" como flex item a la izquierda con spacer cuando no aplique (alinea filas)
+- Reducir tamaños: valor 140→115, estado 130→105, modificatorios 170→130, origen 150→130, acciones 220→170
+- Agregar `table-fixed` para que las celdas respeten los `size` y no empujen
+**Impacto**: tabla principal · 100% afectada · regla cardinal "sin scroll horizontal" del CLAUDE.md
+**Test que regresione**: e2e con Playwright debe verificar que `document.querySelector('.overflow-x-auto').scrollWidth <= clientWidth`. Pendiente.
+**Smoke test canónico**: cualquier proceso · la tabla debe mostrar las 7 columnas sin scroll en 1280px.
+**Status**: **DEPLOYED** (commit `c57bf83` paquete UX cero-tech)
+
+---
+
+### Error #11 — NTC_WATCH_LIST_FUERA_BATCH
+**Proceso**: 131 NTCs del watch list (CO1.NTC.1183655, CO1.NTC.1206116, CO1.NTC.1208161, ...)
+**Fecha / hora**: 2026-04-26 ~22:00 (Bogotá)
+**Reportado por**: auto-detectado por la auditoría diaria (`audit_dashboard_full.py`)
+**Síntoma exacto**: la auditoría reportaba `coverage=none` para 105 procesos, pero al cross-checkear contra `community.secop.gov.co` muchos tenían datos completos. El batch anterior del scrape solo procesó los 167 que estaban en una lista hardcodeada — los 131 NTCs nuevos del watch list quedaban fuera silenciosamente.
+**Causa**: `scripts/scrape_portal.py` tenía una lista de UIDs cableada que no se sincronizaba con el watch list real. Cada vez que la Dra agregaba links nuevos al watch, no se incorporaban al batch de scrape.
+**Fix propuesto**: leer dinámicamente del `.cache/watched_urls.json` los UIDs scrapeables y procesarlos. Quitar la lista hardcodeada.
+**Impacto**: portal seed · 131/491 (27%) items afectados — gap CARDINAL que dejaba la cobertura en 78.6% en lugar de 97.8%.
+**Test que regresione**: comparar la lista de UIDs del scrape con `len(watched_urls.json)`. Si difiere, fail.
+**Smoke test canónico**: post-scrape, cobertura debe pasar de ~386/491 a ~480/491.
+**Status**: **DEPLOYED** (commit `a86a44b` el 2026-04-26 + batch 2 cerrado en commit `b37026b` el 2026-04-27)
+
+---
+
+### Error #12 — HEADER_FUNCTION_RENDERIZA_SOURCE_CODE
+**Proceso (si aplica)**: ninguno (afecta header de columna)
+**Fecha / hora**: 2026-04-27 ~07:00 (Bogotá)
+**Reportado por**: Sergio capturó screenshot en producción mostrando código JSX raw como header de columna
+**Síntoma exacto**: la primera columna de la tabla (checkbox "Sel.") mostraba `()=>/*#__PURE__*/(0, __TURBOPACK__IMPORTED_MODULE__$5B$PROJECT$5D2F$NODE_MODULES$2F$NEXT$2F$DIST$2F$COMPILED$2F$REACT$2F$JSX$2D$DEV$2D$RUNTIME$2E$JS__$5B$APP$2D$CLIENT$5D$__$28$E$2D$..., ("SPAN", { CLASSNAME: "TEXT-[10PX]"...` — el código fuente de la función JSX renderizado como texto literal. Bug visible cardinal en producción para la Dra abogada.
+**Causa**: `app/src/components/unified-table.tsx` la columna `id: "select"` tenía `header: () => <span>...</span>` (función). El wrapper `ColumnHeader` hace `String(h.column.columnDef.header)` — para una función eso devuelve el SOURCE CODE como texto. Las otras 7 columnas tenían `header: "Contrato"` (string) entonces no caían en el bug.
+**Fix propuesto**: cambiar `header: () => <span>...</span>` a `header: "Sel."` (string simple). El checkbox cell sigue siendo JSX, el header solo necesita un label corto.
+**Impacto**: tabla principal · header columna 1 · 100% visible para todos los usuarios · UX bug crítico (la Dra ve código en producción)
+**Test que regresione**: e2e Playwright debe verificar que ningún `<th>` contenga el string "function" o "=>". Agregado en `scripts/smoke_e2e_camila.py` indirecto via verify columnheader names.
+**Smoke test canónico**: visualmente, header columna 1 debe decir "Sel." no código JSX.
+**Status**: **DEPLOYED** (commit `c57bf83`)
+
+**Lección persistida**: `memory/feedback_tanstack_header_function.md` — TanStack Table requiere `header` como string. Si necesitás JSX, hay que usar `flexRender(column.columnDef.header, context)` en el wrapper (refactor mayor).
+
+---
+
+### Error #13 — ACTUALIZAR_SECOP_NO_REFRESCABA_MODIFICATORIOS
+**Proceso (si aplica)**: afecta el botón principal "Actualizar datos del SECOP"
+**Fecha / hora**: 2026-04-27 ~08:00 (Bogotá)
+**Reportado por**: Sergio durante review · "modificaciones está ahí?"
+**Síntoma exacto**: cuando la Dra clickeaba "Actualizar datos del SECOP" (~1 segundo), el feedback decía "SECOP Integrado actualizado desde datos.gov.co" — pero los modificatorios (lo MÁS RELEVANTE para Camila) NO se actualizaban porque viven en otro dataset.
+**Causa**: `handleIntegradoSync()` en `app/src/app/page.tsx` solo llamaba `api.integradoSync()` que refresca `rpmr-utcd` (SECOP Integrado). Pero los modificatorios viven en `jbjy-vk9h` (contratos firmados) que requiere `reloadContracts()`. El botón principal de la Dra estaba *funcionalmente roto* para el caso de uso que ella prioriza.
+**Fix propuesto**: refrescar AMBOS datasets en paralelo:
+```ts
+await Promise.all([
+  api.integradoSync(),    // rpmr-utcd
+  reloadContracts(),      // jbjy-vk9h ← LOS MODIFICATORIOS VIVEN ACÁ
+]);
+```
+Tiempo total se mantiene en ~1-2 segundos (los 2 fetches a Socrata corren en paralelo, no secuencial).
+**Impacto**: botón principal · 100% afectado · Cami no veía modificatorios frescos al click. Bug cardinal: la Dra cuida específicamente los modificatorios.
+**Test que regresione**: e2e debe verificar que después del click el ModsPanel `total_modificados` se recalcula vs estado anterior.
+**Smoke test canónico**: click "Actualizar datos del SECOP" · feedback debe decir "Datos del SECOP actualizados — contratos, modificatorios y todo lo demás".
+**Status**: **DEPLOYED** (commit `c57bf83`)
+
+**Lección persistida**: `memory/feedback_modificatorios_dataset.md` — los modificatorios viven en `jbjy-vk9h`. Cualquier botón "Actualizar X" que prometa frescura para la Dra debe refrescar AMBOS datasets.
+
+---
+
+### Error #14 — UX_TECNICA_PARA_ABOGADA_CERO_TECH
+**Proceso (si aplica)**: todo el dashboard
+**Fecha / hora**: 2026-04-27 ~08:30 (Bogotá)
+**Reportado por**: Sergio (varios mensajes) · "ella es abogada solo le importan sus links del secop · esos botones no se entienden para qué sirven · todo el tablero debe estar para alguien no tech"
+**Síntoma exacto**: 3 botones del action bar ("Refrescar desde SECOP", "Integrado (382)", "Leer del portal SECOP") parecían lo mismo para Cami abogada. Indicadores con jerga técnica ("Cobertura automática", "Última firma SECOP", "Audit log íntegro"). Badges como "vía Integrado" / "vía portal cache" sin sentido para alguien que no entiende los datasets. Card "Días adicionados" mostrando una métrica técnica que la Dra no usa.
+**Causa**: el dashboard se construyó con mental model de Sergio (IT) — exponiendo cada fuente, cada operación, cada métrica técnica. Para Cami abogada esto es ruido cognitivo que la frena en lugar de ayudarla.
+**Fix propuesto** (paquete completo):
+1. **Action bar**: 1 solo botón visible "Actualizar datos del SECOP" + sección colapsable `<details>` "🔧 Sergio · Operaciones avanzadas (Cami no necesita usar esto)"
+2. **Indicadores**: re-etiquetar — "Cobertura automática" → "Procesos con datos del SECOP", "Última firma SECOP" → "Último contrato firmado", "Audit log" → "Registro auditado"
+3. **Badges**: "vía Integrado" → "Datos SECOP en vivo", "vía portal cache" → "Foto SECOP · hace X días", "No en API público" → "Aún sin publicar"
+4. **Filtros**: "Modalidad de contratación" → "Tipo de contratación", "Hoja Excel" → "Período"
+5. **Modificatorios**: card "Días adicionados" eliminada (no relevante), header destacado "Modificatorios — lo más relevante a revisar · acá los ves todos sin abrir link por link"
+6. **Sublabels visibles** debajo de cada filtro + botón explicando qué incluye/hace en lenguaje cotidiano
+7. **Tooltips multilínea** explicando cada métrica
+8. **Botones acción fila**: "Agregar" → "Sumar a mi lista", "(sin contrato firmado)" → "(contrato aún no firmado)"
+**Impacto**: TODA la UI · 100% afectada · UX cardinal para entrega a la Dra
+**Test que regresione**: smoke test e2e debe verificar que los textos cero-tech aparezcan ("Procesos con datos del SECOP", "Modificatorios — lo más relevante a revisar", etc.). Implementado en `scripts/smoke_e2e_camila.py`.
+**Smoke test canónico**: la Dra debería poder explicar cada parte del dashboard en sus propias palabras de abogada.
+**Status**: **DEPLOYED** (commit `c57bf83`)
+
+**Lección persistida**: `memory/feedback_camila_cero_tech.md` — TODO el dashboard debe estar para alguien no técnico. Lenguaje legal cotidiano. Sin jerga API/portal/scrape. Modificatorios como prioridad cardinal.
+
+---
+
 ## Cierre de cada incidente — checklist
 
 Antes de marcar un Error como **DEPLOYED**:
