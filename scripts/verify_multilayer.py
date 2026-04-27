@@ -26,6 +26,8 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
@@ -35,6 +37,54 @@ from typing import Callable
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PROD_URL = "https://smarroquinc10.github.io/14-SECOP-Dr-Camila-Mendoza"
+
+# CARDINAL · cero falsos positivos: errores transitorios de red/CPU NUNCA
+# deben causar fail de una capa. Patrones que disparan retry automático
+# con backoff exponencial:
+TRANSIENT_PATTERNS = (
+    "connectex",                       # Windows: TCP connect refused/timeout
+    "winerror 10054",                  # connection reset by peer
+    "winerror 10060",                  # TCP timeout
+    "winerror 10061",                  # connection refused
+    "connection timed out",
+    "connection reset",
+    "connection refused",
+    "error connecting",                # gh CLI: "error connecting to api.github.com"
+    "failed to connect",
+    "could not resolve host",
+    "network is unreachable",
+    "no route to host",
+    "ssl: handshake",                  # SSL handshake transitorio
+    "tls handshake",
+    # DNS hipos (resolver caído / WiFi dropouts / Windows DNS cache miss)
+    "getaddrinfo",
+    "11001",                           # Windows: WSAHOST_NOT_FOUND
+    "11002",                           # Windows: WSATRY_AGAIN
+    "host not found",
+    "no address associated",
+    "temporary failure in name resolution",
+    "name or service not known",
+    "nodename nor servname provided",
+    # Network mid-stream
+    "remote end closed connection",
+    "incomplete read",
+    # Server-side transitorios
+    "bad gateway",                     # 502
+    "gateway timeout",                 # 504
+    "service unavailable",             # 503
+    "internal server error",           # 500
+    # Genéricos
+    "timeout",
+    "timed out",
+)
+
+
+def _is_transient_error(text: str) -> bool:
+    """¿El texto del error es un fallo transitorio de red/CPU?"""
+    if not text:
+        return False
+    lower = text.lower()
+    return any(p in lower for p in TRANSIENT_PATTERNS)
 
 
 @dataclass
@@ -48,28 +98,81 @@ class CapaResult:
         return "✅" if self.passed else "❌"
 
 
-def run_cmd(cmd: list[str], cwd: Path | None = None, timeout: int = 60) -> tuple[int, str]:
-    """Run a shell command and return (exit_code, output)."""
-    try:
-        result = subprocess.run(
-            cmd,
-            cwd=cwd or REPO_ROOT,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            encoding="utf-8",
-            errors="replace",
-        )
-        return result.returncode, (result.stdout or "") + (result.stderr or "")
-    except subprocess.TimeoutExpired:
-        return 124, f"TIMEOUT after {timeout}s"
-    except Exception as e:
-        return 1, f"ERROR: {e}"
+def run_cmd(
+    cmd: list[str],
+    cwd: Path | None = None,
+    timeout: int = 60,
+    retries: int = 2,
+) -> tuple[int, str]:
+    """Run a shell command and return (exit_code, output).
+
+    Cardinal · cero FP: si el primer intento falla con error transitorio
+    (red TCP, CPU saturation, gh CLI hipo), reintenta con backoff
+    exponencial (2s, 5s) antes de declarar fail real. Total: hasta 3
+    intentos por defecto.
+    """
+    last_code, last_out = 1, ""
+    backoffs = [2, 5, 10]
+    attempts = retries + 1
+    for i in range(attempts):
+        try:
+            result = subprocess.run(
+                cmd,
+                cwd=cwd or REPO_ROOT,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                encoding="utf-8",
+                errors="replace",
+            )
+            last_code = result.returncode
+            last_out = (result.stdout or "") + (result.stderr or "")
+        except subprocess.TimeoutExpired:
+            last_code = 124
+            last_out = f"TIMEOUT after {timeout}s"
+        except Exception as e:
+            last_code = 1
+            last_out = f"ERROR: {e}"
+
+        # Éxito
+        if last_code == 0:
+            return last_code, last_out
+
+        # Falla → ¿es transitoria y queda retry?
+        if i < attempts - 1 and (last_code == 124 or _is_transient_error(last_out)):
+            time.sleep(backoffs[min(i, len(backoffs) - 1)])
+            continue
+        return last_code, last_out
+    return last_code, last_out
 
 
-def http_get_json(url: str, timeout: int = 15):
-    with urllib.request.urlopen(url, timeout=timeout) as r:
-        return json.loads(r.read())
+def http_get_json(url: str, timeout: int = 15, retries: int = 2):
+    """HTTP GET → JSON. Cardinal · cero FP: retry con backoff en errores
+    transitorios (5xx, timeout, connection reset). Total hasta 3 intentos."""
+    last_exc: Exception | None = None
+    backoffs = [2, 5, 10]
+    attempts = retries + 1
+    for i in range(attempts):
+        try:
+            with urllib.request.urlopen(url, timeout=timeout) as r:
+                return json.loads(r.read())
+        except urllib.error.HTTPError as e:
+            last_exc = e
+            # 4xx (excepto 408/429) son fallas reales del request, no retry
+            if e.code >= 500 or e.code in (408, 429):
+                if i < attempts - 1:
+                    time.sleep(backoffs[min(i, len(backoffs) - 1)])
+                    continue
+            raise
+        except (urllib.error.URLError, TimeoutError, OSError) as e:
+            last_exc = e
+            if i < attempts - 1 and _is_transient_error(str(e)):
+                time.sleep(backoffs[min(i, len(backoffs) - 1)])
+                continue
+            raise
+    if last_exc:
+        raise last_exc
+    raise RuntimeError(f"http_get_json sin éxito tras {attempts} intentos · {url}")
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -77,9 +180,20 @@ def http_get_json(url: str, timeout: int = 15):
 # ─────────────────────────────────────────────────────────────────────
 def capa_1_pytest() -> CapaResult:
     py = REPO_ROOT / ".venv" / "Scripts" / "python.exe"
-    code, out = run_cmd([str(py), "-X", "utf8", "-m", "pytest", "-q"], timeout=120)
+    # CARDINAL · cero FP: pytest pasa típicamente en 17-90s. Bajo carga
+    # (otra corrida concurrente, IO heavy) puede tardar más. timeout=300s
+    # cubre escenarios reales sin permitir hangs reales. retries=0 porque
+    # un test FAIL real no es transitorio (no tiene sentido retry).
+    code, out = run_cmd(
+        [str(py), "-X", "utf8", "-m", "pytest", "-q"], timeout=300, retries=0
+    )
+    # Si TIMEOUT puro (124) puede ser carga puntual del sistema · 1 retry
+    # con timeout aún más generoso antes de declarar fail.
+    if code == 124:
+        code, out = run_cmd(
+            [str(py), "-X", "utf8", "-m", "pytest", "-q"], timeout=600, retries=0
+        )
     if code == 0 and "passed" in out.lower():
-        # Parse "192 passed"
         import re
         m = re.search(r"(\d+)\s+passed", out)
         n = m.group(1) if m else "?"
@@ -433,29 +547,67 @@ def capa_11_pdfs_portal() -> CapaResult:
             else:
                 sin_docs += 1
 
-        # Verificar que un PDF random sea HTTP HEAD-able
-        pdf_test_status = "n/a"
-        if sample_uid_con_docs:
-            sample_doc = seed[sample_uid_con_docs]["documents"][0]
-            pdf_url = sample_doc.get("url", "")
-            if pdf_url.startswith("http"):
+        # CARDINAL · cero FP: el portal community.secop SIEMPRE rechaza
+        # HEAD con 403 Forbidden (comportamiento documentado del SECOP).
+        # Por eso usamos GET con Range bytes=0-0 (descarga 1 byte) +
+        # User-Agent de browser real. Servidor devuelve 206 Partial
+        # Content si soporta Range, 200 si descarga completo.
+        # Probamos 5 PDFs distintos · reportamos X/5 accesibles.
+        sample_uids = [u for u, e in seed.items() if (e.get("documents") or [])][:50]
+        step = max(1, len(sample_uids) // 5) if sample_uids else 1
+        pdf_samples = sample_uids[::step][:5]
+        pdf_ok = 0
+        pdf_total = 0
+        for uid in pdf_samples:
+            doc = seed[uid]["documents"][0]
+            pdf_url = doc.get("url", "")
+            if not pdf_url.startswith("http"):
+                continue
+            pdf_total += 1
+            backoffs = [2, 5]
+            for attempt in range(3):
                 try:
-                    req = urllib.request.Request(pdf_url, method="HEAD")
-                    with urllib.request.urlopen(req, timeout=10) as r:
-                        pdf_test_status = f"sample HTTP {r.status}"
+                    req = urllib.request.Request(pdf_url)
+                    req.add_header("Range", "bytes=0-0")
+                    req.add_header(
+                        "User-Agent",
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                        "AppleWebKit/537.36 (KHTML, like Gecko) "
+                        "Chrome/131.0.0.0 Safari/537.36",
+                    )
+                    with urllib.request.urlopen(req, timeout=15) as r:
+                        if r.status in (200, 206):
+                            pdf_ok += 1
+                            break
                 except Exception as e:
-                    pdf_test_status = f"sample FAIL: {str(e)[:50]}"
+                    if attempt < 2 and _is_transient_error(str(e)):
+                        time.sleep(backoffs[attempt])
+                        continue
+                    break
+        pdf_test_status = (
+            f"PDFs {pdf_ok}/{pdf_total} accesibles (GET Range)"
+            if pdf_total
+            else "n/a"
+        )
 
         if con_docs == 0:
             return CapaResult("PDFs portal en producción", False, "0 procesos tienen documentos en el seed!")
 
-        # >= 80% de procesos del seed deberían tener al menos 1 documento
+        # >= 70% de procesos del seed deberían tener al menos 1 documento
         pct_con_docs = (con_docs / total) * 100 if total > 0 else 0
         if pct_con_docs < 70:
             return CapaResult(
                 "PDFs portal en producción",
                 False,
                 f"solo {pct_con_docs:.0f}% del portal tiene docs (esperado >70%) · {con_docs}/{total} con docs · {total_docs} PDFs totales",
+            )
+        # CARDINAL: si TODOS los samples HEAD rebotan = portal SECOP caído
+        # o nuestros URLs son inválidos. Es fail real, no informativo.
+        if pdf_total > 0 and pdf_ok == 0:
+            return CapaResult(
+                "PDFs portal en producción",
+                False,
+                f"{pdf_total}/5 PDFs sample dieron 0/100% HTTP 200 · portal SECOP posiblemente caído · {con_docs}/{total} con docs registrados",
             )
         return CapaResult(
             "PDFs portal en producción",
