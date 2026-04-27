@@ -177,9 +177,17 @@ export default function HomePage() {
     [watched]
   );
 
-  // Coverage stats — qué porcentaje del watch list tiene datos automáticos
-  // vs muestra "—" honesto. La Dra ve transparencia total: cuánto el sistema
-  // cubre solo y cuánto requiere acción humana (botón "Abrir" o scrape local).
+  // Coverage stats — DOS dimensiones cardinales (2026-04-27 r3 · feedback
+  // Sergio "total confianza · solo lo que la Dra ve manualmente"):
+  //
+  // 1. CONFIABLE = api + portal — fuentes verificadas. Datos en los que
+  //    la Dra puede confiar para presentar a Compliance.
+  //
+  // 2. DETECTADO = api + portal + integrado — el proceso EXISTE en SECOP
+  //    pero los valores del Integrado pueden tener drift (95% drift
+  //    detectado en rpmr-only).
+  //
+  // La Dra ve ambas cifras: confiable (322/491 ~66%) vs detectado (480/491 ~98%).
   const coverageStats = React.useMemo(() => {
     const watched_rows = allRows.filter((r) => r.watched);
     const total = watched_rows.length;
@@ -187,9 +195,24 @@ export default function HomePage() {
     const integrado = watched_rows.filter((r) => r.data_source === "integrado").length;
     const portal = watched_rows.filter((r) => r.data_source === "portal").length;
     const none = watched_rows.filter((r) => r.data_source == null).length;
-    const cubierto = api + integrado + portal;
-    const pct = total > 0 ? Math.round((cubierto / total) * 100) : 0;
-    return { total, api, integrado, portal, none, cubierto, pct };
+    const confiable = api + portal;  // Sin rpmr-only (puede tener drift)
+    const detectado = api + portal + integrado;  // Total presencia en SECOP
+    const pctConfiable = total > 0 ? Math.round((confiable / total) * 100) : 0;
+    const pctDetectado = total > 0 ? Math.round((detectado / total) * 100) : 0;
+    return {
+      total,
+      api,
+      integrado,
+      portal,
+      none,
+      confiable,
+      detectado,
+      pctConfiable,
+      pctDetectado,
+      // Mantener compatibilidad con código existente (cubierto = detectado)
+      cubierto: detectado,
+      pct: pctDetectado,
+    };
   }, [allRows]);
 
   // Frescura del SECOP — fecha del contrato más reciente entre los watched.
@@ -711,38 +734,49 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* Cobertura del watch list — re-etiquetada para la Dra abogada
-            cero tech: "Procesos con datos del SECOP" en lugar de
-            "Cobertura automática" tecnicismo. */}
+        {/* Cobertura DUAL — total confianza cardinal (2026-04-27 r3):
+            distinguir entre "confiable" (api + portal · lo que la Dra ve
+            si abre el link) vs "detectado" (incluye rpmr-only que puede
+            tener drift). Transparencia total para Compliance. */}
         {coverageStats.total > 0 && (
           <div
             className="flex flex-col text-[11px] text-ink-soft border-l border-rule pl-3"
             title={
-              `De los ${coverageStats.total} procesos que vos seguís, ` +
-              `${coverageStats.cubierto} ya tienen datos extraídos del SECOP automáticamente. ` +
-              `Los ${coverageStats.none} restantes son casos especiales: borradores que el SECOP ` +
-              `aún no publica, o procesos en limbo. Para esos podés clickear "Abrir" y ver el ` +
-              `proceso en SECOP a mano.`
+              `De los ${coverageStats.total} procesos que vos seguís:\n\n` +
+              `  ✅ ${coverageStats.confiable} (${coverageStats.pctConfiable}%) tienen datos VERIFICADOS\n` +
+              `     contra el portal community.secop · 100% confiables\n\n` +
+              `  ⚠️ ${coverageStats.integrado} están solo en SECOP Integrado (rpmr-utcd)\n` +
+              `     sin verificar contra portal · valores pueden tener drift\n\n` +
+              `  ❌ ${coverageStats.none} son borradores REQ o PPI sin notice_uid\n` +
+              `     que el SECOP no expone públicamente · cardinal-imposibles`
             }
           >
             <span className="eyebrow">Procesos con datos del SECOP</span>
             <span className="font-mono text-ink">
               <span
                 className={cn(
-                  coverageStats.pct >= 80
+                  coverageStats.pctConfiable >= 80
                     ? "text-emerald-700"
-                    : coverageStats.pct >= 50
+                    : coverageStats.pctConfiable >= 50
                     ? "text-amber-700"
                     : "text-rose-700"
                 )}
               >
-                {coverageStats.cubierto}/{coverageStats.total}
+                {coverageStats.confiable}/{coverageStats.total}
               </span>
               {" · "}
-              <span className="text-ink-soft">{coverageStats.pct}%</span>
+              <span className="text-ink-soft">{coverageStats.pctConfiable}% confiables</span>
             </span>
             <span className="text-[10px] mt-0.5">
-              {coverageStats.none} sin datos públicos · click &ldquo;Abrir&rdquo; para verlos a mano
+              {coverageStats.integrado > 0 && (
+                <span className="text-amber-700">
+                  + {coverageStats.integrado} con drift posible
+                </span>
+              )}
+              {coverageStats.integrado > 0 && coverageStats.none > 0 && " · "}
+              {coverageStats.none > 0 && (
+                <span>{coverageStats.none} sin publicar</span>
+              )}
             </span>
           </div>
         )}

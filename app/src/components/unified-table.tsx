@@ -860,14 +860,31 @@ export function UnifiedTable({
                   ⚠️ {r.discrepancias.length} discrepancia{r.discrepancias.length !== 1 ? "s" : ""}
                 </div>
               )}
-              {r.data_source === "integrado" && (
-                <div
-                  className="mt-1 inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-medium"
-                  title="Los datos vienen del SECOP en vivo. Se actualizaron en la última sincronización."
-                >
-                  Datos SECOP en vivo
-                </div>
-              )}
+              {r.data_source === "integrado" && (() => {
+                // CARDINAL (2026-04-27): cuando solo está en rpmr-utcd y NO
+                // en portal, los valores pueden tener drift (95% de los rpmr-
+                // only tienen discrepancia detectada). Badge cardinal rojo
+                // alerta que la Dra debe verificar en el link directamente.
+                const tieneDrift = r.discrepancias && r.discrepancias.length > 0;
+                if (tieneDrift) {
+                  return (
+                    <div
+                      className="mt-1 inline-flex items-center px-1.5 py-0.5 rounded bg-rose-100 text-rose-900 border border-rose-400 text-[9px] font-bold"
+                      title="🚨 ALERTA CARDINAL: este proceso solo está en SECOP Integrado (rpmr-utcd) y se detectó drift de valores con el portal. Los valores mostrados PUEDEN SER INCORRECTOS. Verificá DIRECTAMENTE en el link al portal community.secop antes de confiar."
+                    >
+                      🚨 Drift detectado · NO confiar
+                    </div>
+                  );
+                }
+                return (
+                  <div
+                    className="mt-1 inline-flex items-center px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-300 text-[9px] font-medium"
+                    title="⚠️ Solo está en el SECOP Integrado (rpmr-utcd), no en el portal community.secop. El SECOP Integrado a veces tiene valores con drift. Para 100% confianza: click 'Abrir' y verificá en el portal."
+                  >
+                    ⚠️ Solo SECOP Integrado · usá el link
+                  </div>
+                );
+              })()}
               {r.data_source === "portal" && (() => {
                 const age = formatAge(r.data_source_scraped_at);
                 const fechaCorta =
