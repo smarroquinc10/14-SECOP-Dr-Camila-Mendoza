@@ -287,6 +287,433 @@ export function DetailDialog({ contractId, open, onOpenChange }: Props) {
                 </div>
               )}
 
+              {/* RESUMEN EJECUTIVO COMPLETO — feedback Cami (2026-04-27):
+                  "dejarle a la mano clave para que ella mire de una · fijo
+                  MÁS info la quiere a la mano". Toda la info legal del
+                  contrato visible al primer scroll: identificación, estado,
+                  plata, tiempos, contratista, supervisión, modalidad legal,
+                  recursos, garantías, geografía. Camila NO tiene que cazar
+                  nada — todo está acá. */}
+              {(() => {
+                const c = contract as Record<string, unknown>;
+                const num = String(c.referencia_del_contrato ?? c.id_contrato ?? "");
+                const proveedor = String(c.proveedor_adjudicado ?? "");
+                const tipoDoc = String(c.tipodocproveedor ?? "");
+                const docProv = String(c.documento_proveedor ?? "");
+                const repLegal = String(c.nombre_representante_legal ?? "");
+                const objeto = String(c.objeto_del_contrato ?? "");
+                const estado = String(c.estado_contrato ?? "");
+                const valor = Number(c.valor_del_contrato ?? 0);
+                const valorPagado = Number(c.valor_pagado ?? 0);
+                const valorPendiente = Number(c.valor_pendiente_de_pago ?? 0);
+                const valorFacturado = Number(c.valor_facturado ?? 0);
+                const valorAnticipo = Number(c.valor_de_pago_adelantado ?? 0);
+                const habilitaAnticipo = String(c.habilita_pago_adelantado ?? "").toLowerCase();
+                const fechaFirma = String(c.fecha_de_firma ?? "").slice(0, 10);
+                const fechaInicio = String(c.fecha_de_inicio_del_contrato ?? "").slice(0, 10);
+                const fechaFin = String(c.fecha_de_fin_del_contrato ?? "").slice(0, 10);
+                const duracion = String(c.duraci_n_del_contrato ?? "");
+                const dias = Number(c.dias_adicionados ?? 0);
+                const supervisor = String(c.nombre_supervisor ?? "");
+                const idSupervisor = String(c.n_mero_de_documento_supervisor ?? "");
+                const ordenadorGasto = String(c.nombre_ordenador_del_gasto ?? "");
+                const ordenadorPago = String(c.nombre_ordenador_de_pago ?? "");
+                const modalidad = String(c.modalidad_de_contratacion ?? "");
+                const tipoContrato = String(c.tipo_de_contrato ?? "");
+                const justificacion = String(c.justificacion_modalidad_de ?? "");
+                const origenRecursos = String(c.origen_de_los_recursos ?? "");
+                const destinoGasto = String(c.destino_gasto ?? "");
+                const departamento = String(c.departamento ?? "");
+                const ciudad = String(c.ciudad ?? "");
+                const esPyme = String(c.es_pyme ?? "").toLowerCase() === "si";
+                const liquidacion = String(c.liquidaci_n ?? "").toLowerCase();
+                const fechaInicLiq = String(c.fecha_inicio_liquidacion ?? "").slice(0, 10);
+                const fechaFinLiq = String(c.fecha_fin_liquidacion ?? "").slice(0, 10);
+                const ultimaAct = String(c.ultima_actualizacion ?? "").slice(0, 10);
+                const puedeProrrogar = String(c.el_contrato_puede_ser_prorrogado ?? "").toLowerCase();
+                const reversion = String(c.reversion ?? "").toLowerCase();
+                const obAmbiental = String(c.obligaci_n_ambiental ?? "");
+                const sector = String(c.sector ?? "");
+                const sibCount = sibContratos.length;
+
+                // Calcular días para vencer
+                let diasParaVencer: number | null = null;
+                if (fechaFin) {
+                  const fin = new Date(fechaFin);
+                  if (!isNaN(fin.getTime())) {
+                    diasParaVencer = Math.floor(
+                      (fin.getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+                    );
+                  }
+                }
+                if (!proveedor && !objeto && !valor && !estado) return null;
+
+                const estadoBadgeColor =
+                  /modific/i.test(estado)
+                    ? "bg-amber-100 text-amber-900 border-amber-300"
+                    : /ejecuc/i.test(estado)
+                    ? "bg-emerald-100 text-emerald-900 border-emerald-300"
+                    : /liquidad/i.test(estado)
+                    ? "bg-stone-100 text-stone-700 border-stone-300"
+                    : /cancel/i.test(estado)
+                    ? "bg-rose-100 text-rose-900 border-rose-300"
+                    : /borrador|aprob|preparac/i.test(estado)
+                    ? "bg-sky-100 text-sky-900 border-sky-300"
+                    : "bg-stone-100 text-ink border-stone-300";
+
+                return (
+                  <section className="border-2 border-burgundy/30 bg-gradient-to-br from-burgundy/[0.03] to-transparent rounded-md overflow-hidden">
+                    <div className="bg-burgundy/5 px-4 py-2.5 border-b border-burgundy/20">
+                      <h3 className="serif text-base font-semibold text-burgundy flex items-center gap-2">
+                        📋 Resumen ejecutivo del contrato
+                      </h3>
+                      <p className="text-[11px] text-ink-soft mt-0.5">
+                        Toda la información clave a la mano · sin abrir SECOP
+                      </p>
+                    </div>
+
+                    <div className="p-4 space-y-4 text-sm">
+                      {/* IDENTIFICACIÓN */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {num && (
+                          <div>
+                            <div className="text-[10px] uppercase tracking-wider text-ink-soft mb-1">
+                              Número del contrato
+                            </div>
+                            <div className="font-mono text-ink">{num}</div>
+                          </div>
+                        )}
+                        {estado && (
+                          <div>
+                            <div className="text-[10px] uppercase tracking-wider text-ink-soft mb-1">
+                              Estado actual
+                            </div>
+                            <span className={cn("inline-flex items-center px-2.5 py-1 rounded text-sm font-medium border", estadoBadgeColor)}>
+                              {estado}
+                            </span>
+                            {ultimaAct && (
+                              <div className="text-[10px] text-ink-soft mt-1">
+                                Última actualización SECOP: {ultimaAct}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* OBJETO COMPLETO (sin truncar — feedback Cami: "el objeto no puede estar resumido") */}
+                      {objeto && (
+                        <div className="pt-3 border-t border-rule">
+                          <div className="text-[10px] uppercase tracking-wider text-ink-soft mb-1">
+                            Objeto del contrato (texto completo)
+                          </div>
+                          <div className="text-ink text-sm leading-relaxed whitespace-pre-wrap">
+                            {objeto}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* CONTRATISTA */}
+                      {proveedor && (
+                        <div className="pt-3 border-t border-rule">
+                          <div className="text-[10px] uppercase tracking-wider text-ink-soft mb-1">
+                            Contratista
+                          </div>
+                          <div className="text-ink font-medium">{proveedor}</div>
+                          <div className="text-[11px] text-ink-soft mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
+                            {tipoDoc && docProv && (
+                              <span><span className="font-mono">{tipoDoc} {docProv}</span></span>
+                            )}
+                            {repLegal && (
+                              <span>Representante legal: <span className="text-ink">{repLegal}</span></span>
+                            )}
+                            {esPyme && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px]">
+                                🏢 PYME
+                              </span>
+                            )}
+                            {(departamento || ciudad) && (
+                              <span>📍 {[ciudad, departamento].filter(Boolean).join(", ")}</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* PLATA / VALORES */}
+                      {valor > 0 && (
+                        <div className="pt-3 border-t border-rule">
+                          <div className="text-[10px] uppercase tracking-wider text-ink-soft mb-1">
+                            Valor del contrato
+                          </div>
+                          <div className="font-mono text-lg font-semibold text-ink">
+                            {moneyCO.format(valor)}
+                          </div>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2 text-xs">
+                            {valorFacturado > 0 && (
+                              <div>
+                                <div className="text-[10px] text-ink-soft">Facturado</div>
+                                <div className="font-mono text-ink">{moneyCO.format(valorFacturado)}</div>
+                              </div>
+                            )}
+                            {valorPagado > 0 && (
+                              <div>
+                                <div className="text-[10px] text-ink-soft">Pagado</div>
+                                <div className="font-mono text-emerald-700">{moneyCO.format(valorPagado)}</div>
+                              </div>
+                            )}
+                            {valorPendiente > 0 && (
+                              <div>
+                                <div className="text-[10px] text-ink-soft">Pendiente</div>
+                                <div className="font-mono text-rose-700 font-semibold">{moneyCO.format(valorPendiente)}</div>
+                              </div>
+                            )}
+                            {valorAnticipo > 0 && (
+                              <div>
+                                <div className="text-[10px] text-ink-soft">Anticipo</div>
+                                <div className="font-mono text-ink">{moneyCO.format(valorAnticipo)}</div>
+                              </div>
+                            )}
+                          </div>
+                          {(habilitaAnticipo || origenRecursos || destinoGasto) && (
+                            <div className="text-[11px] text-ink-soft mt-2 flex flex-wrap gap-x-3 gap-y-0.5">
+                              {habilitaAnticipo === "si" && <span>💰 Anticipo habilitado</span>}
+                              {origenRecursos && <span>Origen: <span className="text-ink">{origenRecursos}</span></span>}
+                              {destinoGasto && <span>Destino: <span className="text-ink">{destinoGasto}</span></span>}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* LÍNEA DE TIEMPO */}
+                      {(fechaFirma || fechaInicio || fechaFin) && (
+                        <div className="pt-3 border-t border-rule">
+                          <div className="text-[10px] uppercase tracking-wider text-ink-soft mb-1">
+                            Línea de tiempo del contrato
+                          </div>
+                          <div className="flex flex-wrap gap-x-6 gap-y-1.5 text-xs">
+                            {fechaFirma && (
+                              <span><span className="text-ink-soft">📝 Firmado: </span><span className="font-mono text-ink">{fechaFirma}</span></span>
+                            )}
+                            {fechaInicio && (
+                              <span><span className="text-ink-soft">▶ Inicio: </span><span className="font-mono text-ink">{fechaInicio}</span></span>
+                            )}
+                            {fechaFin && (
+                              <span>
+                                <span className="text-ink-soft">⏹ Termina: </span>
+                                <span className="font-mono text-ink">{fechaFin}</span>
+                                {diasParaVencer !== null && (
+                                  <span className={cn("ml-1.5 text-[11px]",
+                                    diasParaVencer < 0 ? "text-stone-500 italic" :
+                                    diasParaVencer <= 30 ? "text-rose-700 font-semibold" :
+                                    diasParaVencer <= 90 ? "text-amber-700" :
+                                    "text-ink-soft",
+                                  )}>
+                                    {diasParaVencer < 0
+                                      ? `(terminó hace ${Math.abs(diasParaVencer)} días)`
+                                      : diasParaVencer === 0
+                                      ? "(vence HOY)"
+                                      : `(${diasParaVencer} días para vencer)`}
+                                  </span>
+                                )}
+                              </span>
+                            )}
+                            {duracion && (
+                              <span><span className="text-ink-soft">⏱ Duración: </span><span className="font-mono text-ink">{duracion}</span></span>
+                            )}
+                            {dias > 0 && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 text-[10px]">
+                                + {dias} días por prórroga
+                              </span>
+                            )}
+                            {puedeProrrogar === "si" && (
+                              <span className="text-emerald-700 text-[10px]">✓ puede prorrogarse</span>
+                            )}
+                          </div>
+                          {(fechaInicLiq || fechaFinLiq) && (
+                            <div className="text-[11px] text-ink-soft mt-1.5">
+                              {fechaInicLiq && <span>Liquidación inicia: <span className="font-mono text-ink">{fechaInicLiq}</span></span>}
+                              {fechaInicLiq && fechaFinLiq && <span> · </span>}
+                              {fechaFinLiq && <span>Liquidación finaliza: <span className="font-mono text-ink">{fechaFinLiq}</span></span>}
+                            </div>
+                          )}
+                          {liquidacion === "si" && (
+                            <div className="text-[10px] text-sky-700 mt-1 italic">
+                              📋 Este contrato requiere liquidación
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* SUPERVISIÓN Y ORDEN */}
+                      {(supervisor || ordenadorGasto || ordenadorPago) && (
+                        <div className="pt-3 border-t border-rule">
+                          <div className="text-[10px] uppercase tracking-wider text-ink-soft mb-1">
+                            Personas a cargo
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                            {supervisor && (
+                              <div>
+                                <span className="text-ink-soft">👁 Supervisor: </span>
+                                <span className="text-ink">{supervisor}</span>
+                                {idSupervisor && (
+                                  <span className="text-[10px] font-mono text-ink-soft ml-1">({idSupervisor})</span>
+                                )}
+                              </div>
+                            )}
+                            {ordenadorGasto && (
+                              <div>
+                                <span className="text-ink-soft">✍ Ordenador del gasto: </span>
+                                <span className="text-ink">{ordenadorGasto}</span>
+                              </div>
+                            )}
+                            {ordenadorPago && (
+                              <div>
+                                <span className="text-ink-soft">💳 Ordenador del pago: </span>
+                                <span className="text-ink">{ordenadorPago}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* MODALIDAD Y TIPO LEGAL */}
+                      {(modalidad || tipoContrato || justificacion) && (
+                        <div className="pt-3 border-t border-rule">
+                          <div className="text-[10px] uppercase tracking-wider text-ink-soft mb-1">
+                            Modalidad legal y tipo
+                          </div>
+                          <div className="space-y-1 text-xs">
+                            {modalidad && (
+                              <div>
+                                <span className="text-ink-soft">Modalidad: </span>
+                                <span className="text-ink">{modalidad}</span>
+                              </div>
+                            )}
+                            {tipoContrato && (
+                              <div>
+                                <span className="text-ink-soft">Tipo: </span>
+                                <span className="text-ink">{tipoContrato}</span>
+                              </div>
+                            )}
+                            {justificacion && (
+                              <div>
+                                <span className="text-ink-soft">Justificación: </span>
+                                <span className="text-ink italic">{justificacion}</span>
+                              </div>
+                            )}
+                            {sector && (
+                              <div>
+                                <span className="text-ink-soft">Sector: </span>
+                                <span className="text-ink">{sector}</span>
+                              </div>
+                            )}
+                            {reversion === "si" && (
+                              <div className="text-amber-700 text-[10px]">⚠ Tiene cláusula de reversión</div>
+                            )}
+                            {obAmbiental && obAmbiental.toLowerCase() !== "no" && obAmbiental.toLowerCase() !== "no aplica" && (
+                              <div className="text-amber-700 text-[10px]">🌱 Obligación ambiental: {obAmbiental}</div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* HERMANOS — otros contratos del mismo proceso */}
+                      {sibCount > 0 && (
+                        <div className="pt-3 border-t border-rule text-[11px] text-ink-soft italic">
+                          Este proceso tiene {sibCount} {sibCount === 1 ? "contrato hermano" : "contratos hermanos"} firmados (ver sección al final del modal)
+                        </div>
+                      )}
+                    </div>
+                  </section>
+                );
+              })()}
+
+              {/* ALERTAS LEGALES — feedback Cami: que la herramienta sea CLAVE
+                  para ella. Las alertas le dicen QUÉ ACCIÓN tomar al ver el
+                  contrato, sin tener que analizar campos uno por uno. */}
+              {(() => {
+                const c = contract as Record<string, unknown>;
+                const estado = String(c.estado_contrato ?? "");
+                const fechaFin = String(c.fecha_de_fin_del_contrato ?? "").slice(0, 10);
+                const valorPendiente = Number(c.valor_pendiente_de_pago ?? 0);
+                const liquidacion = String(c.liquidaci_n ?? "").toLowerCase();
+
+                const alertas: { icon: string; text: string; cls: string }[] = [];
+
+                // Vence pronto
+                if (fechaFin) {
+                  const fin = new Date(fechaFin);
+                  if (!isNaN(fin.getTime())) {
+                    const dias = Math.floor(
+                      (fin.getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+                    );
+                    if (dias >= 0 && dias <= 30) {
+                      alertas.push({
+                        icon: "⏰",
+                        text:
+                          dias === 0
+                            ? "Este contrato vence HOY · considerar liquidación o prórroga inmediata"
+                            : `Este contrato vence en ${dias} ${dias === 1 ? "día" : "días"} · considerar liquidación o prórroga`,
+                        cls: "bg-rose-50 border-rose-200 text-rose-900",
+                      });
+                    } else if (dias < 0 && !/liquidad/i.test(estado)) {
+                      alertas.push({
+                        icon: "⚠️",
+                        text: `La fecha de terminación pasó hace ${Math.abs(dias)} días y el contrato no aparece como liquidado · revisar liquidación`,
+                        cls: "bg-amber-50 border-amber-200 text-amber-900",
+                      });
+                    } else if (dias > 30 && dias <= 90) {
+                      alertas.push({
+                        icon: "📅",
+                        text: `Este contrato vence en ${dias} días · planificar liquidación o renovación`,
+                        cls: "bg-amber-50 border-amber-200 text-amber-900",
+                      });
+                    }
+                  }
+                }
+
+                // Pagos pendientes
+                if (valorPendiente > 0) {
+                  alertas.push({
+                    icon: "💰",
+                    text: `Hay ${moneyCO.format(valorPendiente)} pendientes de pago al contratista · revisar tesorería`,
+                    cls: "bg-amber-50 border-amber-200 text-amber-900",
+                  });
+                }
+
+                // Requiere liquidación según SECOP
+                if (liquidacion === "si" && !/liquidad/i.test(estado)) {
+                  alertas.push({
+                    icon: "📋",
+                    text: "Este contrato requiere liquidación según SECOP · verificar acta",
+                    cls: "bg-sky-50 border-sky-200 text-sky-900",
+                  });
+                }
+
+                if (alertas.length === 0) return null;
+
+                return (
+                  <section>
+                    <div className="eyebrow mb-2 flex items-center gap-1.5">
+                      🚨 Alertas legales del contrato
+                    </div>
+                    <div className="space-y-1.5">
+                      {alertas.map((a, i) => (
+                        <div
+                          key={i}
+                          className={cn(
+                            "flex items-start gap-2 px-3 py-2 rounded-md border text-sm",
+                            a.cls,
+                          )}
+                        >
+                          <span className="shrink-0">{a.icon}</span>
+                          <span>{a.text}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                );
+              })()}
+
               {/* Sección "Modificatorios detectados" — feedback Cami abogada
                   (2026-04-27): cuando el contrato esté modificado, mostrar
                   un resumen DESTACADO al inicio del modal con la info clave:
