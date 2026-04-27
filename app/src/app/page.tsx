@@ -51,7 +51,9 @@ export default function HomePage() {
   // CARDINAL PURO (Sergio 2026-04-27): SWR fetches a contracts (jbjy) y
   // integradoBulk (rpmr) ELIMINADOS. La app solo lee del watch list +
   // portal cache · cero datos derivados de fuentes que mienten.
-  const { data: feab } = useSWR("feab", api.feab, { refreshInterval: 0 });
+  // CARDINAL PURO (Sergio 2026-04-27): SWR fetch a `feab` ELIMINADO ·
+  // ese endpoint cuenta jbjy + rpmr (datasets que la app ya no usa en UI).
+  // El watch list (491 links de Camila) es el único contador cardinal.
   const {
     data: watch,
     isLoading: loadingWatch,
@@ -684,13 +686,18 @@ export default function HomePage() {
           </span>
         </div>
 
-        {feab && (
-          <div className="text-sm text-ink-soft border-l border-rule pl-3" title="Resumen de tu watch list: contratos firmados que el SECOP ya publicó, procesos totales del FEAB, y los 491 links que vos seguís del Excel.">
-            <span className="font-mono">{feab.contratos}</span> contratos ·{" "}
-            <span className="font-mono">{feab.procesos}</span> procesos ·{" "}
-            <span className="font-mono">{watched.length}</span> que vos seguís
-          </div>
-        )}
+        {/* CARDINAL PURO (Sergio 2026-04-27): los contadores 'feab.contratos'
+            y 'feab.procesos' venían del endpoint api.feab que internamente
+            consulta jbjy/rpmr (totales de TODOS los contratos del FEAB en
+            esos datasets). Esos números NO son los 491 links de Camila ·
+            son contadores derivados que confunden. Eliminados · solo
+            mostramos lo que SÍ es cardinal: los 491 que ella sigue. */}
+        <div
+          className="text-sm text-ink-soft border-l border-rule pl-3"
+          title="Total de procesos del watch list de la Dra · cada uno es uno de tus links del Excel."
+        >
+          <span className="font-mono">{watched.length}</span> procesos en tu lista del Excel
+        </div>
 
         {ultActualiz?.ultima_consulta && (
           <div className="flex flex-col text-[11px] text-ink-soft border-l border-rule pl-3" title="Cuándo fue la última vez que el sistema hizo una operación (consulta o actualización de datos).">
