@@ -758,23 +758,31 @@ export function UnifiedTable({
       },
       {
         id: "estado",
-        header: "Estado",
+        header: "Estado del proceso",
+        // CARDINAL PURO (Sergio 2026-04-27): el campo `estado` viene del
+        // portal scrape · es el estado del PROCESO (no del contrato firmado).
+        // Mostrar "Publicado" sin contexto era confuso · ahora se titula
+        // "Estado del proceso" para que la Dra entienda que es el estado
+        // del proceso publicado, no del contrato en ejecución.
         accessorFn: (r) => r.estado ?? "",
         cell: ({ row }) => {
           const r = row.original;
           return (
             <div className="text-xs">
               {r.estado ? (
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-stone-100 text-ink text-[10px] break-words">
+                <span
+                  className="inline-flex items-center px-1.5 py-0.5 rounded bg-stone-100 text-ink text-[10px] break-words"
+                  title={`Estado del proceso en SECOP: "${r.estado}". Para el estado del contrato firmado, abrí el link manualmente.`}
+                >
                   {r.estado}
                 </span>
               ) : (
-                <span className="text-ink-soft/50 text-[10px]">—</span>
-              )}
-              {r.liquidado && (
-                <div className="text-[10px] text-ink-soft italic mt-1">
-                  Liquidado
-                </div>
+                <span
+                  className="text-ink-soft/50 text-[10px] italic"
+                  title="El portal community.secop no expone estado para este proceso · revisar en el link"
+                >
+                  — Revisar en el link
+                </span>
               )}
             </div>
           );
@@ -784,39 +792,36 @@ export function UnifiedTable({
       {
         id: "modificatorios",
         header: "Modificatorios",
+        // CARDINAL PURO (Sergio 2026-04-27): el portal scrape NO extrae info
+        // de modificatorios todavía. Decir "Sin modificatorios" sería FN
+        // (algunos contratos SÍ tienen modificatorios visibles en el link).
+        // Honesto: mostrar "—" cuando el portal no expone el dato + tooltip
+        // que dirige a verificar en el link manualmente.
         accessorFn: (r) => {
-          const isMod =
-            /modific/i.test(r.estado ?? "") ||
-            (r.dias_adicionados != null && r.dias_adicionados > 0);
-          return isMod ? "Modificado" : "Sin modificatorios";
+          // Solo afirmar "Modificado" si viene del portal scrape mismo
+          const portalDiceMod =
+            /modific/i.test(r.estado ?? "");
+          return portalDiceMod ? "Modificado (según portal)" : "—";
         },
         cell: ({ row }) => {
           const r = row.original;
-          const isMod =
-            /modific/i.test(r.estado ?? "") ||
-            (r.dias_adicionados != null && r.dias_adicionados > 0);
+          const portalDiceMod = /modific/i.test(r.estado ?? "");
           return (
             <div className="text-[11px]">
-              {isMod ? (
-                <div>
-                  <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 text-[10px] whitespace-nowrap">
-                    Modificado
-                  </span>
-                  {r.dias_adicionados && r.dias_adicionados > 0 && (
-                    <span className="block font-mono text-[10px] text-ink-soft mt-1">
-                      +{r.dias_adicionados} días
-                    </span>
-                  )}
-                </div>
-              ) : (
-                <span className="text-ink-soft/50 text-[10px]">
-                  Sin modificatorios
+              {portalDiceMod ? (
+                <span
+                  className="inline-flex items-center px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 text-[10px] whitespace-nowrap"
+                  title="El estado del portal community.secop incluye 'modific...' · revisar el link para detalles del modificatorio"
+                >
+                  Modificado
                 </span>
-              )}
-              {r.notas && (
-                <div className="text-[10px] text-ink-soft italic mt-1 line-clamp-2">
-                  {r.notas}
-                </div>
+              ) : (
+                <span
+                  className="text-ink-soft/60 text-[10px] italic"
+                  title="El sistema no extrae info de modificatorios automáticamente · click en 'Abrir' para revisar en el link community.secop"
+                >
+                  — Revisar en el link
+                </span>
               )}
             </div>
           );

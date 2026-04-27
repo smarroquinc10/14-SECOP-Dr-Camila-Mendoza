@@ -1,17 +1,25 @@
 "use client";
 
+/**
+ * DetailDialog · CARDINAL PURO post 2026-04-27
+ *
+ * Frase fundadora de Sergio: "una abogada no puede ver errores · no te
+ * puedes comer datos · no puede haber falsos positivos y falsos negativos".
+ *
+ * Filosofía cardinal de este modal:
+ *   - SOLO muestra lo que el scrape del link community.secop extrajo
+ *   - NO hace fetches a jbjy-vk9h ni rpmr-utcd (mienten · 33 procs >50% drift)
+ *   - NO calcula "alertas legales" derivadas (eran FP/FN frecuentes)
+ *   - NO muestra comparaciones entre fuentes (cardinal puro = solo el link)
+ *   - Si el portal no tiene datos: mensaje honesto + botón "Abrir en SECOP II"
+ *   - "—" honesto en cada celda faltante
+ *
+ * Memoria: feedback_dashboard_es_scraper_de_links.md, project_porque_fundador.md
+ */
+
 import * as React from "react";
 import useSWR from "swr";
-import {
-  ChevronDown,
-  ChevronRight,
-  Download,
-  ExternalLink,
-  Globe,
-  Loader2,
-  RefreshCw,
-  ShieldCheck,
-} from "lucide-react";
+import { ChevronRight, ExternalLink, Loader2 } from "lucide-react";
 
 import {
   Dialog,
@@ -20,10 +28,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { api, type Contract, type ContractDetail, type DiscrepanciasBulk, type PortalSnapshot } from "@/lib/api";
-import { cn, confidenceColor, fmtDate, moneyCO } from "@/lib/utils";
+import { api, type PortalSnapshot } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 interface Props {
   contractId: string | null;
@@ -31,1549 +38,311 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
-/** Friendly Spanish labels for raw SECOP fields, grouped by section. */
-const SECTIONS: { label: string; fields: [string, string][] }[] = [
-  {
-    label: "Identificación",
-    fields: [
-      ["id_contrato", "Código del contrato"],
-      ["referencia_del_contrato", "Referencia FEAB"],
-      ["proceso_de_compra", "Portafolio (CO1.BDOS)"],
-      ["nombre_entidad", "Entidad contratante"],
-      ["nit_entidad", "NIT entidad"],
-      ["objeto_del_contrato", "Objeto"],
-      ["modalidad_de_contratacion", "Modalidad de contratación"],
-      ["tipo_de_contrato", "Tipo de contrato"],
-      ["justificacion_modalidad_de", "Justificación modalidad"],
-    ],
-  },
-  {
-    label: "Estado y fechas",
-    fields: [
-      ["estado_contrato", "Estado del contrato"],
-      ["fecha_de_firma", "Fecha de firma"],
-      ["fecha_de_inicio_del_contrato", "Fecha de inicio"],
-      ["fecha_de_fin_del_contrato", "Fecha de terminación"],
-      ["fecha_inicio_liquidacion", "Inicio de liquidación"],
-      ["fecha_fin_liquidacion", "Fin de liquidación"],
-      ["liquidaci_n", "¿Requiere liquidación?"],
-      ["duraci_n_del_contrato", "Duración"],
-      ["dias_adicionados", "Días adicionados (prórrogas)"],
-      ["el_contrato_puede_ser_prorrogado", "¿Puede prorrogarse?"],
-    ],
-  },
-  {
-    label: "Valores",
-    fields: [
-      ["valor_del_contrato", "Valor inicial"],
-      ["valor_facturado", "Valor facturado"],
-      ["valor_pagado", "Valor pagado"],
-      ["valor_pendiente_de_pago", "Pendiente de pago"],
-      ["valor_pendiente_de_ejecucion", "Pendiente de ejecución"],
-      ["valor_de_pago_adelantado", "Valor anticipo"],
-      ["habilita_pago_adelantado", "¿Anticipo habilitado?"],
-      ["origen_de_los_recursos", "Origen recursos"],
-      ["destino_gasto", "Destino del gasto"],
-    ],
-  },
-  {
-    label: "Contratista",
-    fields: [
-      ["proveedor_adjudicado", "Razón social"],
-      ["tipodocproveedor", "Tipo identificación"],
-      ["documento_proveedor", "Número identificación"],
-      ["nombre_representante_legal", "Representante legal"],
-      ["domicilio_representante_legal", "Domicilio"],
-      ["departamento", "Departamento"],
-      ["ciudad", "Ciudad"],
-      ["es_pyme", "¿Es PYME?"],
-    ],
-  },
-  {
-    label: "Supervisión y orden",
-    fields: [
-      ["nombre_supervisor", "Supervisor"],
-      ["n_mero_de_documento_supervisor", "ID supervisor"],
-      ["nombre_ordenador_del_gasto", "Ordenador del gasto"],
-      ["nombre_ordenador_de_pago", "Ordenador de pago"],
-    ],
-  },
-  {
-    label: "Otros",
-    fields: [
-      ["rama", "Rama"],
-      ["orden", "Orden"],
-      ["sector", "Sector"],
-      ["entidad_centralizada", "Entidad centralizada"],
-      ["reversion", "¿Reversión?"],
-      ["obligaci_n_ambiental", "Obligación ambiental"],
-      ["espostconflicto", "Post-conflicto"],
-      ["ultima_actualizacion", "Última actualización SECOP"],
-    ],
-  },
-];
+/**
+ * Etiquetas humanas para los campos del portal scrape.
+ * Si el campo no está acá, se muestra con su nombre crudo (snake_case → spaces).
+ * Cardinal: NUNCA esconder un campo · si existe en el scrape, se muestra.
+ */
+const PORTAL_FIELD_LABELS: Record<string, string> = {
+  numero_proceso: "Número del proceso",
+  numero_contrato: "Número del contrato",
+  titulo: "Título",
+  descripcion: "Descripción / objeto",
+  estado: "Estado del proceso (en SECOP)",
+  fase: "Fase del proceso",
+  tipo_proceso: "Tipo de proceso",
+  tipo_contrato: "Tipo de contrato",
+  modalidad: "Modalidad de contratación",
+  justificacion_modalidad: "Justificación de la modalidad",
+  valor_total: "Valor total",
+  precio_estimado: "Precio estimado",
+  proveedor: "Proveedor (cuando publicado)",
+  fecha_publicacion: "Fecha de publicación del proceso",
+  fecha_firma_contrato: "Fecha de firma del contrato",
+  fecha_inicio_ejecucion: "Fecha de inicio de ejecución",
+  plazo_ejecucion: "Plazo de ejecución",
+  duracion_contrato: "Duración del contrato",
+  direccion_ejecucion: "Dirección de ejecución",
+  unspsc_principal: "Código UNSPSC principal",
+  destinacion_gasto: "Destinación del gasto",
+  garantia_cumplimiento: "Garantía de cumplimiento",
+  garantia_pct_valor: "Garantía: % del valor",
+  garantia_smmlv: "Garantía: SMMLV",
+  garantia_resp_civil: "Garantía: responsabilidad civil",
+  garantia_vigencia_desde: "Garantía: vigencia desde",
+  garantia_vigencia_hasta: "Garantía: vigencia hasta",
+  dar_publicidad: "Publicidad del proceso",
+  lotes: "Procedimiento por lotes",
+  mipyme_limitacion: "Limitación a MIPYMES",
+};
 
-/** Set de field names ya cubiertos por las SECTIONS curadas. Cualquier
- *  campo del API jbjy-vk9h que no esté acá se renderiza al final en
- *  "Otros campos del API" — así nunca se "comen" datos del SECOP.
- *  La regla cardinal "espejo y reflejo fiel" exige que TODO lo que el
- *  API devuelva quede expuesto al usuario, aunque sea en una sección
- *  expandible secundaria. */
-const CURATED_FIELDS: Set<string> = new Set(
-  SECTIONS.flatMap((s) => s.fields.map(([k]) => k)),
-);
 
-/** Fields administrativos / de sistema que NUNCA es útil mostrar al
- *  usuario. Los excluimos explícitamente del "Otros campos" para no
- *  ensuciar el modal con basura. */
-const NOISE_FIELDS: Set<string> = new Set([
-  "_id",
-  "_notas", // se computa en backend; ya se muestra como "Notas"
-  ":@computed_region_y8tx_xa3w",
-  ":@computed_region_b8mb_y23g",
-  ":@computed_region_kpa3_pdzn",
-  ":@computed_region_ck25_dyt8",
-  ":@computed_region_g8jr_8txm",
-  ":@computed_region_yyfu_pwt8",
-]);
-
-/** Money-shaped fields adicionales que pueden aparecer en "Otros campos". */
-const MORE_MONEY_FIELDS = new Set([
-  "saldo_cdp",
-  "saldo_vigencia",
-  "valor_amortizado",
-  "presupuesto_general_de_la_nacion_pgn",
-  "recursos_de_credito",
-  "recursos_propios",
-  "recursos_propios_alcald_as_gobernaciones_y_resguardos_ind_genas_",
-  "sistema_general_de_participaciones",
-  "sistema_general_de_regal_as",
-]);
-
-const MONEY_FIELDS = new Set([
-  "valor_del_contrato",
-  "valor_facturado",
-  "valor_pagado",
-  "valor_pendiente_de_pago",
-  "valor_pendiente_de_ejecucion",
-  "valor_de_pago_adelantado",
-  ...MORE_MONEY_FIELDS,
-]);
-const DATE_FIELDS = new Set([
-  "fecha_de_firma",
-  "fecha_de_inicio_del_contrato",
-  "fecha_de_fin_del_contrato",
-  "fecha_inicio_liquidacion",
-  "fecha_fin_liquidacion",
-  "ultima_actualizacion",
-]);
-
-function fmtValue(field: string, raw: unknown): string {
-  if (raw === null || raw === undefined || raw === "") return "—";
-  const s = String(raw).trim();
-  if (s.toLowerCase() === "no definido" || s.toLowerCase() === "nan") return "—";
-  if (MONEY_FIELDS.has(field)) {
-    const n = Number(s);
-    if (!isFinite(n)) return s;
-    return moneyCO.format(n);
-  }
-  if (DATE_FIELDS.has(field)) return fmtDate(s);
-  return s;
+/** Convierte snake_case → "Snake Case" para campos sin label explícito. */
+function humanizeFieldName(s: string): string {
+  return s
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+
+/** Render value · si vacío, "—" honesto. */
+function renderValue(v: string | null | undefined): React.ReactNode {
+  if (v == null || String(v).trim() === "") {
+    return <span className="text-ink-soft italic">—</span>;
+  }
+  return <span className="whitespace-pre-wrap">{String(v)}</span>;
+}
+
+
 export function DetailDialog({ contractId, open, onOpenChange }: Props) {
-  const { data, error, isLoading } = useSWR<ContractDetail>(
-    open && contractId ? `contract:${contractId}` : null,
-    () => api.contract(contractId!)
+  // CARDINAL PURO: única fetch · SOLO portal scrape del link community.secop.
+  // Si el contractId puede ser tanto process_id como notice_uid, intenta
+  // ambos · el `api.contractPortal()` ya maneja el lookup por ambas keys.
+  const { data: portalData, isLoading } = useSWR<PortalSnapshot | null>(
+    open && contractId ? `portal:${contractId}` : null,
+    () => api.contractPortal(contractId!),
+    { revalidateOnFocus: false },
   );
 
-  // Cargar las discrepancias entre fuentes del SECOP para este contrato.
-  // Cardinal: si rpmr-utcd dice valor=X y portal dice valor=Y, la Dra
-  // necesita ver ambos para verificar contra el portal community.secop.
-  const { data: discrepanciasBulk } = useSWR<DiscrepanciasBulk | null>(
-    "discrepancias-bulk",
-    api.discrepanciasBulk,
-    { refreshInterval: 0, revalidateOnFocus: false }
+  if (!open) return null;
+
+  const fields = portalData?.fields ?? {};
+  const documents = portalData?.documents ?? [];
+  const notificaciones = portalData?.notificaciones ?? [];
+  const scrapedAt = portalData?.scraped_at ?? null;
+  const status = portalData?.status ?? null;
+
+  // Detectar tipo de link para mensajes específicos cardinal-honestos
+  const isContratoInterno = contractId?.startsWith("CO1.PCCNTR.") ?? false;
+  const isBorrador =
+    (contractId?.startsWith("CO1.REQ.") || contractId?.startsWith("CO1.BDOS.")) ??
+    false;
+  const hasPortalData = Object.keys(fields).length > 0;
+
+  // Construir el link de SECOP II para abrir manualmente
+  const secopUrl =
+    fields.url_proceso ??
+    fields.url ??
+    (contractId
+      ? `https://community.secop.gov.co/Public/Tendering/OpportunityDetail/Index?noticeUID=${contractId}`
+      : null);
+
+  // Título del modal: número del contrato si existe, sino process_id
+  const modalTitle =
+    fields.numero_contrato ??
+    fields.numero_proceso ??
+    contractId ??
+    "Detalle del contrato";
+
+  // Subtítulo: descripción del portal (truncada)
+  const subtitle = fields.titulo ?? fields.descripcion ?? "";
+
+  // Renderizado: ordenar campos · primero los más importantes (labels conocidos),
+  // después el resto alfabético (cardinal "ver todo")
+  const knownFields = Object.keys(PORTAL_FIELD_LABELS).filter(
+    (k) => k in fields,
   );
-  const discrepancias = React.useMemo(() => {
-    if (!discrepanciasBulk?.by_process_id || !contractId) return [];
-    // Buscar por contractId, process_id, o notice_uid
-    const byPid = discrepanciasBulk.by_process_id;
-    const direct = byPid[contractId];
-    if (direct) return direct;
-    // Si data está cargada, intentar también con notice_uid
-    if (data?.notice_uid && byPid[data.notice_uid]) {
-      return byPid[data.notice_uid];
-    }
-    return [];
-  }, [discrepanciasBulk, contractId, data]);
-
-  // Cuando un proceso tiene varios contratos firmados (típico en subastas
-  // con múltiples ganadores), `data.contratos` trae todos los que comparten
-  // notice_uid. Antes el modal siempre mostraba `[0]` — si la Dra clickeaba
-  // PCCNTR.X y el primero del array era PCCNTR.Y, veía el contrato
-  // equivocado. Ahora preferimos el que matchea el id que clickeó.
-  const allContratos = data?.contratos ?? [];
-  const contract =
-    allContratos.find((c) => c.id_contrato === contractId) ??
-    allContratos[0] ??
-    {};
-  // Hermanos: otros contratos del mismo proceso (mismo notice_uid),
-  // distintos al que está mostrándose ahora. Se renderizan en una sección
-  // dedicada al final para que la Dra los vea de un vistazo.
-  const sibContratos = allContratos.filter(
-    (c) => c.id_contrato !== (contract as Contract).id_contrato,
-  );
-  const url =
-    (contract as Record<string, unknown>).urlproceso?.toString() ?? "";
-
-  // Toggle "Otros campos del API". ABIERTO por default — la regla
-  // cardinal "espejo y reflejo fiel" prohibe esconder data del SECOP
-  // detrás de un click que la Dra puede no descubrir. Si ella quiere
-  // colapsarlo para reducir scroll, queda como toggle. Pero la data
-  // se ve en cuanto abre el modal, sin trabajo extra.
-  const [showAllApiFields, setShowAllApiFields] = React.useState(true);
-
-  // Calculamos los campos del API NO cubiertos por SECTIONS — son los
-  // 29 campos que antes se "comían". Filtramos vacíos y ruido conocido.
-  const otrosCamposApi = React.useMemo(() => {
-    const out: Array<[string, unknown]> = [];
-    for (const [k, v] of Object.entries(contract as Record<string, unknown>)) {
-      if (CURATED_FIELDS.has(k)) continue;
-      if (NOISE_FIELDS.has(k)) continue;
-      if (v === null || v === undefined || v === "") continue;
-      const s = String(v).trim();
-      if (!s) continue;
-      const sl = s.toLowerCase();
-      if (sl === "no definido" || sl === "nan" || sl === "null") continue;
-      out.push([k, v]);
-    }
-    return out.sort((a, b) => a[0].localeCompare(b[0]));
-  }, [contract]);
+  const otherFields = Object.keys(fields)
+    .filter((k) => !(k in PORTAL_FIELD_LABELS))
+    .sort();
+  const orderedFields = [...knownFields, ...otherFields];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="eyebrow text-burgundy">Detalle del contrato</div>
-          <DialogTitle>
-            {(contract as Record<string, unknown>).referencia_del_contrato as string ??
-              contractId ??
-              "—"}
+          <p className="text-[10px] uppercase tracking-wider text-ink-soft">
+            Detalle del contrato
+          </p>
+          <DialogTitle className="serif text-2xl text-ink">
+            {modalTitle}
           </DialogTitle>
-          <DialogDescription>
-            {(contract as Record<string, unknown>).proveedor_adjudicado as string ?? ""}
-          </DialogDescription>
-          <div className="flex items-center gap-3 mt-2">
-            {url && (
-              <a
-                href={url}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 text-sm text-burgundy hover:underline"
-              >
-                Abrir en SECOP II <ExternalLink className="h-3.5 w-3.5" />
-              </a>
-            )}
-            {data?.secop_hash && (
-              <span className="inline-flex items-center gap-1 text-[11px] font-mono text-ink-soft">
-                <ShieldCheck className="h-3.5 w-3.5 text-emerald-700" />
-                {data.secop_hash.slice(0, 16)}…
-              </span>
-            )}
-          </div>
+          {subtitle && (
+            <DialogDescription className="text-ink-soft text-sm">
+              {String(subtitle).slice(0, 200)}
+              {String(subtitle).length > 200 ? "…" : ""}
+            </DialogDescription>
+          )}
+          {secopUrl && (
+            <a
+              href={secopUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-burgundy hover:underline text-sm w-fit mt-1"
+            >
+              <ExternalLink className="h-3 w-3" />
+              Abrir en SECOP II
+            </a>
+          )}
         </DialogHeader>
 
-        <div className="overflow-y-auto px-6 pb-6 max-h-[70vh]">
+        <div className="space-y-5 mt-4">
+          {/* LOADING STATE */}
           {isLoading && (
-            <div className="flex items-center gap-2 py-12 text-ink-soft">
-              <Loader2 className="h-4 w-4 animate-spin" /> Consultando SECOP…
+            <div className="flex items-center gap-2 text-ink-soft py-8 justify-center">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Cargando datos del scrape del link…</span>
             </div>
           )}
-          {error && (
-            <div className="py-8 text-rose-700 text-sm">
-              No pude consultar el detalle. Reintentar más tarde.
-            </div>
+
+          {/* SIN DATOS DEL PORTAL · mensaje honesto cardinal por tipo */}
+          {!isLoading && !hasPortalData && (
+            <section className="border border-rule rounded-md p-4 bg-amber-50/40">
+              {isContratoInterno && (
+                <>
+                  <h3 className="serif text-base font-semibold text-violet-900 mb-1">
+                    Este link va al portal interno SECOP II
+                  </h3>
+                  <p className="text-sm text-ink leading-relaxed">
+                    El link de este proceso apunta al portal interno del SECOP II
+                    que requiere <strong>tu login institucional</strong>. El
+                    sistema no puede leerlo automáticamente · click en{" "}
+                    <strong>&ldquo;Abrir en SECOP II&rdquo;</strong> arriba para
+                    verificar los datos con tu sesión.
+                  </p>
+                </>
+              )}
+              {isBorrador && (
+                <>
+                  <h3 className="serif text-base font-semibold text-amber-900 mb-1">
+                    Este proceso aún está en preparación (borrador)
+                  </h3>
+                  <p className="text-sm text-ink leading-relaxed">
+                    El SECOP todavía no publicó los datos de este proceso · está
+                    en estado borrador. Cuando se publique, el sistema lo
+                    detecta automáticamente y trae sus datos.
+                  </p>
+                </>
+              )}
+              {!isContratoInterno && !isBorrador && (
+                <>
+                  <h3 className="serif text-base font-semibold text-rose-900 mb-1">
+                    Este proceso aún no aparece publicado en SECOP
+                  </h3>
+                  <p className="text-sm text-ink leading-relaxed">
+                    Las APIs públicas del SECOP no exponen este proceso ·
+                    puede ser un borrador, un proceso cancelado, o uno en
+                    limbo. Click en <strong>&ldquo;Abrir en SECOP II&rdquo;</strong>{" "}
+                    arriba para verlo manualmente.
+                  </p>
+                </>
+              )}
+            </section>
           )}
-          {data && (
-            <div className="space-y-6">
-              {data.needs_review.length > 0 && (
-                <div className="border-l-4 border-amber-400 bg-amber-50 px-4 py-3 rounded">
-                  <div className="text-[11px] font-semibold uppercase tracking-wider text-amber-700">
-                    Celdas marcadas para revisión
-                  </div>
-                  <div className="mt-1 text-sm text-ink">
-                    {data.needs_review.join(", ")}
-                  </div>
+
+          {/* DATOS DEL PORTAL · todos los campos · cardinal "ver todo" */}
+          {!isLoading && hasPortalData && (
+            <>
+              <section className="border border-rule rounded-md overflow-hidden">
+                <div className="bg-surface px-4 py-2.5 border-b border-rule">
+                  <h3 className="serif text-base font-semibold text-ink">
+                    Datos del proceso (extraídos del link)
+                  </h3>
+                  <p className="text-[11px] text-ink-soft mt-0.5">
+                    Espejo cardinal de lo que la entidad publicó en{" "}
+                    <strong>community.secop.gov.co</strong>. Si necesitás
+                    verificar algún campo, click &ldquo;Abrir en SECOP II&rdquo;
+                    arriba.
+                  </p>
                 </div>
-              )}
-
-              {/* RESUMEN EJECUTIVO COMPLETO — feedback Cami (2026-04-27):
-                  "dejarle a la mano clave para que ella mire de una · fijo
-                  MÁS info la quiere a la mano". Toda la info legal del
-                  contrato visible al primer scroll: identificación, estado,
-                  plata, tiempos, contratista, supervisión, modalidad legal,
-                  recursos, garantías, geografía. Camila NO tiene que cazar
-                  nada — todo está acá. */}
-              {(() => {
-                const c = contract as Record<string, unknown>;
-                const num = String(c.referencia_del_contrato ?? c.id_contrato ?? "");
-                const proveedor = String(c.proveedor_adjudicado ?? "");
-                const tipoDoc = String(c.tipodocproveedor ?? "");
-                const docProv = String(c.documento_proveedor ?? "");
-                const repLegal = String(c.nombre_representante_legal ?? "");
-                const objeto = String(c.objeto_del_contrato ?? "");
-                const estado = String(c.estado_contrato ?? "");
-                const valor = Number(c.valor_del_contrato ?? 0);
-                const valorPagado = Number(c.valor_pagado ?? 0);
-                const valorPendiente = Number(c.valor_pendiente_de_pago ?? 0);
-                const valorFacturado = Number(c.valor_facturado ?? 0);
-                const valorAnticipo = Number(c.valor_de_pago_adelantado ?? 0);
-                const habilitaAnticipo = String(c.habilita_pago_adelantado ?? "").toLowerCase();
-                const fechaFirma = String(c.fecha_de_firma ?? "").slice(0, 10);
-                const fechaInicio = String(c.fecha_de_inicio_del_contrato ?? "").slice(0, 10);
-                const fechaFin = String(c.fecha_de_fin_del_contrato ?? "").slice(0, 10);
-                const duracion = String(c.duraci_n_del_contrato ?? "");
-                const dias = Number(c.dias_adicionados ?? 0);
-                const supervisor = String(c.nombre_supervisor ?? "");
-                const idSupervisor = String(c.n_mero_de_documento_supervisor ?? "");
-                const ordenadorGasto = String(c.nombre_ordenador_del_gasto ?? "");
-                const ordenadorPago = String(c.nombre_ordenador_de_pago ?? "");
-                const modalidad = String(c.modalidad_de_contratacion ?? "");
-                const tipoContrato = String(c.tipo_de_contrato ?? "");
-                const justificacion = String(c.justificacion_modalidad_de ?? "");
-                const origenRecursos = String(c.origen_de_los_recursos ?? "");
-                const destinoGasto = String(c.destino_gasto ?? "");
-                const departamento = String(c.departamento ?? "");
-                const ciudad = String(c.ciudad ?? "");
-                const esPyme = String(c.es_pyme ?? "").toLowerCase() === "si";
-                const liquidacion = String(c.liquidaci_n ?? "").toLowerCase();
-                const fechaInicLiq = String(c.fecha_inicio_liquidacion ?? "").slice(0, 10);
-                const fechaFinLiq = String(c.fecha_fin_liquidacion ?? "").slice(0, 10);
-                const ultimaAct = String(c.ultima_actualizacion ?? "").slice(0, 10);
-                const puedeProrrogar = String(c.el_contrato_puede_ser_prorrogado ?? "").toLowerCase();
-                const reversion = String(c.reversion ?? "").toLowerCase();
-                const obAmbiental = String(c.obligaci_n_ambiental ?? "");
-                const sector = String(c.sector ?? "");
-                const sibCount = sibContratos.length;
-
-                // Calcular días para vencer
-                let diasParaVencer: number | null = null;
-                if (fechaFin) {
-                  const fin = new Date(fechaFin);
-                  if (!isNaN(fin.getTime())) {
-                    diasParaVencer = Math.floor(
-                      (fin.getTime() - Date.now()) / (1000 * 60 * 60 * 24),
-                    );
-                  }
-                }
-                if (!proveedor && !objeto && !valor && !estado) return null;
-
-                const estadoBadgeColor =
-                  /modific/i.test(estado)
-                    ? "bg-amber-100 text-amber-900 border-amber-300"
-                    : /ejecuc/i.test(estado)
-                    ? "bg-emerald-100 text-emerald-900 border-emerald-300"
-                    : /liquidad/i.test(estado)
-                    ? "bg-stone-100 text-stone-700 border-stone-300"
-                    : /cancel/i.test(estado)
-                    ? "bg-rose-100 text-rose-900 border-rose-300"
-                    : /borrador|aprob|preparac/i.test(estado)
-                    ? "bg-sky-100 text-sky-900 border-sky-300"
-                    : "bg-stone-100 text-ink border-stone-300";
-
-                return (
-                  <section className="border-2 border-burgundy/30 bg-gradient-to-br from-burgundy/[0.03] to-transparent rounded-md overflow-hidden">
-                    <div className="bg-burgundy/5 px-4 py-2.5 border-b border-burgundy/20">
-                      <h3 className="serif text-base font-semibold text-burgundy flex items-center gap-2">
-                        📋 Resumen ejecutivo del contrato
-                      </h3>
-                      <p className="text-[11px] text-ink-soft mt-0.5">
-                        Toda la información clave a la mano · sin abrir SECOP
-                      </p>
-                    </div>
-
-                    <div className="p-4 space-y-4 text-sm">
-                      {/* IDENTIFICACIÓN */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {num && (
-                          <div>
-                            <div className="text-[10px] uppercase tracking-wider text-ink-soft mb-1">
-                              Número del contrato
-                            </div>
-                            <div className="font-mono text-ink">{num}</div>
-                          </div>
-                        )}
-                        {estado && (
-                          <div>
-                            <div className="text-[10px] uppercase tracking-wider text-ink-soft mb-1">
-                              Estado actual
-                            </div>
-                            <span className={cn("inline-flex items-center px-2.5 py-1 rounded text-sm font-medium border", estadoBadgeColor)}>
-                              {estado}
-                            </span>
-                            {ultimaAct && (
-                              <div className="text-[10px] text-ink-soft mt-1">
-                                Última actualización SECOP: {ultimaAct}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* OBJETO COMPLETO (sin truncar — feedback Cami: "el objeto no puede estar resumido") */}
-                      {objeto && (
-                        <div className="pt-3 border-t border-rule">
-                          <div className="text-[10px] uppercase tracking-wider text-ink-soft mb-1">
-                            Objeto del contrato (texto completo)
-                          </div>
-                          <div className="text-ink text-sm leading-relaxed whitespace-pre-wrap">
-                            {objeto}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* CONTRATISTA */}
-                      {proveedor && (
-                        <div className="pt-3 border-t border-rule">
-                          <div className="text-[10px] uppercase tracking-wider text-ink-soft mb-1">
-                            Contratista
-                          </div>
-                          <div className="text-ink font-medium">{proveedor}</div>
-                          <div className="text-[11px] text-ink-soft mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
-                            {tipoDoc && docProv && (
-                              <span><span className="font-mono">{tipoDoc} {docProv}</span></span>
-                            )}
-                            {repLegal && (
-                              <span>Representante legal: <span className="text-ink">{repLegal}</span></span>
-                            )}
-                            {esPyme && (
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px]">
-                                🏢 PYME
-                              </span>
-                            )}
-                            {(departamento || ciudad) && (
-                              <span>📍 {[ciudad, departamento].filter(Boolean).join(", ")}</span>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* PLATA / VALORES */}
-                      {valor > 0 && (
-                        <div className="pt-3 border-t border-rule">
-                          <div className="text-[10px] uppercase tracking-wider text-ink-soft mb-1">
-                            Valor del contrato
-                          </div>
-                          <div className="font-mono text-lg font-semibold text-ink">
-                            {moneyCO.format(valor)}
-                          </div>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2 text-xs">
-                            {valorFacturado > 0 && (
-                              <div>
-                                <div className="text-[10px] text-ink-soft">Facturado</div>
-                                <div className="font-mono text-ink">{moneyCO.format(valorFacturado)}</div>
-                              </div>
-                            )}
-                            {valorPagado > 0 && (
-                              <div>
-                                <div className="text-[10px] text-ink-soft">Pagado</div>
-                                <div className="font-mono text-emerald-700">{moneyCO.format(valorPagado)}</div>
-                              </div>
-                            )}
-                            {valorPendiente > 0 && (
-                              <div>
-                                <div className="text-[10px] text-ink-soft">Pendiente</div>
-                                <div className="font-mono text-rose-700 font-semibold">{moneyCO.format(valorPendiente)}</div>
-                              </div>
-                            )}
-                            {valorAnticipo > 0 && (
-                              <div>
-                                <div className="text-[10px] text-ink-soft">Anticipo</div>
-                                <div className="font-mono text-ink">{moneyCO.format(valorAnticipo)}</div>
-                              </div>
-                            )}
-                          </div>
-                          {(habilitaAnticipo || origenRecursos || destinoGasto) && (
-                            <div className="text-[11px] text-ink-soft mt-2 flex flex-wrap gap-x-3 gap-y-0.5">
-                              {habilitaAnticipo === "si" && <span>💰 Anticipo habilitado</span>}
-                              {origenRecursos && <span>Origen: <span className="text-ink">{origenRecursos}</span></span>}
-                              {destinoGasto && <span>Destino: <span className="text-ink">{destinoGasto}</span></span>}
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* LÍNEA DE TIEMPO */}
-                      {(fechaFirma || fechaInicio || fechaFin) && (
-                        <div className="pt-3 border-t border-rule">
-                          <div className="text-[10px] uppercase tracking-wider text-ink-soft mb-1">
-                            Línea de tiempo del contrato
-                          </div>
-                          <div className="flex flex-wrap gap-x-6 gap-y-1.5 text-xs">
-                            {fechaFirma && (
-                              <span><span className="text-ink-soft">📝 Firmado: </span><span className="font-mono text-ink">{fechaFirma}</span></span>
-                            )}
-                            {fechaInicio && (
-                              <span><span className="text-ink-soft">▶ Inicio: </span><span className="font-mono text-ink">{fechaInicio}</span></span>
-                            )}
-                            {fechaFin && (
-                              <span>
-                                <span className="text-ink-soft">⏹ Termina: </span>
-                                <span className="font-mono text-ink">{fechaFin}</span>
-                                {diasParaVencer !== null && (
-                                  <span className={cn("ml-1.5 text-[11px]",
-                                    diasParaVencer < 0 ? "text-stone-500 italic" :
-                                    diasParaVencer <= 30 ? "text-rose-700 font-semibold" :
-                                    diasParaVencer <= 90 ? "text-amber-700" :
-                                    "text-ink-soft",
-                                  )}>
-                                    {diasParaVencer < 0
-                                      ? `(terminó hace ${Math.abs(diasParaVencer)} días)`
-                                      : diasParaVencer === 0
-                                      ? "(vence HOY)"
-                                      : `(${diasParaVencer} días para vencer)`}
-                                  </span>
-                                )}
-                              </span>
-                            )}
-                            {duracion && (
-                              <span><span className="text-ink-soft">⏱ Duración: </span><span className="font-mono text-ink">{duracion}</span></span>
-                            )}
-                            {dias > 0 && (
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 text-[10px]">
-                                + {dias} días por prórroga
-                              </span>
-                            )}
-                            {puedeProrrogar === "si" && (
-                              <span className="text-emerald-700 text-[10px]">✓ puede prorrogarse</span>
-                            )}
-                          </div>
-                          {(fechaInicLiq || fechaFinLiq) && (
-                            <div className="text-[11px] text-ink-soft mt-1.5">
-                              {fechaInicLiq && <span>Liquidación inicia: <span className="font-mono text-ink">{fechaInicLiq}</span></span>}
-                              {fechaInicLiq && fechaFinLiq && <span> · </span>}
-                              {fechaFinLiq && <span>Liquidación finaliza: <span className="font-mono text-ink">{fechaFinLiq}</span></span>}
-                            </div>
-                          )}
-                          {liquidacion === "si" && (
-                            <div className="text-[10px] text-sky-700 mt-1 italic">
-                              📋 Este contrato requiere liquidación
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* SUPERVISIÓN Y ORDEN */}
-                      {(supervisor || ordenadorGasto || ordenadorPago) && (
-                        <div className="pt-3 border-t border-rule">
-                          <div className="text-[10px] uppercase tracking-wider text-ink-soft mb-1">
-                            Personas a cargo
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
-                            {supervisor && (
-                              <div>
-                                <span className="text-ink-soft">👁 Supervisor: </span>
-                                <span className="text-ink">{supervisor}</span>
-                                {idSupervisor && (
-                                  <span className="text-[10px] font-mono text-ink-soft ml-1">({idSupervisor})</span>
-                                )}
-                              </div>
-                            )}
-                            {ordenadorGasto && (
-                              <div>
-                                <span className="text-ink-soft">✍ Ordenador del gasto: </span>
-                                <span className="text-ink">{ordenadorGasto}</span>
-                              </div>
-                            )}
-                            {ordenadorPago && (
-                              <div>
-                                <span className="text-ink-soft">💳 Ordenador del pago: </span>
-                                <span className="text-ink">{ordenadorPago}</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* MODALIDAD Y TIPO LEGAL */}
-                      {(modalidad || tipoContrato || justificacion) && (
-                        <div className="pt-3 border-t border-rule">
-                          <div className="text-[10px] uppercase tracking-wider text-ink-soft mb-1">
-                            Modalidad legal y tipo
-                          </div>
-                          <div className="space-y-1 text-xs">
-                            {modalidad && (
-                              <div>
-                                <span className="text-ink-soft">Modalidad: </span>
-                                <span className="text-ink">{modalidad}</span>
-                              </div>
-                            )}
-                            {tipoContrato && (
-                              <div>
-                                <span className="text-ink-soft">Tipo: </span>
-                                <span className="text-ink">{tipoContrato}</span>
-                              </div>
-                            )}
-                            {justificacion && (
-                              <div>
-                                <span className="text-ink-soft">Justificación: </span>
-                                <span className="text-ink italic">{justificacion}</span>
-                              </div>
-                            )}
-                            {sector && (
-                              <div>
-                                <span className="text-ink-soft">Sector: </span>
-                                <span className="text-ink">{sector}</span>
-                              </div>
-                            )}
-                            {reversion === "si" && (
-                              <div className="text-amber-700 text-[10px]">⚠ Tiene cláusula de reversión</div>
-                            )}
-                            {obAmbiental && obAmbiental.toLowerCase() !== "no" && obAmbiental.toLowerCase() !== "no aplica" && (
-                              <div className="text-amber-700 text-[10px]">🌱 Obligación ambiental: {obAmbiental}</div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* HERMANOS — otros contratos del mismo proceso */}
-                      {sibCount > 0 && (
-                        <div className="pt-3 border-t border-rule text-[11px] text-ink-soft italic">
-                          Este proceso tiene {sibCount} {sibCount === 1 ? "contrato hermano" : "contratos hermanos"} firmados (ver sección al final del modal)
-                        </div>
-                      )}
-                    </div>
-                  </section>
-                );
-              })()}
-
-              {/* DISCREPANCIAS ENTRE FUENTES DEL SECOP — cardinal absoluto:
-                  cuando el SECOP MISMO se contradice entre rpmr-utcd y el
-                  portal community.secop, alertamos visiblemente. La Dra
-                  debe verificar contra el portal (que es la verdad cardinal
-                  porque es lo que la entidad sube directamente). El dashboard
-                  ahora prefiere portal sobre rpmr en la cascada (commit r2),
-                  pero seguimos mostrando la discrepancia para total
-                  transparencia ante Compliance. */}
-              {discrepancias.length > 0 && (
-                <section className="border-2 border-rose-300 bg-rose-50/50 rounded-md overflow-hidden">
-                  <div className="bg-rose-100/60 px-4 py-2.5 border-b border-rose-200">
-                    <h3 className="serif text-base font-semibold text-rose-900 flex items-center gap-2">
-                      ⚠️ Las fuentes del SECOP reportan datos distintos
-                    </h3>
-                    <p className="text-[11px] text-rose-800 mt-0.5">
-                      Para este contrato, los datasets del SECOP no coinciden entre sí.
-                      El dashboard usa el valor del <strong>portal community.secop</strong>{" "}
-                      (la verdad cardinal · lo que la entidad sube directamente). Verificá
-                      contra el portal antes de presentar a Compliance.
-                    </p>
-                  </div>
-                  <div className="p-4">
-                    <table className="w-full text-sm">
-                      <thead className="text-[10px] uppercase tracking-wider text-ink-soft border-b border-rose-200">
-                        <tr>
-                          <th className="text-left px-2 py-1">Campo</th>
-                          <th className="text-left px-2 py-1">rpmr-utcd dice</th>
-                          <th className="text-left px-2 py-1">portal dice</th>
-                          <th className="text-right px-2 py-1">Diferencia</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {discrepancias.map((d, i) => {
-                          // Mostrar siempre rpmr a la izquierda y portal a la derecha
-                          const rpmr = d.fuente_a === "rpmr" ? d.valor_a : d.valor_b;
-                          const portal = d.fuente_a === "portal" ? d.valor_a : d.valor_b;
-                          return (
-                            <tr key={i} className="border-b border-rose-100/50 last:border-0">
-                              <td className="px-2 py-1.5 text-xs font-medium text-ink">
-                                {d.campo}
-                              </td>
-                              <td className="px-2 py-1.5 text-xs text-ink-soft font-mono">
-                                {rpmr ?? "—"}
-                              </td>
-                              <td className="px-2 py-1.5 text-xs text-ink font-mono font-semibold">
-                                {portal ?? "—"}
-                              </td>
-                              <td className="px-2 py-1.5 text-xs text-right">
-                                {d.diff_pct != null && (
-                                  <span className={cn(
-                                    "font-mono",
-                                    d.diff_pct > 50 ? "text-rose-700 font-bold" : "text-amber-700",
-                                  )}>
-                                    {d.diff_pct.toFixed(1)}%
-                                  </span>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                    <div className="mt-3 pt-2 border-t border-rose-200 text-[10px] text-rose-800 italic">
-                      💡 Cardinal: el portal community.secop tiene los datos REALES
-                      que la entidad subió. Si necesitás verificar manualmente, abrí el
-                      proceso en el portal con el botón &ldquo;Abrir en SECOP II&rdquo;
-                      arriba.
-                    </div>
-                  </div>
-                </section>
-              )}
-
-              {/* ALERTAS LEGALES — feedback Cami: que la herramienta sea CLAVE
-                  para ella. Las alertas le dicen QUÉ ACCIÓN tomar al ver el
-                  contrato, sin tener que analizar campos uno por uno. */}
-              {(() => {
-                const c = contract as Record<string, unknown>;
-                const estado = String(c.estado_contrato ?? "");
-                const fechaFin = String(c.fecha_de_fin_del_contrato ?? "").slice(0, 10);
-                const valorPendiente = Number(c.valor_pendiente_de_pago ?? 0);
-                const liquidacion = String(c.liquidaci_n ?? "").toLowerCase();
-
-                const alertas: { icon: string; text: string; cls: string }[] = [];
-
-                // Vence pronto
-                if (fechaFin) {
-                  const fin = new Date(fechaFin);
-                  if (!isNaN(fin.getTime())) {
-                    const dias = Math.floor(
-                      (fin.getTime() - Date.now()) / (1000 * 60 * 60 * 24),
-                    );
-                    if (dias >= 0 && dias <= 30) {
-                      alertas.push({
-                        icon: "⏰",
-                        text:
-                          dias === 0
-                            ? "Este contrato vence HOY · considerar liquidación o prórroga inmediata"
-                            : `Este contrato vence en ${dias} ${dias === 1 ? "día" : "días"} · considerar liquidación o prórroga`,
-                        cls: "bg-rose-50 border-rose-200 text-rose-900",
-                      });
-                    } else if (dias < 0 && !/liquidad/i.test(estado)) {
-                      alertas.push({
-                        icon: "⚠️",
-                        text: `La fecha de terminación pasó hace ${Math.abs(dias)} días y el contrato no aparece como liquidado · revisar liquidación`,
-                        cls: "bg-amber-50 border-amber-200 text-amber-900",
-                      });
-                    } else if (dias > 30 && dias <= 90) {
-                      alertas.push({
-                        icon: "📅",
-                        text: `Este contrato vence en ${dias} días · planificar liquidación o renovación`,
-                        cls: "bg-amber-50 border-amber-200 text-amber-900",
-                      });
-                    }
-                  }
-                }
-
-                // Pagos pendientes
-                if (valorPendiente > 0) {
-                  alertas.push({
-                    icon: "💰",
-                    text: `Hay ${moneyCO.format(valorPendiente)} pendientes de pago al contratista · revisar tesorería`,
-                    cls: "bg-amber-50 border-amber-200 text-amber-900",
-                  });
-                }
-
-                // Requiere liquidación según SECOP
-                if (liquidacion === "si" && !/liquidad/i.test(estado)) {
-                  alertas.push({
-                    icon: "📋",
-                    text: "Este contrato requiere liquidación según SECOP · verificar acta",
-                    cls: "bg-sky-50 border-sky-200 text-sky-900",
-                  });
-                }
-
-                if (alertas.length === 0) return null;
-
-                return (
-                  <section>
-                    <div className="eyebrow mb-2 flex items-center gap-1.5">
-                      🚨 Alertas legales del contrato
-                    </div>
-                    <div className="space-y-1.5">
-                      {alertas.map((a, i) => (
-                        <div
-                          key={i}
-                          className={cn(
-                            "flex items-start gap-2 px-3 py-2 rounded-md border text-sm",
-                            a.cls,
-                          )}
-                        >
-                          <span className="shrink-0">{a.icon}</span>
-                          <span>{a.text}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                );
-              })()}
-
-              {/* Sección "Modificatorios detectados" — feedback Cami abogada
-                  (2026-04-27): cuando el contrato esté modificado, mostrar
-                  un resumen DESTACADO al inicio del modal con la info clave:
-                  estado, días adicionados, fecha de la última actualización
-                  SECOP, y un hint para buscar PDFs en el snapshot del portal
-                  abajo. Esto evita que la Dra tenga que rastrear el dato
-                  en 3 secciones distintas. */}
-              {(() => {
-                const c = contract as Record<string, unknown>;
-                const estado = String(c.estado_contrato ?? "");
-                const dias = Number(c.dias_adicionados ?? 0);
-                const isMod = /modific/i.test(estado) || dias > 0;
-                if (!isMod) return null;
-                const ultima = String(c.ultima_actualizacion ?? "").slice(0, 10);
-                const fechaInicio = String(c.fecha_de_inicio_del_contrato ?? "").slice(0, 10);
-                const fechaFin = String(c.fecha_de_fin_del_contrato ?? "").slice(0, 10);
-                return (
-                  <section className="border-2 border-amber-300 bg-amber-50/40 rounded-md overflow-hidden">
-                    <div className="bg-amber-100/60 px-4 py-2.5 border-b border-amber-200">
-                      <h3 className="serif text-base font-semibold text-amber-900 flex items-center gap-2">
-                        📝 Modificatorios detectados en este contrato
-                      </h3>
-                      <p className="text-[11px] text-amber-800 mt-0.5">
-                        Este contrato tiene cambios formales registrados en SECOP. Acá ves
-                        el resumen sin tener que revisar cada sección.
-                      </p>
-                    </div>
-                    <div className="p-4 space-y-3 text-sm">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                          <div className="text-[10px] uppercase tracking-wider text-ink-soft mb-0.5">
-                            Estado actual
-                          </div>
-                          <div className="inline-flex items-center px-2 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300 font-medium">
-                            {estado || "Modificado"}
-                          </div>
-                        </div>
-                        {dias > 0 && (
-                          <div>
-                            <div className="text-[10px] uppercase tracking-wider text-ink-soft mb-0.5">
-                              Días adicionados (prórroga)
-                            </div>
-                            <div className="font-mono text-base font-semibold text-amber-900">
-                              + {dias} días
-                            </div>
-                          </div>
-                        )}
-                        {fechaInicio && (
-                          <div>
-                            <div className="text-[10px] uppercase tracking-wider text-ink-soft mb-0.5">
-                              Fecha de inicio del contrato
-                            </div>
-                            <div className="font-mono text-ink">{fechaInicio}</div>
-                          </div>
-                        )}
-                        {fechaFin && (
-                          <div>
-                            <div className="text-[10px] uppercase tracking-wider text-ink-soft mb-0.5">
-                              Fecha de terminación
-                            </div>
-                            <div className="font-mono text-ink">
-                              {fechaFin}
-                              {dias > 0 && (
-                                <span className="text-[10px] text-ink-soft ml-1 italic">
-                                  (incluye los +{dias} días de prórroga)
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                        {ultima && (
-                          <div className="md:col-span-2">
-                            <div className="text-[10px] uppercase tracking-wider text-ink-soft mb-0.5">
-                              Última actualización del proceso en SECOP
-                            </div>
-                            <div className="font-mono text-ink">{ultima}</div>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="text-[11px] text-ink-soft border-t border-amber-200 pt-2.5 mt-2 italic">
-                        💡 Para descargar el PDF del otrosí / acta de modificación / aprobación
-                        de prórroga: bajá hasta la sección{" "}
-                        <span className="font-semibold not-italic">
-                          &ldquo;Snapshot del portal SECOP&rdquo;
-                        </span>{" "}
-                        — los documentos con palabras como &ldquo;OTROSÍ&rdquo;,
-                        &ldquo;MODIFICACIÓN&rdquo;, &ldquo;PRÓRROGA&rdquo; o
-                        &ldquo;ADICIÓN&rdquo; en el nombre son los que corresponden
-                        al modificatorio.
-                      </div>
-                    </div>
-                  </section>
-                );
-              })()}
-
-              {SECTIONS.map((section) => {
-                const rows = section.fields
-                  .map(([field, label]) => {
-                    const value = (contract as Record<string, unknown>)[field];
-                    if (value === null || value === undefined || value === "") return null;
-                    return [field, label, value] as const;
-                  })
-                  .filter(
-                    (r): r is readonly [string, string, NonNullable<unknown>] =>
-                      r !== null,
-                  );
-                if (!rows.length) return null;
-                return (
-                  <section key={section.label}>
-                    <div className="eyebrow mb-2">{section.label}</div>
-                    <div className="border border-rule rounded-md overflow-hidden">
-                      <table className="w-full text-sm">
-                        <tbody>
-                          {rows.map(([field, label, value], i) => {
-                            const conf = data.feab_confidence?.[label];
-                            const src = data.feab_sources?.[label];
-                            return (
-                              <tr
-                                key={field}
-                                className={cn(
-                                  "border-b border-rule/50 last:border-0",
-                                  i % 2 === 0 ? "bg-background" : "bg-surface"
-                                )}
-                              >
-                                <td className="px-3 py-2 w-1/3 text-ink-soft text-xs uppercase tracking-wide">
-                                  {label}
-                                </td>
-                                <td className="px-3 py-2 text-ink">
-                                  {fmtValue(field, value)}
-                                </td>
-                                <td className="px-3 py-2 w-32">
-                                  {conf && (
-                                    <Badge className={confidenceColor(conf)}>
-                                      {conf}
-                                    </Badge>
-                                  )}
-                                  {src && (
-                                    <div className="text-[10px] font-mono text-ink-soft mt-1">
-                                      {src}
-                                    </div>
-                                  )}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </section>
-                );
-              })}
-
-              {/* Otros campos del API jbjy-vk9h que las SECTIONS curadas no
-                  cubren. Antes este bloque NO existía y el modal mostraba
-                  44/73 campos — los 29 restantes ("descripcion_del_proceso",
-                  "condiciones_de_entrega", etc.) quedaban invisibles para
-                  la Dra aunque el API los devolviera. Cardinal violation.
-                  Ahora se muestran SIEMPRE, escondidos detrás de un toggle
-                  para no abrumar el modal por default. */}
-              {otrosCamposApi.length > 0 && (
-                <section>
-                  <button
-                    onClick={() => setShowAllApiFields((s) => !s)}
-                    className="inline-flex items-center gap-1 text-xs text-burgundy hover:underline"
-                  >
-                    {showAllApiFields ? (
-                      <ChevronDown className="h-3 w-3" />
-                    ) : (
-                      <ChevronRight className="h-3 w-3" />
-                    )}
-                    Otros campos del API SECOP ({otrosCamposApi.length})
-                  </button>
-                  {showAllApiFields && (
-                    <div className="mt-2 border border-rule rounded-md overflow-hidden">
-                      <table className="w-full text-sm">
-                        <tbody>
-                          {otrosCamposApi.map(([field, value], i) => (
-                            <tr
-                              key={field}
-                              className={cn(
-                                "border-b border-rule/50 last:border-0",
-                                i % 2 === 0 ? "bg-background" : "bg-surface",
-                              )}
-                            >
-                              <td className="px-3 py-2 w-1/3 text-ink-soft text-[10px] uppercase tracking-wide font-mono">
-                                {field.replace(/_/g, " ")}
-                              </td>
-                              <td className="px-3 py-2 text-ink whitespace-pre-wrap">
-                                {fmtValue(field, value)}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </section>
-              )}
-
-              {/* Otros contratos del MISMO proceso (mismos notice_uid).
-                  Aparece cuando el proceso adjudicó a varios proveedores
-                  (típico en subastas con múltiples lotes/ganadores). Antes
-                  el modal silenciosamente solo mostraba el primero — los
-                  demás se "comían". Ahora cada hermano se renderiza con
-                  su mini-tabla de campos clave. */}
-              {sibContratos.length > 0 && (
-                <section>
-                  <div className="eyebrow mb-2">
-                    Otros contratos del mismo proceso ({sibContratos.length})
-                  </div>
-                  <div className="space-y-3">
-                    {sibContratos.map((sib, idx) => {
-                      const sibUrl =
-                        (sib as Record<string, unknown>).urlproceso?.toString() ?? "";
+                <table className="w-full text-sm">
+                  <tbody>
+                    {orderedFields.map((field, i) => {
+                      const label =
+                        PORTAL_FIELD_LABELS[field] ?? humanizeFieldName(field);
+                      const value = fields[field];
                       return (
-                        <div
-                          key={(sib.id_contrato ?? `sib-${idx}`)}
-                          className="border border-rule rounded-md overflow-hidden"
+                        <tr
+                          key={field}
+                          className={cn(
+                            "border-b border-rule/50 last:border-0",
+                            i % 2 === 0 ? "bg-background" : "bg-surface",
+                          )}
                         >
-                          <div className="bg-surface px-3 py-2 border-b border-rule flex items-center justify-between">
-                            <span className="font-mono text-[11px] text-burgundy">
-                              {sib.referencia_del_contrato ?? sib.id_contrato ?? "—"}
-                            </span>
-                            {sibUrl && (
-                              <a
-                                href={sibUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-[10px] text-ink-soft hover:text-burgundy hover:underline inline-flex items-center gap-1"
-                              >
-                                Abrir <ExternalLink className="h-3 w-3" />
-                              </a>
-                            )}
-                          </div>
-                          <table className="w-full text-sm">
-                            <tbody>
-                              {SECTIONS.flatMap((s) => s.fields)
-                                .map(([field, label]) => {
-                                  const value = (sib as Record<string, unknown>)[field];
-                                  if (value === null || value === undefined || value === "") {
-                                    return null;
-                                  }
-                                  return [field, label, value] as const;
-                                })
-                                .filter(
-                                  (r): r is readonly [string, string, NonNullable<unknown>] =>
-                                    r !== null,
-                                )
-                                .map(([field, label, value], i) => (
-                                  <tr
-                                    key={field}
-                                    className={cn(
-                                      "border-b border-rule/50 last:border-0",
-                                      i % 2 === 0 ? "bg-background" : "bg-surface",
-                                    )}
-                                  >
-                                    <td className="px-3 py-1.5 w-1/3 text-ink-soft text-[11px] uppercase tracking-wide">
-                                      {label}
-                                    </td>
-                                    <td className="px-3 py-1.5 text-ink text-xs">
-                                      {fmtValue(field, value)}
-                                    </td>
-                                  </tr>
-                                ))}
-                            </tbody>
-                          </table>
-                        </div>
+                          <td className="px-3 py-2 w-1/3 text-ink-soft text-[11px] uppercase tracking-wide font-medium align-top">
+                            {label}
+                          </td>
+                          <td className="px-3 py-2 text-ink align-top">
+                            {renderValue(value)}
+                          </td>
+                        </tr>
                       );
                     })}
-                  </div>
-                </section>
-              )}
+                  </tbody>
+                </table>
+              </section>
 
-              {/* Adiciones */}
-              {Object.values(data.adiciones_by_contrato).some((a) => a.length > 0) && (
-                <section>
-                  <div className="eyebrow mb-2">
-                    Adiciones / Modificatorios al contrato
+              {/* DOCUMENTOS PUBLICADOS · si los hay */}
+              {documents.length > 0 && (
+                <section className="border border-rule rounded-md overflow-hidden">
+                  <div className="bg-surface px-4 py-2.5 border-b border-rule">
+                    <h3 className="serif text-base font-semibold text-ink">
+                      Documentos publicados ({documents.length})
+                    </h3>
                   </div>
-                  <div className="border border-rule rounded-md overflow-hidden">
-                    <table className="w-full text-sm">
-                      <thead className="bg-surface text-[11px] uppercase tracking-wider text-ink-soft">
-                        <tr>
-                          <th className="text-left px-3 py-2">Tipo</th>
-                          <th className="text-left px-3 py-2">Valor</th>
-                          <th className="text-left px-3 py-2">Fecha</th>
-                          <th className="text-left px-3 py-2">Descripción</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {Object.values(data.adiciones_by_contrato)
-                          .flat()
-                          .map((a, i) => (
-                            <tr
-                              key={i}
-                              className="border-b border-rule/50 last:border-0"
-                            >
-                              <td className="px-3 py-2">{(a.tipo as string) ?? "—"}</td>
-                              <td className="px-3 py-2 font-mono">
-                                {moneyCO.format(Number(a.valor ?? 0))}
-                              </td>
-                              <td className="px-3 py-2 font-mono text-ink-soft">
-                                {fmtDate((a.fecha_adicion as string) ?? "")}
-                              </td>
-                              <td className="px-3 py-2 text-xs text-ink-soft">
-                                {((a.descripcion_adicion as string) ?? "").slice(0, 80)}
-                              </td>
-                            </tr>
-                          ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </section>
-              )}
-
-              {/* Modificatorios al PROCESO (distintos a adiciones de contrato).
-                  Vienen del dataset SECOP de modificatorios de proceso. */}
-              {data.mods_proceso?.length > 0 && (
-                <section>
-                  <div className="eyebrow mb-2">
-                    Modificatorios al proceso ({data.mods_proceso.length})
-                  </div>
-                  <div className="border border-rule rounded-md overflow-hidden">
-                    <table className="w-full text-sm">
-                      <thead className="bg-surface text-[11px] uppercase tracking-wider text-ink-soft">
-                        <tr>
-                          <th className="text-left px-3 py-2">Tipo</th>
-                          <th className="text-left px-3 py-2">Fecha</th>
-                          <th className="text-left px-3 py-2">Descripción</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {data.mods_proceso.map((m, i) => (
-                          <tr
-                            key={i}
-                            className="border-b border-rule/50 last:border-0"
-                          >
-                            <td className="px-3 py-2">
-                              {((m.tipo_modificacion as string) ??
-                                (m.tipo as string)) ??
-                                "—"}
-                            </td>
-                            <td className="px-3 py-2 font-mono text-ink-soft">
-                              {fmtDate(
-                                (m.fecha_modificacion as string) ??
-                                  (m.fecha as string) ??
-                                  "",
-                              )}
-                            </td>
-                            <td className="px-3 py-2 text-xs text-ink-soft">
-                              {((m.descripcion as string) ??
-                                (m.justificacion as string) ??
-                                "").slice(0, 120)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </section>
-              )}
-
-              {/* DATOS DEL PORTAL — cascada de fuentes públicas:
-                  1. SECOP Integrado (rpmr-utcd) — sin captcha, datos.gov.co
-                  2. Portal scrape snapshot — community.secop.gov.co
-                  3. Botón "Leer del portal" si nada tiene el proceso
-
-                  Cada link expone campos distintos; renderizamos TODO
-                  lo capturado sin alucinar / asumir / inventar. */}
-              {data.notice_uid && (
-                <PortalSection noticeUid={data.notice_uid} />
-              )}
-
-              {/* OBSERVACIONES de la Dra (notas escritas a mano en el Excel).
-                  Vienen del Excel master, no de SECOP. */}
-              {data.observaciones_dra?.length > 0 && (
-                <section>
-                  <div className="eyebrow mb-2">
-                    Observaciones de la Dra ({data.observaciones_dra.length})
-                  </div>
-                  <div className="border border-rule rounded-md divide-y divide-rule/50">
-                    {data.observaciones_dra.map((o, i) => (
-                      <div key={i} className="p-3">
-                        <div className="text-[10px] font-mono text-ink-soft uppercase tracking-wider mb-1">
-                          {o.sheet} · fila {o.row}
-                        </div>
-                        <div className="text-sm text-ink whitespace-pre-wrap">
-                          {o.text}
-                        </div>
-                      </div>
+                  <ul className="divide-y divide-rule/50">
+                    {documents.map((doc, i) => (
+                      <li key={i} className="px-3 py-2 flex items-start gap-2">
+                        <ChevronRight className="h-3 w-3 mt-1 text-ink-soft flex-shrink-0" />
+                        <a
+                          href={doc.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-burgundy hover:underline text-sm flex-1"
+                        >
+                          {doc.name}
+                        </a>
+                      </li>
                     ))}
-                  </div>
+                  </ul>
                 </section>
               )}
 
-              <div className="text-[10px] font-mono text-ink-soft pt-4 border-t border-rule">
-                Hash SECOP completo: {data.secop_hash}
-                <br />
-                Code version: {data.code_version} · Consultado:{" "}
-                {data.fetched_at}
-              </div>
-            </div>
+              {/* NOTIFICACIONES DEL PROCESO · si las hay */}
+              {notificaciones.length > 0 && (
+                <section className="border border-rule rounded-md overflow-hidden">
+                  <div className="bg-surface px-4 py-2.5 border-b border-rule">
+                    <h3 className="serif text-base font-semibold text-ink">
+                      Notificaciones del proceso ({notificaciones.length})
+                    </h3>
+                  </div>
+                  <ul className="divide-y divide-rule/50">
+                    {notificaciones.map((n, i) => (
+                      <li key={i} className="px-3 py-2 text-sm">
+                        <div className="text-ink font-medium">{n.evento}</div>
+                        <div className="text-[11px] text-ink-soft mt-0.5">
+                          {n.proceso} · {n.fecha}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+            </>
           )}
+
+          {/* FOOTER · trazabilidad cardinal · auditable */}
+          <footer className="border-t border-rule pt-3 mt-4 text-[10px] text-ink-soft font-mono">
+            <div>process_id: {contractId ?? "—"}</div>
+            {scrapedAt && (
+              <div>scrape del link: {scrapedAt}</div>
+            )}
+            {status && (
+              <div>status del scrape: {status}</div>
+            )}
+            <div>code version: cardinal-puro · 2026-04-27</div>
+          </footer>
+        </div>
+
+        <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-rule">
+          <Button
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+          >
+            Cerrar
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
-  );
-}
-
-
-/* ─────────────────────────────────────────────────────────────────────
- * PortalSection — espejo del HTML del portal SECOP para un proceso.
- *
- * - Cada proceso del portal tiene campos diferentes; renderizamos el
- *   `all_labels` completo (label normalizado → valor) sin curar.
- * - Si el snapshot no existe aún, mostramos un botón "Leer ahora" que
- *   dispara el scraper en backend.
- * - Status badge: ok_completo (verde) / ok_parcial (ámbar) / errored (rojo).
- * - "Re-leer del portal" fuerza un re-scrape (--force) cuando la Dra
- *   sospecha que cambió algo.
- * - NUNCA inventar valores: vacío → "—".
- * ──────────────────────────────────────────────────────────────────── */
-
-const PORTAL_STATUS_LABEL: Record<string, { label: string; cls: string }> = {
-  ok_completo: { label: "Espejo completo", cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  ok_parcial:  { label: "Espejo parcial",  cls: "bg-amber-50 text-amber-700 border-amber-200" },
-  bloqueado_captcha: { label: "Bloqueado por captcha", cls: "bg-rose-50 text-rose-700 border-rose-200" },
-  error_red: { label: "Error de red", cls: "bg-rose-50 text-rose-700 border-rose-200" },
-  no_disponible: { label: "No disponible", cls: "bg-stone-50 text-stone-700 border-stone-200" },
-};
-
-function PortalSection({ noticeUid }: { noticeUid: string }) {
-  // Cascada: primero consulta SECOP Integrado (rpmr-utcd, sin captcha).
-  // Si está, mostramos esos campos como fuente principal. En paralelo
-  // pedimos el snapshot del portal scrape (puede estar o no). Solo si
-  // NINGUNO tiene el proceso, ofrecemos el botón "Leer del portal".
-  const { data: integ, error: integError, isLoading: integLoading } =
-    useSWR(
-      `integ:${noticeUid}`,
-      () => api.contractIntegrado(noticeUid),
-    );
-  const { data, error, isLoading, mutate } = useSWR<PortalSnapshot>(
-    `portal:${noticeUid}`,
-    () => api.contractPortal(noticeUid),
-  );
-  const [scraping, setScraping] = React.useState(false);
-  // Toggle "Ver TODOS los campos crudos del portal" — ABIERTO por
-  // default. Misma regla cardinal: si el portal devuelve un label, la
-  // Dra lo tiene que ver al abrir el modal. Sin escondrijos.
-  const [showAllLabels, setShowAllLabels] = React.useState(true);
-
-  async function triggerScrape(force = false) {
-    setScraping(true);
-    try {
-      await api.portalScrape({ uid: noticeUid, force });
-      // Espera 3s y refresca, luego sigue refrescando cada 5s mientras esté corriendo
-      const poll = async (attempts: number): Promise<void> => {
-        await new Promise((r) => setTimeout(r, 3000));
-        const snap = await api.contractPortal(noticeUid).catch(() => null);
-        if (snap?.available && snap.status === "ok_completo") {
-          mutate(snap);
-          return;
-        }
-        if (attempts > 0) return poll(attempts - 1);
-        mutate();
-      };
-      await poll(20); // hasta ~60s
-    } finally {
-      setScraping(false);
-    }
-  }
-
-  // Render del Integrado siempre que esté disponible (primero en la
-  // cascada, sin captcha). Lo mostramos antes del snapshot del portal.
-  const integFields = integ?.available ? (integ.fields ?? {}) : {};
-  const integEntries = Object.entries(integFields).filter(
-    ([k, v]) => v && k !== "_notice_uid",
-  );
-  const integRender = integ?.available && integEntries.length > 0 && (
-    <section>
-      <div className="eyebrow mb-2 flex items-center gap-1.5">
-        <Globe className="h-3 w-3" /> SECOP Integrado · datos.gov.co
-        <span className="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border bg-emerald-50 text-emerald-700 border-emerald-200">
-          Sin captcha
-        </span>
-      </div>
-      {integ.synced_at && (
-        <div className="text-[10px] font-mono text-ink-soft mb-2">
-          Sincronizado: {integ.synced_at} · {integEntries.length} campos · {integ.source}
-        </div>
-      )}
-      <div className="border border-rule rounded-md overflow-hidden mb-3">
-        <table className="w-full text-sm">
-          <tbody>
-            {integEntries.map(([k, v], i) => (
-              <tr
-                key={k}
-                className={cn(
-                  "border-b border-rule/50 last:border-0",
-                  i % 2 === 0 ? "bg-background" : "bg-surface",
-                )}
-              >
-                <td className="px-3 py-2 w-1/3 text-ink-soft text-xs uppercase tracking-wide">
-                  {k.replace(/_/g, " ")}
-                </td>
-                <td className="px-3 py-2 text-ink whitespace-pre-wrap">{v}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  );
-
-  if (isLoading || integLoading) {
-    return (
-      <section>
-        <div className="eyebrow mb-2 flex items-center gap-1.5">
-          <Globe className="h-3 w-3" /> Datos del portal SECOP
-        </div>
-        <div className="flex items-center gap-2 text-ink-soft text-xs py-3">
-          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Consultando datos públicos…
-        </div>
-      </section>
-    );
-  }
-
-  if (error) {
-    return (
-      <>
-        {integRender}
-        <section>
-          <div className="eyebrow mb-2 flex items-center gap-1.5">
-            <Globe className="h-3 w-3" /> Snapshot del portal
-          </div>
-          <div className="text-rose-700 text-xs py-3">
-            No pude consultar el snapshot del portal.
-          </div>
-        </section>
-      </>
-    );
-  }
-
-  if (!data?.available) {
-    // Si Integrado YA tiene los datos, mostramos eso y solo
-    // ofrecemos el portal scrape como bonus (más detalle: documentos,
-    // notificaciones, etc.). Si Integrado NO tiene, el portal scrape
-    // pasa a ser la única opción.
-    return (
-      <>
-        {integRender}
-        <section>
-          <div className="eyebrow mb-2 flex items-center gap-1.5">
-            <Globe className="h-3 w-3" /> Snapshot detallado del portal
-            {integ?.available && (
-              <span className="text-[10px] text-ink-soft italic ml-1">
-                (opcional — ya tenés los datos arriba)
-              </span>
-            )}
-          </div>
-          <div className="border border-dashed border-rule rounded-md p-4 bg-surface">
-            <p className="text-sm text-ink-soft mb-3">
-              {integ?.available
-                ? "Para ver documentos del proceso (pliegos, adendas, modificatorios) " +
-                  "podés leer el portal — agrega información que el dataset Integrado no tiene."
-                : "Este proceso no está en el dataset Integrado ni en el snapshot del " +
-                  "portal. Lectura del portal es la única fuente que queda."}
-            </p>
-            <Button
-              onClick={() => triggerScrape(false)}
-              disabled={scraping}
-              className="gap-2"
-              size="sm"
-              variant={integ?.available ? "outline" : "default"}
-            >
-              {scraping ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Download className="h-3.5 w-3.5" />
-              )}
-              {integ?.available
-                ? "Leer documentos del portal"
-                : "Leer del portal ahora"}
-            </Button>
-            <p className="text-[11px] text-ink-soft mt-2 italic">
-              * Abre Chrome visible. Si SECOP pide captcha, el solver
-              automático lo intenta (audio en español); si falla, lo
-              resolvés una vez y queda guardado para los siguientes.
-            </p>
-          </div>
-        </section>
-      </>
-    );
-  }
-
-  const status = data.status ?? "ok_completo";
-  const statusInfo = PORTAL_STATUS_LABEL[status] ?? PORTAL_STATUS_LABEL.ok_completo;
-  const fields = data.fields ?? {};
-  const allLabels = data.all_labels ?? {};
-  const docs = data.documents ?? [];
-  const notifs = data.notificaciones ?? [];
-  const fieldEntries = Object.entries(fields).filter(([, v]) => v && v.trim());
-  const labelEntries = Object.entries(allLabels).filter(([, v]) => v && v.trim());
-  const labelEntriesNotInFields = labelEntries.filter(
-    ([k]) => !fieldEntries.some(([fk]) => fk.toLowerCase() === k.toLowerCase()),
-  );
-
-  return (
-    <>
-    {integRender}
-    <section className="space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <div className="eyebrow flex items-center gap-1.5">
-          <Globe className="h-3 w-3" /> Snapshot del portal SECOP
-          <span
-            className={cn(
-              "ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border",
-              statusInfo.cls,
-            )}
-          >
-            {statusInfo.label}
-          </span>
-          {data.missing_fields && data.missing_fields.length > 0 && (
-            <span className="ml-1 text-[10px] text-amber-700">
-              · faltan: {data.missing_fields.join(", ")}
-            </span>
-          )}
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => triggerScrape(true)}
-          disabled={scraping}
-          className="gap-1 text-xs"
-          title="Re-leer del portal (forzar)"
-        >
-          {scraping ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
-          ) : (
-            <RefreshCw className="h-3 w-3" />
-          )}
-          Re-leer
-        </Button>
-      </div>
-
-      {data.scraped_at && (
-        <div className="text-[10px] font-mono text-ink-soft">
-          Leído del portal: {data.scraped_at} · {labelEntries.length} campos ·{" "}
-          {docs.length} documentos · {notifs.length} notificaciones
-        </div>
-      )}
-
-      {fieldEntries.length > 0 && (
-        <div className="border border-rule rounded-md overflow-hidden">
-          <table className="w-full text-sm">
-            <tbody>
-              {fieldEntries.map(([k, v], i) => (
-                <tr
-                  key={k}
-                  className={cn(
-                    "border-b border-rule/50 last:border-0",
-                    i % 2 === 0 ? "bg-background" : "bg-surface",
-                  )}
-                >
-                  <td className="px-3 py-2 w-1/3 text-ink-soft text-xs uppercase tracking-wide">
-                    {k.replace(/_/g, " ")}
-                  </td>
-                  <td className="px-3 py-2 text-ink whitespace-pre-wrap">
-                    {v}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {labelEntriesNotInFields.length > 0 && (
-        <div>
-          <button
-            onClick={() => setShowAllLabels((s) => !s)}
-            className="inline-flex items-center gap-1 text-xs text-burgundy hover:underline"
-          >
-            {showAllLabels ? (
-              <ChevronDown className="h-3 w-3" />
-            ) : (
-              <ChevronRight className="h-3 w-3" />
-            )}
-            Ver TODOS los campos crudos del portal ({labelEntriesNotInFields.length} más)
-          </button>
-          {showAllLabels && (
-            <div className="mt-2 border border-rule rounded-md overflow-hidden">
-              <table className="w-full text-xs">
-                <tbody>
-                  {labelEntriesNotInFields.map(([k, v], i) => (
-                    <tr
-                      key={k}
-                      className={cn(
-                        "border-b border-rule/50 last:border-0",
-                        i % 2 === 0 ? "bg-background" : "bg-surface",
-                      )}
-                    >
-                      <td className="px-3 py-1.5 w-1/2 text-ink-soft font-mono text-[10px]">
-                        {k}
-                      </td>
-                      <td className="px-3 py-1.5 text-ink whitespace-pre-wrap">
-                        {v}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
-
-      {docs.length > 0 && (
-        <div>
-          <div className="eyebrow mb-1.5">Documentos del proceso ({docs.length})</div>
-          <ul className="border border-rule rounded-md divide-y divide-rule/50">
-            {docs.map((d, i) => (
-              <li key={i} className="px-3 py-2 flex items-center justify-between gap-2 text-xs">
-                <span className="text-ink truncate flex-1">{d.name}</span>
-                {d.url && (
-                  <a
-                    href={d.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-burgundy hover:underline shrink-0"
-                  >
-                    <Download className="h-3 w-3" /> Descargar
-                  </a>
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {notifs.length > 0 && (
-        <div>
-          <div className="eyebrow mb-1.5">Notificaciones del proceso ({notifs.length})</div>
-          <div className="border border-rule rounded-md overflow-hidden">
-            <table className="w-full text-xs">
-              <thead className="bg-surface text-[10px] uppercase tracking-wider text-ink-soft">
-                <tr>
-                  <th className="text-left px-3 py-1.5">Proceso</th>
-                  <th className="text-left px-3 py-1.5">Evento</th>
-                  <th className="text-left px-3 py-1.5">Fecha</th>
-                </tr>
-              </thead>
-              <tbody>
-                {notifs.map((n, i) => (
-                  <tr key={i} className="border-b border-rule/50 last:border-0">
-                    <td className="px-3 py-1.5 font-mono text-[10px]">{n.proceso}</td>
-                    <td className="px-3 py-1.5">{n.evento}</td>
-                    <td className="px-3 py-1.5 font-mono text-ink-soft">{n.fecha}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-    </section>
-    </>
   );
 }
