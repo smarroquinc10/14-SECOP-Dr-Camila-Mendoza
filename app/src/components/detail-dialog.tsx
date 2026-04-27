@@ -287,6 +287,102 @@ export function DetailDialog({ contractId, open, onOpenChange }: Props) {
                 </div>
               )}
 
+              {/* Sección "Modificatorios detectados" — feedback Cami abogada
+                  (2026-04-27): cuando el contrato esté modificado, mostrar
+                  un resumen DESTACADO al inicio del modal con la info clave:
+                  estado, días adicionados, fecha de la última actualización
+                  SECOP, y un hint para buscar PDFs en el snapshot del portal
+                  abajo. Esto evita que la Dra tenga que rastrear el dato
+                  en 3 secciones distintas. */}
+              {(() => {
+                const c = contract as Record<string, unknown>;
+                const estado = String(c.estado_contrato ?? "");
+                const dias = Number(c.dias_adicionados ?? 0);
+                const isMod = /modific/i.test(estado) || dias > 0;
+                if (!isMod) return null;
+                const ultima = String(c.ultima_actualizacion ?? "").slice(0, 10);
+                const fechaInicio = String(c.fecha_de_inicio_del_contrato ?? "").slice(0, 10);
+                const fechaFin = String(c.fecha_de_fin_del_contrato ?? "").slice(0, 10);
+                return (
+                  <section className="border-2 border-amber-300 bg-amber-50/40 rounded-md overflow-hidden">
+                    <div className="bg-amber-100/60 px-4 py-2.5 border-b border-amber-200">
+                      <h3 className="serif text-base font-semibold text-amber-900 flex items-center gap-2">
+                        📝 Modificatorios detectados en este contrato
+                      </h3>
+                      <p className="text-[11px] text-amber-800 mt-0.5">
+                        Este contrato tiene cambios formales registrados en SECOP. Acá ves
+                        el resumen sin tener que revisar cada sección.
+                      </p>
+                    </div>
+                    <div className="p-4 space-y-3 text-sm">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <div className="text-[10px] uppercase tracking-wider text-ink-soft mb-0.5">
+                            Estado actual
+                          </div>
+                          <div className="inline-flex items-center px-2 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300 font-medium">
+                            {estado || "Modificado"}
+                          </div>
+                        </div>
+                        {dias > 0 && (
+                          <div>
+                            <div className="text-[10px] uppercase tracking-wider text-ink-soft mb-0.5">
+                              Días adicionados (prórroga)
+                            </div>
+                            <div className="font-mono text-base font-semibold text-amber-900">
+                              + {dias} días
+                            </div>
+                          </div>
+                        )}
+                        {fechaInicio && (
+                          <div>
+                            <div className="text-[10px] uppercase tracking-wider text-ink-soft mb-0.5">
+                              Fecha de inicio del contrato
+                            </div>
+                            <div className="font-mono text-ink">{fechaInicio}</div>
+                          </div>
+                        )}
+                        {fechaFin && (
+                          <div>
+                            <div className="text-[10px] uppercase tracking-wider text-ink-soft mb-0.5">
+                              Fecha de terminación
+                            </div>
+                            <div className="font-mono text-ink">
+                              {fechaFin}
+                              {dias > 0 && (
+                                <span className="text-[10px] text-ink-soft ml-1 italic">
+                                  (incluye los +{dias} días de prórroga)
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        {ultima && (
+                          <div className="md:col-span-2">
+                            <div className="text-[10px] uppercase tracking-wider text-ink-soft mb-0.5">
+                              Última actualización del proceso en SECOP
+                            </div>
+                            <div className="font-mono text-ink">{ultima}</div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="text-[11px] text-ink-soft border-t border-amber-200 pt-2.5 mt-2 italic">
+                        💡 Para descargar el PDF del otrosí / acta de modificación / aprobación
+                        de prórroga: bajá hasta la sección{" "}
+                        <span className="font-semibold not-italic">
+                          &ldquo;Snapshot del portal SECOP&rdquo;
+                        </span>{" "}
+                        — los documentos con palabras como &ldquo;OTROSÍ&rdquo;,
+                        &ldquo;MODIFICACIÓN&rdquo;, &ldquo;PRÓRROGA&rdquo; o
+                        &ldquo;ADICIÓN&rdquo; en el nombre son los que corresponden
+                        al modificatorio.
+                      </div>
+                    </div>
+                  </section>
+                );
+              })()}
+
               {SECTIONS.map((section) => {
                 const rows = section.fields
                   .map(([field, label]) => {
