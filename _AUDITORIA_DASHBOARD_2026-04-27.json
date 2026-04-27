@@ -1,107 +1,154 @@
 {
-  "audited_at": "2026-04-27T09:23:39.219554Z",
-  "finished_at": "2026-04-27T09:23:39.863161Z",
+  "audited_at": "2026-04-27T10:08:51.059185Z",
+  "finished_at": "2026-04-27T10:10:42.446560Z",
   "no_network": false,
   "totals": {
     "watched_items": 491,
     "portal_seed_entries": 473,
-    "jbjy_rows": 288,
+    "jbjy_rows": 0,
     "rpmr_rows": 382,
     "rpmr_orphan_secop_i": 88
   },
   "coverage_counts": {
-    "api": 6,
-    "none": 11,
+    "none": 17,
     "portal": 316,
     "integrado": 158
   },
   "severity_counts": {
-    "scrape": 3
+    "scrape": 9
   },
   "items": [
     {
       "process_id": "CO1.PCCNTR.8930451",
       "notice_uid": null,
       "url": "https://www.secop.gov.co/CO1ContractsManagement/Tendering/ProcurementContractEdit/View?docUniqueIdentifier=CO1.PCCNTR.8930451&prevCtxUrl=https%3a%2f%2fwww.secop.gov.co%3a443%2fCO1ContractsManagement%2fTendering%2fProcurementContractManagement%2fIndex&prevCtxLbl=Contratos+",
-      "coverage": "api",
+      "coverage": "none",
       "sheets": [
         "FEAB 2026"
       ],
       "vigencias": [
         "2026"
       ],
-      "issues": [],
-      "issues_summary": {}
+      "issues": [
+        {
+          "check": 13,
+          "severity": "scrape",
+          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
+        }
+      ],
+      "issues_summary": {
+        "scrape": 1
+      }
     },
     {
       "process_id": "CO1.PCCNTR.8930521",
       "notice_uid": null,
       "url": "https://www.secop.gov.co/CO1ContractsManagement/Tendering/ProcurementContractEdit/View?docUniqueIdentifier=CO1.PCCNTR.8930521&prevCtxUrl=https%3a%2f%2fwww.secop.gov.co%3a443%2fCO1ContractsManagement%2fTendering%2fProcurementContractManagement%2fIndex&prevCtxLbl=Contratos+",
-      "coverage": "api",
+      "coverage": "none",
       "sheets": [
         "FEAB 2026"
       ],
       "vigencias": [
         "2026"
       ],
-      "issues": [],
-      "issues_summary": {}
+      "issues": [
+        {
+          "check": 13,
+          "severity": "scrape",
+          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
+        }
+      ],
+      "issues_summary": {
+        "scrape": 1
+      }
     },
     {
       "process_id": "CO1.PCCNTR.8930513",
       "notice_uid": null,
       "url": "https://www.secop.gov.co/CO1ContractsManagement/Tendering/ProcurementContractEdit/View?docUniqueIdentifier=CO1.PCCNTR.8930513&prevCtxUrl=https%3a%2f%2fwww.secop.gov.co%3a443%2fCO1ContractsManagement%2fTendering%2fProcurementContractManagement%2fIndex&prevCtxLbl=Contratos+",
-      "coverage": "api",
+      "coverage": "none",
       "sheets": [
         "FEAB 2026"
       ],
       "vigencias": [
         "2026"
       ],
-      "issues": [],
-      "issues_summary": {}
+      "issues": [
+        {
+          "check": 13,
+          "severity": "scrape",
+          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
+        }
+      ],
+      "issues_summary": {
+        "scrape": 1
+      }
     },
     {
       "process_id": "CO1.PCCNTR.8930039",
       "notice_uid": null,
       "url": "https://www.secop.gov.co/CO1ContractsManagement/Tendering/ProcurementContractEdit/View?docUniqueIdentifier=CO1.PCCNTR.8930039&prevCtxUrl=https%3a%2f%2fwww.secop.gov.co%3a443%2fCO1ContractsManagement%2fTendering%2fProcurementContractManagement%2fIndex&prevCtxLbl=Contratos+",
-      "coverage": "api",
+      "coverage": "none",
       "sheets": [
         "FEAB 2026"
       ],
       "vigencias": [
         "2026"
       ],
-      "issues": [],
-      "issues_summary": {}
+      "issues": [
+        {
+          "check": 13,
+          "severity": "scrape",
+          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
+        }
+      ],
+      "issues_summary": {
+        "scrape": 1
+      }
     },
     {
       "process_id": "CO1.PCCNTR.8929690",
       "notice_uid": null,
       "url": "https://www.secop.gov.co/CO1ContractsManagement/Tendering/ProcurementContractEdit/View?docUniqueIdentifier=CO1.PCCNTR.8929690&prevCtxUrl=https%3a%2f%2fwww.secop.gov.co%3a443%2fCO1ContractsManagement%2fTendering%2fProcurementContractManagement%2fIndex&prevCtxLbl=Contratos+",
-      "coverage": "api",
+      "coverage": "none",
       "sheets": [
         "FEAB 2026"
       ],
       "vigencias": [
         "2026"
       ],
-      "issues": [],
-      "issues_summary": {}
+      "issues": [
+        {
+          "check": 13,
+          "severity": "scrape",
+          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
+        }
+      ],
+      "issues_summary": {
+        "scrape": 1
+      }
     },
     {
       "process_id": "CO1.PCCNTR.8930109",
       "notice_uid": null,
       "url": "https://www.secop.gov.co/CO1ContractsManagement/Tendering/ProcurementContractEdit/View?docUniqueIdentifier=CO1.PCCNTR.8930109&prevCtxUrl=https%3a%2f%2fwww.secop.gov.co%3a443%2fCO1ContractsManagement%2fTendering%2fProcurementContractManagement%2fIndex&prevCtxLbl=Contratos+",
-      "coverage": "api",
+      "coverage": "none",
       "sheets": [
         "FEAB 2026"
       ],
       "vigencias": [
         "2026"
       ],
-      "issues": [],
-      "issues_summary": {}
+      "issues": [
+        {
+          "check": 13,
+          "severity": "scrape",
+          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
+        }
+      ],
+      "issues_summary": {
+        "scrape": 1
+      }
     },
     {
       "process_id": "CO1.REQ.9988313",

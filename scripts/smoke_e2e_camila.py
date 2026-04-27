@@ -75,23 +75,33 @@ def main() -> int:
                 fails.append(f"STEP 3: indicador '{indicator_text}' no aparece")
 
         # ---- Step 4: action bar - 1 solo botón visible para Cami ----
+        # Post-cardinal pure (commit 83cd4da · 2026-04-27): el botón fue
+        # renombrado de "Actualizar datos del SECOP" → "Refrescar mis links
+        # del SECOP" para reflejar la verdad cardinal (scrape del link
+        # community.secop, no APIs jbjy/rpmr).
         print("[4] Action bar - 1 solo botón visible...")
-        actualizar_btn = page.get_by_role("button", name="Actualizar datos del SECOP")
-        if not actualizar_btn.is_visible(timeout=5000):
-            fails.append("STEP 4: botón 'Actualizar datos del SECOP' no visible")
+        refrescar_btn = page.get_by_role("button", name="Refrescar mis links del SECOP")
+        if not refrescar_btn.is_visible(timeout=5000):
+            fails.append("STEP 4: botón 'Refrescar mis links del SECOP' no visible")
 
         # Sergio · Operaciones avanzadas debe estar COLAPSADO por default
         if not page.get_by_text("Sergio · Operaciones avanzadas").is_visible(timeout=3000):
             fails.append("STEP 4: sección 'Sergio · Operaciones avanzadas' no aparece")
 
-        # ---- Step 5: Modificatorios destacado ----
-        print("[5] Sección Modificatorios destacada...")
-        if not page.get_by_text("Modificatorios — lo más relevante a revisar").is_visible(timeout=5000):
-            fails.append("STEP 5: header 'Modificatorios — lo más relevante a revisar' no aparece")
-        if not page.get_by_text("Contratos modificados").first.is_visible(timeout=3000):
-            fails.append("STEP 5: card 'Contratos modificados' no aparece")
-        if page.get_by_text("Días adicionados", exact=False).first.is_visible(timeout=2000):
-            warnings.append("STEP 5: 'Días adicionados' aparece — debió ser eliminada")
+        # ---- Step 5: Cambios recientes en procesos ----
+        # Post-cardinal pure (commit 83cd4da): ModsPanel ELIMINADO porque
+        # leía dias_adicionados de jbjy (ruido). La sección equivalente
+        # cardinal puro es "Cambios recientes en tus procesos" que cuenta
+        # modificatorios reales detectados como PDFs en el link.
+        print("[5] Sección Cambios recientes en procesos...")
+        if not page.get_by_text("Cambios recientes en tus procesos").is_visible(timeout=5000):
+            fails.append("STEP 5: sección 'Cambios recientes en tus procesos' no aparece")
+        # Cardinal puro: NO debe quedar rastro del label viejo "Días adicionados"
+        # ni del literal "+null días adic." que el bug anterior renderizaba.
+        if page.get_by_text("días adic.", exact=False).first.is_visible(timeout=2000):
+            fails.append("STEP 5: 'días adic.' aparece — debió ser eliminada (cardinal pure)")
+        if page.get_by_text("+null", exact=False).first.is_visible(timeout=2000):
+            fails.append("STEP 5: '+null' aparece — bug residual cardinal pure")
 
         # ---- Step 6: Tabla de procesos ----
         print("[6] Tabla con 491 procesos...")

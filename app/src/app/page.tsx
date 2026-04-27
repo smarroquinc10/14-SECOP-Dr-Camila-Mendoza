@@ -1304,7 +1304,10 @@ export default function HomePage() {
                     {r.objeto ?? "(sin objeto)"}
                   </div>
                   <div className="flex items-center gap-2 mt-1 text-[10px] text-ink-soft">
-                    <span>+{r.dias_adicionados} días adic.</span>
+                    <span>
+                      {r.modificatorios_count} modificatorio
+                      {r.modificatorios_count !== 1 ? "s" : ""}
+                    </span>
                     {r.fecha_firma && (
                       <span>· firmado {r.fecha_firma.slice(0, 10)}</span>
                     )}

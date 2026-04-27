@@ -439,7 +439,11 @@ export function buildUnifiedRows(
             portalSnap?.fields?.fecha_firma,
         ) ?? "").slice(0, 10) || null,
       estado: portalSnap?.fields?.estado ?? null,
-      modalidad: portalSnap?.fields?.modalidad ?? null,
+      // CARDINAL PURO: el portal scrape NO devuelve "modalidad" (campo de
+      // jbjy/rpmr). Sí devuelve tipo_contrato (Compraventa, Prestación de
+      // servicios, Otro, Lease Furniture, Obra, Suministros) que es el
+      // valor útil para Cami filtrar como "Tipo de contratación".
+      modalidad: portalSnap?.fields?.tipo_contrato ?? null,
       notas,
       dias_adicionados: dias,
       liquidado: liq,

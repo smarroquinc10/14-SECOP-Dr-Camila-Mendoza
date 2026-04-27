@@ -44,6 +44,9 @@ app/node_modules/
 app/out/
 **/node_modules/
 
+# Build local de smoke pre-push (cd app && npm run build && cp -r out/* out_test/...)
+out_test/
+
 # Dev-time runtime logs (kept locally only)
 _smoke_*.log
 _update_*.log
