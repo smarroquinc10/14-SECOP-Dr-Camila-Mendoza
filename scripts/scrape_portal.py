@@ -95,7 +95,16 @@ def _candidate_uids(args: argparse.Namespace) -> list[str]:
     pending: list[str] = []
     seen: set[str] = set()
     for it in watched:
+        # Bug fix Error #11 (2026-04-26): el watch list tiene 198 items
+        # CO1.NTC.* con notice_uid=None pero process_id=CO1.NTC.X que YA ES
+        # el notice_uid valido (mismo formato). Sin este fallback, 131 NTCs
+        # quedaban fuera del batch. Ahora usamos process_id como notice_uid
+        # cuando ya es formato NTC.
         uid = (it.get("notice_uid") or "").strip()
+        if not uid:
+            pid = (it.get("process_id") or "").strip()
+            if pid.startswith("CO1.NTC."):
+                uid = pid
         if not uid or uid in seen:
             continue
         seen.add(uid)
