@@ -1,6 +1,6 @@
 {
-  "audited_at": "2026-04-27T14:20:13.945893Z",
-  "finished_at": "2026-04-27T14:20:15.619416Z",
+  "audited_at": "2026-04-27T21:25:06.722528Z",
+  "finished_at": "2026-04-27T21:25:07.702829Z",
   "no_network": false,
   "totals": {
     "watched_items": 491,
@@ -5554,7 +5554,7 @@
     {
       "process_id": "CO1.PPI.11758446",
       "notice_uid": null,
-      "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/Vie\nw?PPI=CO1.PPI.11758446&isFromPublicArea=True&isModal=False",
+      "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.11758446&isFromPublicArea=True&isModal=False",
       "coverage": "none",
       "sheets": [
         "FEAB 2018-2021"
