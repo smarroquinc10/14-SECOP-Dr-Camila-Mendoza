@@ -114,14 +114,36 @@ jobs:
               --progress-file .cache/portal_progress.jsonl
           fi
 
-      - name: Copiar cache → seed deployable
+      - name: Mergear cache → seed deployable (Error #17 fix · 2026-04-27)
         run: |
-          if [ -f .cache/portal_opportunity.json ]; then
-            cp .cache/portal_opportunity.json app/public/data/portal_opportunity_seed.json
-            echo "Seed actualizado"
-          else
+          # CARDINAL: el cache .cache/portal_opportunity.json contiene SOLO
+          # los UIDs procesados en ESTE run (selectivo). Si copiamos directo
+          # con `cp`, sobrescribimos el seed completo y PERDEMOS los procesos
+          # ya scrapeados en runs anteriores. El fix usa jq para MERGEAR:
+          # mantiene los entries antiguos + sobrescribe con datos frescos
+          # los que se re-scrape en este run.
+          # Bug original: scrape mensual 2026-04-27 commit 62da9d2 redujo el
+          # seed de 473 → 158 entries, perdiendo 315 procesos del watch list.
+          if [ ! -f .cache/portal_opportunity.json ]; then
             echo "ERROR: cache portal_opportunity.json no existe"
             exit 1
+          fi
+          if [ -f app/public/data/portal_opportunity_seed.json ]; then
+            BEFORE=$(jq 'keys | length' app/public/data/portal_opportunity_seed.json)
+            CACHE=$(jq 'keys | length' .cache/portal_opportunity.json)
+            # Merge: seed nuevo gana en colisiones (datos frescos)
+            jq -s '.[0] * .[1]' \
+              app/public/data/portal_opportunity_seed.json \
+              .cache/portal_opportunity.json \
+              > app/public/data/portal_opportunity_seed.json.new
+            mv app/public/data/portal_opportunity_seed.json.new \
+               app/public/data/portal_opportunity_seed.json
+            AFTER=$(jq 'keys | length' app/public/data/portal_opportunity_seed.json)
+            echo "OK seed mergeado · entries antes: $BEFORE · cache: $CACHE · despues: $AFTER"
+          else
+            cp .cache/portal_opportunity.json app/public/data/portal_opportunity_seed.json
+            CREATED=$(jq 'keys | length' app/public/data/portal_opportunity_seed.json)
+            echo "OK seed creado por primera vez · entries: $CREATED"
           fi
 
       - name: Re-correr auditoria

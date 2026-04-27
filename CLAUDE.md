@@ -21,11 +21,11 @@ La verdad es SECOP. Del Excel solo se toma **VIGENCIA + LINK** (y excepcionalmen
 
 ### 2. 0 FP / 0 FN / 0 datos comidos
 - **0 FP**: cero filas con `data_source=none` que muestren valor/objeto/proveedor/estado (verificable con `audit_fidelity.py`).
-- **0 FN**: cero campos donde la fuente tenga dato y la UI lo descarte. Modal renderiza TODOS los campos del API/Integrado/Portal, no un subset curado.
-- **0 datos comidos**: las 491 filas del watch list siempre se muestran. Si SECOP no las tiene, badge "No en API público" + "—" honesto. NUNCA eliminar fila por no estar en SECOP.
+- **0 FN**: cero campos donde el portal scrape tenga dato y la UI lo descarte. Modal renderiza TODOS los campos del Portal scrape, no un subset curado. (Post-cardinal puro 2026-04-27: jbjy/rpmr ya no alimentan UI · solo el portal scrape · `cross_check_fuentes.py` mantiene reportes Compliance forenses.)
+- **0 datos comidos**: las 491 filas del watch list siempre se muestran. Si el scrape del link no tiene datos (link interno SECOP II o link sin publicar), badge específico ("Verificable solo con tu login" / "Borrador" / "Aún sin publicar") + "—" honesto. NUNCA eliminar fila por no tener datos del scrape.
 
 ### 3. Honesto cuando no sabe
-Badge `"No en API público"` para los 273 procs que datos.gov.co no expone. Modal muestra `—` por celda faltante (ej. 829 instancias de `—` en `CO1.PPI.11758446`). NUNCA inventar metadata de relleno.
+Badges específicos para los 17 procs que el scrape del link no puede leer públicamente: `"Verificable solo con tu login"` (6 PCCNTR · portal interno SECOP II · login institucional) · `"Borrador (no publicado)"` (REQ/BDOS) · `"Aún sin publicar"` (PPIs cardinal-imposibles · ej. `CO1.PPI.11758446`). Modal muestra `—` por celda faltante. NUNCA inventar metadata de relleno · NUNCA usar jbjy/rpmr como fallback (mienten · 33 procs >50% drift validado 2026-04-27).
 
 ### 4. Audit log append-only hash-chained
 SHA-256 + `prev_hash` + `verifyAuditChain` detecta tampering en 6 escenarios (cambio payload, cambio hash, cambio prev_hash, inserción, borrado intermedio, cadena válida). Append-only por keyPath autoincrement — **no hay path para mutar entries**. Jamás editar `.cache/audit_log.jsonl` ni IndexedDB `audit_log` a mano.
@@ -42,8 +42,8 @@ Las observaciones manuales (Excel col 72 OBSERVACIONES) se muestran ÚNICAMENTE 
 > tocada, pero rompen UX/coherencia y la Dra las pidió explícitamente.
 
 1. **Espejo del SECOP**: cada link verificable contra portal en vivo (`scripts/verify_watch_list.py` marca `verify_status`).
-2. **Cascada `api > integrado > portal > "—"`** jamás se mezcla. El primer match gana entero, no hay merging.
-3. **Cada celda con su procedencia clara**: badge "Contrato firmado" / "vía Integrado" / "vía portal cache · hoy" / "No en API público".
+2. **Cascada cardinal pura `portal > "—"`** (decisión 2026-04-27 con Sergio · 4 confirmaciones consecutivas: _"verdad absoluta = links y punto"_). SOLO el scrape del link community.secop alimenta la UI. jbjy-vk9h y rpmr-utcd se siguen cargando para reportes Compliance forenses (`cross_check_fuentes.py`) pero NUNCA llegan a celdas visibles. Memoria: `feedback_dashboard_es_scraper_de_links.md`.
+3. **Cada celda con su procedencia clara**: badge "Foto del SECOP · hace X días" (portal scraped) / "Verificable solo con tu login" (link interno SECOP II · 6 PCCNTR) / "Borrador (no publicado)" (REQ/BDOS) / "Aún sin publicar" (cardinal-imposibles).
 4. **UNA sola tabla unificada** (`unified-table.tsx`). No revivir watch list + inventario paralelos.
 5. **Sin scroll horizontal**. Máximo 6-8 columnas. Combinar info en sub-líneas dentro de cada celda antes que agregar columnas.
 6. **Conteos = Excel exacto**. Filtra por hoja FEAB 2024 (85 filas) → tabla muestra 85. Expandir 1 row por aparición (`expandRowsByAppearance`).
@@ -65,7 +65,7 @@ Las observaciones manuales (Excel col 72 OBSERVACIONES) se muestran ÚNICAMENTE 
 |---|---|
 | `app/src/lib/state-store.ts::verifyAuditChain` | SHA-256 chain logic — 6/6 tampering tests dependen de esto |
 | `app/src/lib/state-store.ts::appendAuditLog` | Append-only invariant: keyPath autoincrement |
-| `app/src/components/unified-table.tsx::buildUnifiedRows` | Cascada api>integrado>portal>none. El primer match gana entero (NO merging). Cardinal violation reciente: leakage `obs_brief` → `notas`, fix `4e029f2` |
+| `app/src/components/unified-table.tsx::buildUnifiedRows` | **Cascada cardinal pura `portal > none`** (post 2026-04-27 · decisión cardinal Sergio). Solo el scrape del link community.secop alimenta UI · jbjy/rpmr nunca llegan a celdas visibles. Cardinal violation reciente: leakage `obs_brief` → `notas`, fix `4e029f2` |
 | `app/src/lib/api.ts::getContracts` / `getIntegrado` | Promise singleton (no cache singleton). BUG-006 fix evitó 3× fetch waterfall |
 | `app/src/lib/security/passphrase.ts` | PBKDF2-SHA256 200k iter — capa 1 de 3 |
 | `app/src/lib/security/url.ts::assertSafeUrl` | Anti self-XSS; rechaza `javascript:`, `data:`, `file:` |
@@ -91,12 +91,14 @@ Las observaciones manuales (Excel col 72 OBSERVACIONES) se muestran ÚNICAMENTE 
 > LIVE y compara contra lo que muestra el dashboard. Lección aprendida
 > en `_APRENDIZAJES_DASHBOARD_2026-04-25.md` Error #2.
 
-| # | Proceso ID | Cobertura esperada | Cómo verificar |
-|---|---|---|---|
-| 1 | `CO1.PCCNTR.8930451` | `api` | Badge "Contrato firmado". `curl "https://www.datos.gov.co/resource/jbjy-vk9h.json?id_contrato=CO1.PCCNTR.8930451"` debe devolver 1 hit. Modal del dashboard debe mostrar valor, fecha_firma, proveedor IDÉNTICOS al curl. Sección "Otros campos del API SECOP" abierta por default con TODOS los campos. |
-| 2 | `CO1.NTC.1416630` | `integrado` | Badge "vía Integrado". `curl "https://www.datos.gov.co/resource/rpmr-utcd.json?\$where=url_contrato%20like%20'%25CO1.NTC.1416630%25'"` debe devolver hit. Modal debe mostrar proveedor, valor, objeto IDÉNTICOS. Filtro "Buscar" con ese código debe encontrarlo (Bug A fix). |
-| 3 | `CO1.NTC.5405127` | `portal` | Badge "vía portal cache · hoy". Proceso debe estar en `app/public/data/portal_opportunity_seed.json`. Modal con 27+ campos del portal y links a documentos. |
-| 4 | `CO1.PPI.11758446` | `none` | Badge "No en API público". Las 3 fuentes (jbjy, rpmr-utcd, portal_seed) NO lo deben tener. Modal con celdas en `—` honesto. Link "Abrir en SECOP II" funcional → la Dra puede ver el proceso en community.secop manualmente (limitación documentada de las 167 PPIs sin exposición en datos.gov.co). |
+**Cobertura cardinal pura post 2026-04-27**: solo 4 categorías visibles (sin `api` ni `integrado` como antes):
+
+| # | Proceso ID | Status esperado | Badge esperado | Cómo verificar |
+|---|---|---|---|---|
+| 1 | `CO1.PCCNTR.8930451` | `contrato_interno` | violeta "Verificable solo con tu login" | URL contiene `CO1ContractsManagement` (portal interno SECOP II · login required). Modal debe mostrar celdas en `—` honesto · botón "Abrir" funcional. NO debe mostrar valores de jbjy-vk9h aunque el API los tenga (cardinal puro: sin verificación contra el link, "—"). La Dra abre con su login para ver datos reales. |
+| 2 | `CO1.NTC.5405127` | `verificado` | "Foto del SECOP · hace X días" | Proceso debe estar en `app/public/data/portal_opportunity_seed.json`. Modal con 27+ campos del portal y links a documentos. Cross-check con community.secop manualmente: cada campo debe coincidir IDÉNTICO. |
+| 3 | `CO1.REQ.9988313` | `borrador` | ámbar "Borrador (no publicado)" | URL formato `/CO1BusinessLine/Tendering/ProcedureEdit/View?docUniqueIdentifier=CO1.REQ.X`. Las APIs públicas no exponen REQ (no publicado aún). Cuando SECOP lo publique como NTC, cron diario lo detecta y migra a `verificado` automáticamente. |
+| 4 | `CO1.PPI.11758446` | `no_en_api` | rojo "Aún sin publicar" | PPI sin notice_uid resuelto. Las 3 fuentes (jbjy, rpmr-utcd, portal_seed) NO lo tienen. Modal con celdas en `—` honesto. Link "Abrir en SECOP II" funcional → la Dra puede ver el proceso en community.secop manualmente (limitación documentada de los 11 cardinal-imposibles). |
 
 **Cómo cross-checkear**: en otra pestaña, abrir community.secop con el `process_id` y comparar campo por campo el modal del dashboard vs lo que muestra el portal. Esto es **sample manual obligatorio** análogo al de Sergio en RUNT (`_APRENDIZAJES_LOTE_16647_v918.md` líneas 156-180). Si la Dra detecta cualquier discrepancia → registrar como `Error #N` en `_APRENDIZAJES_DASHBOARD_*.md` y no declarar deploy listo.
 

@@ -345,6 +345,80 @@ Configurar en: Settings -> Secrets and variables -> Actions -> New repository se
 
 ---
 
+### Error #16 — CASCADA_API_INTEGRADO_VIOLABA_ESPEJO_CARDINAL_DEL_LINK
+**Proceso (si aplica)**: TODOS los 491 del watch list (impacto sistémico)
+**Fecha / hora**: 2026-04-27 00:30 (Bogotá)
+**Reportado por**: Sergio durante diálogo cardinal con Claude tras la auditoría proactiva del 2026-04-27
+**Síntoma exacto**: el dashboard mostraba datos de jbjy-vk9h (6 procs) y rpmr-utcd (158 procs) como autoritativos en celdas visibles, cuando esos datasets:
+1. **rpmr-utcd está demostradamente roto**: 33 procs con >50% drift de valor (caso máximo: `CO1.NTC.1391748` rpmr=$361 cuando real es $345.242.994). 119 fechas posteriores a la firma real (avg +11.8 días, max +54).
+2. **jbjy-vk9h cubre 6 PCCNTR** cuyos links van a `secop.gov.co/CO1ContractsManagement` (portal interno SECOP II que requiere login institucional). Los datos de jbjy son plausibles pero NO son verificables automáticamente contra el link mismo de la Dra · solo ella puede verificarlos manualmente con su login.
+3. La Dra Camila trabaja con un workflow específico: abre los 491 links de su Excel manualmente y copia datos al portal community.secop. **Nunca consulta jbjy/rpmr** · esos datasets son abstracciones técnicas que ella no ve. Mostrarle datos de fuentes que ella no consulta es disonancia cognitiva → desconfianza → vuelve al manual → proyecto fracasó.
+**Causa**: la cascada original `api > portal > integrado > none` priorizaba fuentes derivadas (jbjy, rpmr) sobre el espejo del link mismo. Era atajo para evitar el costo del scrape (~30s/uid con CapSolver) pero introducía datos potencialmente incorrectos. Violaba la Regla Suprema #1 ("NUNCA inventar valores derivados") porque mostraba como autoritativos datos de fuentes que mienten o no son verificables contra el link de la Dra.
+**Fix propuesto**: cascada cardinal pura `portal > none`. Solo el scrape del link community.secop alimenta la UI. jbjy/rpmr se siguen cargando para `cross_check_fuentes.py` (reportes Compliance forenses) pero NUNCA llegan a celdas visibles.
+
+Cambios concretos:
+- `app/src/components/unified-table.tsx::buildUnifiedRows`: cascada simplificada · todos los campos visibles (objeto, valor, proveedor, fecha_firma, estado, modalidad, numero_contrato) vienen ÚNICAMENTE del `portalSnap`. `_raw_api`, `_raw_integrado`, `discrepancias` siempre `null`/`[]`.
+- `app/src/components/unified-table.tsx::classifyStatus`: nuevo status `"contrato_interno"` para URLs que contienen `CO1ContractsManagement` (portal interno SECOP II). NO depende de jbjy.
+- `app/src/components/unified-table.tsx::StatusBadge`: nuevo caso violeta `"Verificable solo con tu login"` para los 6 PCCNTR.
+- `app/src/components/unified-table.tsx::statusLabel`: agregado `"contrato_interno"` para filtro popover.
+- `app/src/app/page.tsx::buildUnifiedRows call`: pasa `[]` y `null` para contracts/integradoBulk/discrepanciasBulk (corte limpio del flujo de jbjy/rpmr al UI).
+
+**Impacto**: TODA la UI · 100% de las 491 filas del watch list · regla cardinal del proyecto (espejo del link). Pre-patch: 327/491 (66%) reflejo cardinal verificable + 164 con datos derivados que mienten. Post-patch: 474/491 (96.5%) reflejo cardinal verificable + 17 honestos = 491/491 (100%) reflejo cardinal honesto.
+**Test que regresione**: `audit_dashboard_full.py` post-patch debe arrojar `coverage: {portal: 474, none: 17}` (sin `api` ni `integrado`). `cross_check_fuentes.py` sigue arrojando 234 discrepancias detectadas internamente PERO no afectan UI. Smoke E2E con Playwright debe verificar que TODAS las celdas con dato vienen del portal scrape (no de jbjy/rpmr).
+**Smoke test canónico**: 4 nuevos procesos del CLAUDE.md actualizado:
+- `CO1.PCCNTR.8930451` → `contrato_interno` (badge violeta · celdas en "—" · botón "Abrir")
+- `CO1.NTC.5405127` → `verificado` (badge "Foto del SECOP · hace X días")
+- `CO1.REQ.9988313` → `borrador` (badge ámbar)
+- `CO1.PPI.11758446` → `no_en_api` (badge rojo)
+**Status**: **PENDIENTE_DEPLOY** (branch `cardinal-pure-cascade-2026-04-27` · validado tsc 0 + pytest 192/192 · esperando fin del scrape `24976400522` antes de mergear · sample manual con Sergio post-deploy)
+
+**Frases fundadoras de Sergio (capturadas para auditabilidad cardinal)**:
+- _"entonces ves que sólo podemos trabajar con los links y ya"_
+- _"es que la dra camila sólo nos pasó esos links y ella actualiza su excel con esos links!!"_
+- _"es que la verdad absoluta son los links y punto"_
+- _"si, porque no podemos comernos datos, mostrar falsos positivos y falsos negativos"_
+- _"lo principal es que la Dra Camila confíe en la app porque ella usa esos links y lo hace a mano!!!"_
+- _"y por eso las verificaciones y auditorías de todo el programa deben ser perfectas!"_
+- _"haz lo que sea mejor ya conoces reglas y todo"_
+
+**Memorias persistidas relacionadas**:
+- `project_porque_fundador.md` ⭐⭐ RAÍZ — Camila debe confiar en la app
+- `feedback_verificaciones_perfectas.md` ⭐⭐ RAÍZ — auditorías 0 FP/FN
+- `feedback_dashboard_es_scraper_de_links.md` ⭐ CARDINAL — workflow operacional
+- `feedback_links_unica_verdad_cardinal.md` ⭐ CARDINAL — evidencia que rpmr está roto
+
+---
+
+### Error #17 — SCRAPE_WORKFLOW_SOBRESCRIBE_SEED_PERDIENDO_315_PROCESOS
+**Proceso (si aplica)**: 315 procesos del watch list (toda la cobertura portal pre-scrape)
+**Fecha / hora**: 2026-04-27 06:32 UTC (commit `62da9d2` del cron auto-commit)
+**Reportado por**: Claude post-scrape, durante verificación del seed nuevo en branch cardinal-pure-cascade
+**Síntoma exacto**: el cron auto-commit del scrape mensual `24976400522` redujo `app/public/data/portal_opportunity_seed.json` de **473 entries → 158 entries**. Diff stat: `-112,777 / +25,828` líneas. Los 315 procesos ya scrapeados en runs anteriores fueron BORRADOS del seed deployable. Si hubiéramos deployado tal cual, la cobertura post-scrape habría sido PEOR que pre-scrape: solo 158 portal-cached + 333 sin datos visibles (el patch cardinal pura ignora jbjy/rpmr).
+**Causa**: `.github/workflows/scrape-portal-mensual.yml:120` hace `cp .cache/portal_opportunity.json app/public/data/portal_opportunity_seed.json` — copia directa que **sobrescribe** el seed completo. El `.cache/portal_opportunity.json` solo contiene los UIDs procesados en ESTE run (158 selectivos). Los 315 entries previas se perdieron en el `cp`.
+**Fix propuesto**: cambiar `cp` por `jq -s '.[0] * .[1]'` que MERGEA los dos JSON · seed nuevo gana en colisiones (datos frescos para los 158 re-scrapeados) · entries antiguos se preservan. Aplicado en commit del branch cardinal-pure-cascade junto con el patch cardinal.
+
+```yaml
+# Antes (BUG)
+cp .cache/portal_opportunity.json app/public/data/portal_opportunity_seed.json
+
+# Después (FIX)
+jq -s '.[0] * .[1]' \
+  app/public/data/portal_opportunity_seed.json \
+  .cache/portal_opportunity.json \
+  > app/public/data/portal_opportunity_seed.json.new
+mv app/public/data/portal_opportunity_seed.json.new \
+   app/public/data/portal_opportunity_seed.json
+```
+
+**Impacto**: catastrófico si se hubiera deployado · 315 procesos del watch list sin datos visibles · cobertura cardinal habría caído de 322 confiables → 158 confiables (PEOR que pre-scrape). Detectado y mitigado **antes del deploy** gracias a la verificación post-scrape del branch cardinal-pure-cascade.
+**Test que regresione**: `verify_multilayer.py` debería tener una capa nueva que valida que el seed no decrece más de 5% entre commits consecutivos del cron. Pendiente como mejora futura.
+**Smoke test canónico**: post-fix, próximo run del scrape mensual debe arrojar `OK seed mergeado · entries antes: N · cache: M · despues: max(N, N+M)` en lugar de simplemente reemplazar.
+**Status**: **DEPLOYED** (fix en branch `cardinal-pure-cascade-2026-04-27` · pendiente merge a main · seed local restaurado a 473 entries via merge manual con jq).
+
+**Lección operacional**: cualquier paso de CI que toque archivos versionados debe usar **operaciones idempotentes que preservan estado anterior** (merge, append, update) en lugar de **operaciones destructivas** (cp, mv, overwrite). Aplicar a todos los workflows del repo para evitar futuros incidentes similares.
+
+---
+
 ## Cierre de cada incidente — checklist
 
 Antes de marcar un Error como **DEPLOYED**:

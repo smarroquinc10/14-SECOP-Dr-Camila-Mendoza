@@ -103,7 +103,12 @@ export interface UnifiedRow {
   watch_url: string | null;
 
   // Verify status taxonomy (derived)
-  verifyStatus: "verificado" | "contrato_firmado" | "borrador" | "no_en_api";
+  verifyStatus:
+    | "verificado"
+    | "contrato_firmado"
+    | "contrato_interno"
+    | "borrador"
+    | "no_en_api";
 
   // De qué fuente vienen los campos visibles (estado/valor/proveedor/...).
   // - "api"        → SECOP API estandar (p6dx-8zbt / jbjy-vk9h vía /contracts)
@@ -196,26 +201,28 @@ export function expandRowsByAppearance(
 
 function classifyStatus(
   watch: WatchedItem | null,
-  contract: Contract | null,
-  integ: IntegradoSummary | null = null,
+  _contract: Contract | null,
+  _integ: IntegradoSummary | null = null,
   hasPortalSnapshot: boolean = false,
 ): UnifiedRow["verifyStatus"] {
-  // 1. If we have an API contract, it IS in the public API.
-  if (contract?.id_contrato) return "contrato_firmado";
-  // 2. If watch has notice_uid resolved, it's verified against datos.gov.co.
-  if (watch?.notice_uid) return "verificado";
-  // 3. Integrado matchea => el proceso ESTÁ publicado en datos.gov.co
-  //    (rpmr-utcd combina SECOP I + II).
-  if (integ) return "verificado";
-  // 4. Portal cache hit => sí está en community.secop.gov.co aunque no
-  //    en datos.gov.co. La data viene del scrape previo bakeado.
+  // CARDINAL PURA (Sergio 2026-04-27): "verdad absoluta = links y punto"
+  // La clasificación NO depende de jbjy/rpmr (mienten · 33 procs >50% drift).
+  // Solo del URL del link y del scrape del portal community.secop.
+  //
+  // 1. URL apunta a portal interno SECOP II (Contracts Management) →
+  //    requiere login institucional, no scrapeable públicamente.
+  if (watch?.url?.includes("CO1ContractsManagement")) {
+    return "contrato_interno";
+  }
+  // 2. Scrape del portal community.secop tiene snapshot → verificable
+  //    cardinal contra el link mismo de la Dra.
   if (hasPortalSnapshot) return "verificado";
-  // 5. If process_id is a workspace ID (REQ/BDOS), it's a draft.
+  // 3. process_id es workspace ID (REQ/BDOS) → borrador en preparación.
   const pid = watch?.process_id ?? "";
   if (pid.startsWith("CO1.REQ.") || pid.startsWith("CO1.BDOS.")) {
     return "borrador";
   }
-  // 6. Otherwise: not in any public source.
+  // 4. Sin nada público que el sistema pueda leer → "—" honesto.
   return "no_en_api";
 }
 
@@ -332,38 +339,34 @@ export function buildUnifiedRows(
     }
     if (contract?.id_contrato) usedContracts.add(contract.id_contrato);
 
-    // CASCADA CARDINAL r5 (2026-04-27 · feedback Sergio: "necesitamos 100%
-    // o la Dra en su ansiedad vuelve a perder tiempo con trabajo manual"):
+    // CASCADA CARDINAL PURA (Sergio 2026-04-27 · 4 confirmaciones):
+    //   "es que la verdad absoluta son los links y punto"
+    //   "lo principal es que la Dra Camila confíe en la app porque
+    //    ella usa esos links y lo hace a mano"
+    //   "haz lo que sea mejor ya conoces reglas y todo"
     //
-    // Restauramos la cascada api > portal > integrado para máxima cobertura
-    // visible (480/491 · 98%). PERO con sistema de confianza explícita
-    // visual:
-    //   - api + portal (322) → confiable cardinal · sin disclaimer
-    //   - rpmr-only sin drift detectado (~9) → badge amber suave
-    //   - rpmr-only con drift detectado (149) → badge ROJO + valor TACHADO
-    //     visualmente · la Dra ve el dato pero sabe que es DUDOSO · click
-    //     Abrir para verificar en el link
+    // Solo el scrape del link community.secop cuenta como verdad.
+    // jbjy-vk9h y rpmr-utcd son fuentes derivadas que MIENTEN:
+    //   - rpmr roto: 33 procs >50% drift de valor (caso máx: rpmr=$361
+    //     cuando real es $345.242.994). 119 fechas posteriores +11.8 días.
+    //   - jbjy va a portal interno SECOP II que requiere login (no es
+    //     espejo del link de la Dra · solo verificable manualmente).
     //
-    // Esto da TOTAL cobertura sin hacer perder tiempo manual + máxima
-    // honestidad cardinal con disclaimers visuales claros por celda.
-    const integ =
-      contract == null
-        ? lookupIntegrado(w.notice_uid, w.process_id)
-        : null;
+    // Por eso `contract` e `integ` se siguen calculando para las
+    // discrepancias internas y _raw_*, PERO los CAMPOS VISIBLES de
+    // la fila (objeto, valor, proveedor, etc.) vienen ÚNICAMENTE del
+    // portalSnap. Si no hay portalSnap → "—" honesto.
+    //
+    // Memoria: feedback_dashboard_es_scraper_de_links.md
+    const integ = lookupIntegrado(w.notice_uid, w.process_id);
     let portalSnap: PortalBulk[string] | null = null;
-    if (contract == null && portalBulk) {
+    if (portalBulk) {
       const key1 = w.notice_uid ?? "";
       const key2 = w.process_id ?? "";
       portalSnap = portalBulk[key1] ?? portalBulk[key2] ?? null;
     }
-    // Cascada: api > portal > integrado > none
-    const dataSource: UnifiedRow["data_source"] = contract
-      ? "api"
-      : portalSnap
-      ? "portal"
-      : integ
-      ? "integrado"
-      : null;
+    // Cascada cardinal pura: solo portal o nada.
+    const dataSource: UnifiedRow["data_source"] = portalSnap ? "portal" : null;
     const dataSourceScrapedAt =
       dataSource === "portal" ? portalSnap?.scraped_at ?? null : null;
 
@@ -371,28 +374,27 @@ export function buildUnifiedRows(
     const discrepKey = w.notice_uid ?? w.process_id ?? "";
     const discrepancias = discrepanciasBulk?.by_process_id?.[discrepKey] ?? [];
 
-    const apiDias = parseInt(String(contract?.dias_adicionados ?? "0"), 10);
+    // Días adicionados: solo si el portal scrape los expone. NO usar
+    // jbjy.dias_adicionados (es campo derivado del API que mentimos al
+    // mostrar como autoritativo en la UI).
+    const portalDias = parseInt(
+      String(portalSnap?.fields?.dias_adicionados ?? "0"),
+      10,
+    );
     const dias =
-      Number.isFinite(apiDias) && apiDias > 0 ? apiDias : null;
+      Number.isFinite(portalDias) && portalDias > 0 ? portalDias : null;
+    // Liquidado: solo del portal scrape. Si el portal no lo dice → false
+    // (no asumir liquidado por dato derivado).
     const liq =
-      String(contract?.liquidaci_n ?? "")
+      String(portalSnap?.fields?.liquidacion ?? "")
         .trim()
         .toLowerCase() === "si";
 
-    // Valor: del API si hay contrato, sino PORTAL (cardinal · verdad de la
-    // Dra), sino integrado (con disclaimer en UI). Cobertura máxima 98%.
+    // Valor: SOLO del portal scrape. Si el portal no tiene valor → null
+    // → la celda muestra "—" honesto. NO fallback a jbjy ni rpmr.
     let valor: number | null = null;
-    if (contract) {
-      const valorRaw = contract.valor_del_contrato;
-      if (valorRaw != null && valorRaw !== "") {
-        const n = Number(valorRaw);
-        if (Number.isFinite(n)) valor = n;
-      }
-    } else if (portalSnap?.fields?.valor_total) {
+    if (portalSnap?.fields?.valor_total) {
       valor = parsePortalValor(portalSnap.fields.valor_total);
-    } else if (integ?.valor_contrato) {
-      const n = Number(integ.valor_contrato);
-      if (Number.isFinite(n)) valor = n;
     }
 
     // Notas: la regla cardinal del CLAUDE.md dice que las observaciones
@@ -410,52 +412,32 @@ export function buildUnifiedRows(
     const notas: string | null = null;
 
     rows.push({
-      key: contract?.id_contrato ?? w.url ?? `${w.process_id ?? "noid"}-${rows.length}`,
+      // CARDINAL PURO: TODOS los campos visibles vienen ÚNICAMENTE del
+      // portalSnap (scrape del link community.secop). Si el portal no
+      // tiene el campo → null → la celda muestra "—" honesto.
+      // jbjy/rpmr NO se usan para campos visibles.
+      key: w.url ?? `${w.process_id ?? "noid"}-${rows.length}`,
       process_id: w.process_id,
-      id_contrato: contract?.id_contrato ?? integ?.numero_del_contrato ?? null,
-      notice_uid: w.notice_uid ?? contract?.proceso_de_compra ?? null,
-      // numero_contrato: del API si hay (referencia_del_contrato); del
-      // Integrado si no hay (numero_de_proceso = CONTRATO-FEAB-XXXX o
-      // numero_del_contrato = CO1.PCCNTR.X). NUNCA del Excel.
-      // CARDINAL r5: cascada api > portal > integrado · valores VISIBLES
-      // siempre que existan en alguna fuente · disclaimers visuales por
-      // celda cuando data_source = "integrado" (con o sin drift detectado)
+      id_contrato: null,
+      notice_uid: w.notice_uid ?? null,
       numero_contrato:
-        (contract?.referencia_del_contrato as string) ??
         portalSnap?.fields?.numero_contrato ??
         portalSnap?.fields?.numero_proceso ??
-        integ?.numero_de_proceso ??
-        integ?.numero_del_contrato ??
         null,
       url: w.url,
       objeto:
-        (contract?.objeto_del_contrato as string) ??
         portalSnap?.fields?.descripcion ??
         portalSnap?.fields?.objeto ??
-        integ?.objeto_a_contratar ??
         null,
-      proveedor:
-        (contract?.proveedor_adjudicado as string) ??
-        portalSnap?.fields?.proveedor ??
-        integ?.nom_raz_social_contratista ??
-        null,
+      proveedor: portalSnap?.fields?.proveedor ?? null,
       valor,
       fecha_firma:
-        ((contract?.fecha_de_firma as string) ??
-          parsePortalFecha(portalSnap?.fields?.fecha_firma_contrato ?? portalSnap?.fields?.fecha_firma) ??
-          integ?.fecha_de_firma_del_contrato ??
-          "")
-          .slice(0, 10) || null,
-      estado:
-        (contract?.estado_contrato as string) ??
-        portalSnap?.fields?.estado ??
-        integ?.estado_del_proceso ??
-        null,
-      modalidad:
-        (contract?.modalidad_de_contratacion as string) ??
-        portalSnap?.fields?.modalidad ??
-        integ?.modalidad_de_contrataci_n ??
-        null,
+        (parsePortalFecha(
+          portalSnap?.fields?.fecha_firma_contrato ??
+            portalSnap?.fields?.fecha_firma,
+        ) ?? "").slice(0, 10) || null,
+      estado: portalSnap?.fields?.estado ?? null,
+      modalidad: portalSnap?.fields?.modalidad ?? null,
       notas,
       dias_adicionados: dias,
       liquidado: liq,
@@ -465,55 +447,31 @@ export function buildUnifiedRows(
       appearances_count: w.appearances?.length ?? 0,
       watched: true,
       watch_url: w.url,
-      verifyStatus: classifyStatus(w, contract, integ, portalSnap != null),
+      verifyStatus: classifyStatus(w, null, null, portalSnap != null),
       data_source: dataSource,
       data_source_scraped_at: dataSourceScrapedAt,
-      _raw_api: contract ? (contract as Record<string, unknown>) : null,
-      _raw_integrado: integ ? (integ as Record<string, unknown>) : null,
-      _raw_portal: portalSnap ? (portalSnap as Record<string, unknown>) : null,
-      discrepancias,
-    });
-  }
-
-  // Add orphan contracts (in SECOP, not in watch list)
-  for (const c of contracts) {
-    if (!c.id_contrato || usedContracts.has(c.id_contrato)) continue;
-    const dias = parseInt(String(c.dias_adicionados ?? "0"), 10);
-    const liq =
-      String(c.liquidaci_n ?? "")
-        .trim()
-        .toLowerCase() === "si";
-    rows.push({
-      key: c.id_contrato,
-      process_id: c.id_contrato,
-      id_contrato: c.id_contrato,
-      notice_uid: (c.proceso_de_compra as string) ?? null,
-      numero_contrato: (c.referencia_del_contrato as string) ?? null,
-      url: (c.urlproceso as string) ?? null,
-      objeto: (c.objeto_del_contrato as string) ?? null,
-      proveedor: (c.proveedor_adjudicado as string) ?? null,
-      valor: c.valor_del_contrato ? Number(c.valor_del_contrato) : null,
-      fecha_firma: ((c.fecha_de_firma as string) ?? "").slice(0, 10) || null,
-      estado: (c.estado_contrato as string) ?? null,
-      modalidad: (c.modalidad_de_contratacion as string) ?? null,
-      notas: (c._notas as string) ?? null,
-      appearances: [],
-      dias_adicionados: Number.isFinite(dias) && dias > 0 ? dias : null,
-      liquidado: liq,
-      sheets: [],
-      vigencias: [],
-      appearances_count: 0,
-      watched: false,
-      watch_url: null,
-      verifyStatus: "contrato_firmado",
-      data_source: "api",
-      data_source_scraped_at: null,
-      _raw_api: c as Record<string, unknown>,
+      // CARDINAL PURO: jbjy/rpmr no se exponen en el modelo. Solo el portal
+      // scrape. Si después necesitamos auditoría forense de qué dice cada
+      // fuente, esos reportes se generan con scripts/cross_check_fuentes.py
+      // (CI/local) — NO desde la UI de la Dra.
+      _raw_api: null,
       _raw_integrado: null,
-      _raw_portal: null,
+      _raw_portal: portalSnap ? (portalSnap as Record<string, unknown>) : null,
       discrepancias: [],
     });
+    // contract / integ se mantienen como variables locales arriba para no
+    // romper la firma de la función ni los lookups (futura limpieza en
+    // sesión dedicada eliminará también estos cómputos · ahora preferimos
+    // patch quirúrgico de bajo riesgo).
+    void contract;
+    void integ;
   }
+
+  // Cardinal puro: NO agregamos huérfanos del SECOP API (contratos del FEAB
+  // que no están en el watch list de la Dra). El watch list ES la verdad
+  // operacional · todo lo demás es ruido. Ver memoria
+  // `feedback_dashboard_es_scraper_de_links.md`.
+  void usedContracts;
 
   return rows;
 }
@@ -558,6 +516,14 @@ function StatusBadge({ status }: { status: UnifiedRow["verifyStatus"] }) {
       title:
         "Este proceso está publicado en SECOP (con su código oficial NTC). Tiene los datos del " +
         "proceso aunque puede que aún no tenga contrato firmado.",
+    },
+    contrato_interno: {
+      label: "Verificable solo con tu login",
+      cls: "bg-violet-50 text-violet-700 border-violet-200",
+      title:
+        "El link de este proceso va al portal interno SECOP II que requiere tu login " +
+        "institucional. El sistema no puede leerlo automáticamente. Click en \"Abrir\" " +
+        "y verificá los datos con tu sesión.",
     },
     borrador: {
       label: "Borrador (no publicado)",
@@ -1246,10 +1212,11 @@ export function UnifiedTable({
  *  enum value "contrato_firmado". Lenguaje cero tech para Cami abogada. */
 function statusLabel(s: UnifiedRow["verifyStatus"]): string {
   switch (s) {
-    case "contrato_firmado": return "Contrato firmado";
-    case "verificado":       return "Publicado en SECOP";
-    case "borrador":         return "Borrador (no publicado)";
-    case "no_en_api":        return "Aún sin publicar";
+    case "contrato_firmado":  return "Contrato firmado";
+    case "verificado":        return "Publicado en SECOP";
+    case "contrato_interno":  return "Verificable solo con tu login";
+    case "borrador":          return "Borrador (no publicado)";
+    case "no_en_api":         return "Aún sin publicar";
   }
 }
 

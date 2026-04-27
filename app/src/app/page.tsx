@@ -157,19 +157,23 @@ export default function HomePage() {
   } | null>(null);
 
   // ---- Build unified rows + busy/feedback state for actions -----------
-  // Cardinal rule: cada celda con su procedencia clara.
-  //   - data_source = "api"        → SECOP API estándar
-  //   - data_source = "integrado"  → SECOP Integrado (sin captcha)
-  //   - data_source = null         → ninguno; UI muestra "—" honesto
+  // CASCADA CARDINAL PURA (Sergio 2026-04-27): la verdad absoluta son los
+  // links del Excel de Camila. SOLO el scrape del portal community.secop
+  // alimenta la tabla principal. jbjy-vk9h y rpmr-utcd se siguen cargando
+  // en este componente para mantener el cableado de las acciones (botón
+  // "Actualizar SECOP" refresca los datasets para que cross_check_fuentes.py
+  // siga detectando drift en reportes Compliance forenses), PERO se pasan
+  // como [] / null a buildUnifiedRows para garantizar que NUNCA aparezcan
+  // en la UI. Memoria: feedback_dashboard_es_scraper_de_links.md
   const allRows = React.useMemo(
     () => buildUnifiedRows(
       watched,
-      contracts,
-      integradoBulk ?? null,
+      [],          // contracts (jbjy-vk9h) → cardinal puro · no en UI
+      null,        // integradoBulk (rpmr-utcd) → cardinal puro · no en UI
       portalBulk ?? null,
-      discrepanciasBulk ?? null,
+      null,        // discrepanciasBulk → no aplica sin jbjy/rpmr en UI
     ),
-    [watched, contracts, integradoBulk, portalBulk, discrepanciasBulk]
+    [watched, portalBulk]
   );
 
   const totalAppearances = React.useMemo(
