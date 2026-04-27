@@ -239,24 +239,17 @@ export default function HomePage() {
     return { ultimaFirma, diasDesde };
   }, [allRows]);
 
-  // Feature B (2026-04-26): "Cambios recientes" — los ultimos N modificatorios
-  // detectados en el watch list. Ayuda a la Dra a estar pendiente de cambios
-  // sin tener que filtrar manualmente. Criterio: dias_adicionados > 0 ordenados
-  // por fecha_firma descendente (proxy de "ultima actividad del proceso").
+  // CARDINAL PURO REAL: "Cambios recientes" usa modificatorios_count
+  // detectado por documents PDF del scrape del link community.secop.
+  // Ordenados por fecha_firma del proceso (proxy de actividad reciente).
   const recentMods = React.useMemo(() => {
     return allRows
-      .filter(
-        (r) =>
-          r.watched &&
-          r.dias_adicionados != null &&
-          r.dias_adicionados > 0
-      )
+      .filter((r) => r.watched && r.modificatorios_count > 0)
       .sort((a, b) => (b.fecha_firma ?? "").localeCompare(a.fecha_firma ?? ""))
       .slice(0, 8);
   }, [allRows]);
 
-  // Feature A (2026-04-26): Stats de "requieren atencion" para el header.
-  // Union de mods recientes + venciendo en 30 dias (sin duplicados).
+  // Stats "requieren atención" cardinal puro: mods PDF + vencen 30d
   const attentionStats = React.useMemo(() => {
     const today = new Date();
     let mods = 0;
@@ -265,27 +258,32 @@ export default function HomePage() {
     for (const r of allRows) {
       if (!r.watched) continue;
       let needs = false;
-      const isMod =
-        (r.dias_adicionados != null && r.dias_adicionados > 0) ||
-        /modific/i.test(r.estado ?? "");
+      const isMod = r.modificatorios_count > 0;
       if (isMod) needs = true;
-      const fechaFin =
-        (r._raw_api?.fecha_de_fin_del_contrato as string | undefined) ??
-        (r._raw_integrado?.fecha_fin_ejecuci_n as string | undefined) ??
+      const portalFecha =
+        (r._raw_portal as { fields?: Record<string, string | null> } | null)
+          ?.fields?.plazo_ejecucion ??
+        (r._raw_portal as { fields?: Record<string, string | null> } | null)
+          ?.fields?.fecha_fin_ejecucion ??
         null;
       let venceProx = false;
-      if (fechaFin) {
-        const fin = new Date(fechaFin);
-        if (!isNaN(fin.getTime())) {
-          const dias = Math.floor(
-            (fin.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+      if (portalFecha) {
+        const m = portalFecha.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+        if (m) {
+          const fin = new Date(
+            `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`,
           );
-          venceProx = dias >= 0 && dias <= 30;
+          if (!isNaN(fin.getTime())) {
+            const dias = Math.floor(
+              (fin.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+            );
+            venceProx = dias >= 0 && dias <= 30;
+          }
         }
       }
       if (venceProx) needs = true;
       if (!needs) continue;
-      const k = r.process_id ?? r.id_contrato ?? "";
+      const k = r.process_id ?? r.url ?? "";
       if (seenKeys.has(k)) continue;
       seenKeys.add(k);
       if (isMod) mods++;
@@ -386,21 +384,25 @@ export default function HomePage() {
       if (sheets.length && !sheets.some((s) => r.sheets.includes(s)))
         return false;
       if (onlyMod) {
-        const isMod =
-          /modific/i.test(r.estado ?? "") ||
-          (r.dias_adicionados != null && r.dias_adicionados > 0);
-        if (!isMod) return false;
+        // CARDINAL PURO REAL: usa modificatorios_count detectado por
+        // documents PDF del scrape del link community.secop.
+        if (r.modificatorios_count === 0) return false;
       }
-      // Feature D (2026-04-26): "Vencen en 30 dias". El campo viene de
-      // _raw_api.fecha_de_fin_del_contrato (jbjy-vk9h) o
-      // _raw_integrado.fecha_fin_ejecuci_n (rpmr-utcd).
+      // Feature D: "Vencen en 30 días". CARDINAL PURO: el portal scrape
+      // expone `plazo_ejecucion` o `fecha_fin_ejecucion` cuando hay info.
+      // No usar jbjy/rpmr (mienten en fechas).
       if (onlyExpiringSoon) {
-        const fechaFin =
-          (r._raw_api?.fecha_de_fin_del_contrato as string | undefined) ??
-          (r._raw_integrado?.fecha_fin_ejecuci_n as string | undefined) ??
+        const portalFecha =
+          (r._raw_portal as { fields?: Record<string, string | null> } | null)
+            ?.fields?.plazo_ejecucion ??
+          (r._raw_portal as { fields?: Record<string, string | null> } | null)
+            ?.fields?.fecha_fin_ejecucion ??
           null;
-        if (!fechaFin) return false;
-        const fin = new Date(fechaFin);
+        if (!portalFecha) return false;
+        // Parse formato CO "DD/MM/YYYY HH:MM..." → Date
+        const m = portalFecha.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+        if (!m) return false;
+        const fin = new Date(`${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`);
         if (isNaN(fin.getTime())) return false;
         const hoy = new Date();
         const diasRestantes = Math.floor(
@@ -408,30 +410,31 @@ export default function HomePage() {
         );
         if (diasRestantes < 0 || diasRestantes > 30) return false;
       }
-      // Feature A (2026-04-26): "Requieren tu atencion" - union de:
-      //   (a) modificatorios recientes (dias_adicionados > 0 + fecha_firma
-      //       en ultimos 30 dias)
-      //   (b) vencen en proximos 30 dias
-      //   (c) estado contiene "modific" (literal del SECOP)
+      // Feature A: "Requieren tu atención" - cardinal puro:
+      //   (a) tiene modificatorios PDF en el link
+      //   (b) vencen en próximos 30 días según portal
       if (onlyAttention) {
-        const tieneModReciente =
-          r.dias_adicionados != null && r.dias_adicionados > 0;
-        const estadoMod = /modific/i.test(r.estado ?? "");
-        const fechaFin =
-          (r._raw_api?.fecha_de_fin_del_contrato as string | undefined) ??
-          (r._raw_integrado?.fecha_fin_ejecuci_n as string | undefined) ??
+        const tieneMod = r.modificatorios_count > 0;
+        const portalFecha =
+          (r._raw_portal as { fields?: Record<string, string | null> } | null)
+            ?.fields?.plazo_ejecucion ??
+          (r._raw_portal as { fields?: Record<string, string | null> } | null)
+            ?.fields?.fecha_fin_ejecucion ??
           null;
         let venceProx = false;
-        if (fechaFin) {
-          const fin = new Date(fechaFin);
-          if (!isNaN(fin.getTime())) {
-            const dias = Math.floor(
-              (fin.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
-            );
-            venceProx = dias >= 0 && dias <= 30;
+        if (portalFecha) {
+          const m = portalFecha.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+          if (m) {
+            const fin = new Date(`${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`);
+            if (!isNaN(fin.getTime())) {
+              const dias = Math.floor(
+                (fin.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+              );
+              venceProx = dias >= 0 && dias <= 30;
+            }
           }
         }
-        if (!tieneModReciente && !estadoMod && !venceProx) return false;
+        if (!tieneMod && !venceProx) return false;
       }
       return true;
     });

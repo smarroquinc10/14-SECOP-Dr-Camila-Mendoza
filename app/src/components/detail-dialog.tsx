@@ -230,6 +230,52 @@ export function DetailDialog({ contractId, open, onOpenChange }: Props) {
             </section>
           )}
 
+          {/* MODIFICATORIOS · CARDINAL PURO REAL · sección destacada
+              porque Camila los prioriza explícitamente (memoria
+              feedback_modal_modificatorios_destacada.md). Los detectamos
+              automáticamente del scrape del link community.secop por
+              patrón de nombre PDF. */}
+          {!isLoading && hasPortalData && (() => {
+            const modDocs = documents.filter((d) =>
+              /modificatorio|otros[ií]|adendo|adicional al contrato/i.test(
+                d.name ?? "",
+              ),
+            );
+            if (modDocs.length === 0) return null;
+            return (
+              <section className="border-2 border-amber-300 bg-amber-50/50 rounded-md overflow-hidden">
+                <div className="bg-amber-100/60 px-4 py-2.5 border-b border-amber-200">
+                  <h3 className="serif text-base font-semibold text-amber-900">
+                    📝 Modificatorios detectados ({modDocs.length})
+                  </h3>
+                  <p className="text-[11px] text-amber-800 mt-0.5">
+                    PDFs encontrados en el link community.secop. Click en
+                    cada uno para descargarlo y revisar los términos del
+                    modificatorio.
+                  </p>
+                </div>
+                <ul className="divide-y divide-amber-200/50">
+                  {modDocs.map((doc, i) => (
+                    <li
+                      key={i}
+                      className="px-3 py-2.5 flex items-start gap-2 hover:bg-amber-50"
+                    >
+                      <ChevronRight className="h-3 w-3 mt-1 text-amber-700 flex-shrink-0" />
+                      <a
+                        href={doc.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-burgundy hover:underline text-sm flex-1 font-medium"
+                      >
+                        {doc.name}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            );
+          })()}
+
           {/* DATOS DEL PORTAL · todos los campos · cardinal "ver todo" */}
           {!isLoading && hasPortalData && (
             <>

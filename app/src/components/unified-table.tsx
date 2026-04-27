@@ -93,6 +93,11 @@ export interface UnifiedRow {
   notas: string | null;
   dias_adicionados: number | null;
   liquidado: boolean;
+  // CARDINAL PURO (Sergio 2026-04-27): modificatorios detectados como
+  // documentos PDF en el portal scrape (patrón "Modificatorio|Otrosí|Adendo").
+  // Es cardinal puro real: viene del scrape del link community.secop.
+  modificatorios_count: number;
+  modificatorios_docs: { name: string; url: string }[];
 
   // From watch list (if present)
   sheets: string[];
@@ -374,21 +379,23 @@ export function buildUnifiedRows(
     const discrepKey = w.notice_uid ?? w.process_id ?? "";
     const discrepancias = discrepanciasBulk?.by_process_id?.[discrepKey] ?? [];
 
-    // Días adicionados: solo si el portal scrape los expone. NO usar
-    // jbjy.dias_adicionados (es campo derivado del API que mentimos al
-    // mostrar como autoritativo en la UI).
-    const portalDias = parseInt(
-      String(portalSnap?.fields?.dias_adicionados ?? "0"),
-      10,
+    // CARDINAL PURO REAL (Sergio 2026-04-27): los modificatorios viven en
+    // el portal community.secop como PDFs adjuntos en la sección
+    // "Documentos del proceso" con nombres tipo "Modificatorio N° X
+    // Contrato N° Y de YYYY.pdf". El scraper YA los extrae como documents.
+    // Detectarlos cardinal puro = filtrar documents por patrón.
+    // Memoria: project_porque_fundador.md, feedback_dashboard_es_scraper_de_links.md
+    const portalDocs = portalSnap?.documents ?? [];
+    const modificatoriosDocs = portalDocs.filter((d) =>
+      /modificatorio|otros[ií]|adendo|adicional al contrato/i.test(d.name ?? ""),
     );
-    const dias =
-      Number.isFinite(portalDias) && portalDias > 0 ? portalDias : null;
-    // Liquidado: solo del portal scrape. Si el portal no lo dice → false
-    // (no asumir liquidado por dato derivado).
+    // dias_adicionados ya no se calcula (jbjy es ruido) · sí contamos
+    // modificatorios reales del link. Mantengo dias=null por compat con
+    // export-excel que tiene una columna para eso.
+    const dias = null;
+    // Liquidado: solo si el portal scrape lo dice explícitamente
     const liq =
-      String(portalSnap?.fields?.liquidacion ?? "")
-        .trim()
-        .toLowerCase() === "si";
+      String(portalSnap?.fields?.liquidacion ?? "").trim().toLowerCase() === "si";
 
     // Valor: SOLO del portal scrape. Si el portal no tiene valor → null
     // → la celda muestra "—" honesto. NO fallback a jbjy ni rpmr.
@@ -441,6 +448,11 @@ export function buildUnifiedRows(
       notas,
       dias_adicionados: dias,
       liquidado: liq,
+      modificatorios_count: modificatoriosDocs.length,
+      modificatorios_docs: modificatoriosDocs.map((d) => ({
+        name: d.name ?? "",
+        url: d.url ?? "",
+      })),
       sheets: w.sheets ?? [],
       vigencias: w.vigencias ?? [],
       appearances: w.appearances ?? [],
@@ -792,37 +804,40 @@ export function UnifiedTable({
       {
         id: "modificatorios",
         header: "Modificatorios",
-        // CARDINAL PURO (Sergio 2026-04-27): el portal scrape NO extrae info
-        // de modificatorios todavía. Decir "Sin modificatorios" sería FN
-        // (algunos contratos SÍ tienen modificatorios visibles en el link).
-        // Honesto: mostrar "—" cuando el portal no expone el dato + tooltip
-        // que dirige a verificar en el link manualmente.
+        // CARDINAL PURO REAL (Sergio 2026-04-27): los modificatorios vienen
+        // del scrape del link community.secop como PDFs adjuntos. El sistema
+        // los detecta automáticamente · Camila ve cuántos hay sin abrir el
+        // link · si quiere descargar el PDF, el modal tiene los links.
         accessorFn: (r) => {
-          // Solo afirmar "Modificado" si viene del portal scrape mismo
-          const portalDiceMod =
-            /modific/i.test(r.estado ?? "");
-          return portalDiceMod ? "Modificado (según portal)" : "—";
+          const n = r.modificatorios_count;
+          if (n === 0) return "Sin modificatorios";
+          return `${n} modificatorio${n > 1 ? "s" : ""}`;
         },
         cell: ({ row }) => {
           const r = row.original;
-          const portalDiceMod = /modific/i.test(r.estado ?? "");
+          const n = r.modificatorios_count;
+          if (n === 0) {
+            return (
+              <span
+                className="text-ink-soft/60 text-[10px]"
+                title="El portal community.secop no tiene PDFs de modificatorios para este proceso. Si te llega información de un modificatorio nuevo, click 'Refrescar' para que el sistema vuelva a leer el link."
+              >
+                Sin modificatorios
+              </span>
+            );
+          }
+          // Tooltip con nombres de los modificatorios para preview rápido
+          const tooltipNames = r.modificatorios_docs
+            .map((d) => `• ${d.name}`)
+            .join("\n");
           return (
             <div className="text-[11px]">
-              {portalDiceMod ? (
-                <span
-                  className="inline-flex items-center px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 text-[10px] whitespace-nowrap"
-                  title="El estado del portal community.secop incluye 'modific...' · revisar el link para detalles del modificatorio"
-                >
-                  Modificado
-                </span>
-              ) : (
-                <span
-                  className="text-ink-soft/60 text-[10px] italic"
-                  title="El sistema no extrae info de modificatorios automáticamente · click en 'Abrir' para revisar en el link community.secop"
-                >
-                  — Revisar en el link
-                </span>
-              )}
+              <span
+                className="inline-flex items-center px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 text-[10px] whitespace-nowrap font-medium"
+                title={`Modificatorios detectados como PDFs en el link community.secop:\n${tooltipNames}\n\nClick en la fila para ver el modal con los links de descarga.`}
+              >
+                {n} modificatorio{n > 1 ? "s" : ""}
+              </span>
             </div>
           );
         },
