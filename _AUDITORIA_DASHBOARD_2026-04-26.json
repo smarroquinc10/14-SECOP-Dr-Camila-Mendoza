@@ -1,22 +1,22 @@
 {
-  "audited_at": "2026-04-26T15:06:41.215498Z",
-  "finished_at": "2026-04-26T15:06:42.123389Z",
+  "audited_at": "2026-04-26T19:42:01.888710Z",
+  "finished_at": "2026-04-26T19:42:03.517751Z",
   "no_network": false,
   "totals": {
     "watched_items": 491,
-    "portal_seed_entries": 66,
+    "portal_seed_entries": 342,
     "jbjy_rows": 288,
     "rpmr_rows": 382,
     "rpmr_orphan_secop_i": 88
   },
   "coverage_counts": {
     "api": 6,
-    "none": 273,
-    "integrado": 158,
-    "portal": 54
+    "none": 105,
+    "portal": 222,
+    "integrado": 158
   },
   "severity_counts": {
-    "scrape": 265
+    "scrape": 97
   },
   "items": [
     {
@@ -205,23 +205,15 @@
       "process_id": "CO1.PPI.38453188",
       "notice_uid": "CO1.NTC.7906712",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.38453188&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2025"
       ],
       "vigencias": [
         "2025"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.36786565",
@@ -249,23 +241,15 @@
       "process_id": "CO1.PPI.39768065",
       "notice_uid": "CO1.NTC.8210327",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.39768065&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2025"
       ],
       "vigencias": [
         "2025"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.38799613",
@@ -1287,89 +1271,57 @@
       "process_id": "CO1.PPI.22985876",
       "notice_uid": "CO1.NTC.3921417",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.22985876&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.23358296",
       "notice_uid": "CO1.NTC.4041828",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.23358296&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.23858655",
       "notice_uid": "CO1.NTC.4186434",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.23858655&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.24316630",
       "notice_uid": "CO1.NTC.4522742",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.24316630&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.23774552",
@@ -1459,45 +1411,29 @@
       "process_id": "CO1.PPI.25243670",
       "notice_uid": "CO1.NTC.4659073",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.25243670&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.25261639",
       "notice_uid": "CO1.NTC.4522733",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.25261639&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.24139852",
@@ -1531,111 +1467,71 @@
       "process_id": "CO1.PPI.25928390",
       "notice_uid": "CO1.NTC.4673033",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.25928390&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.26235999",
       "notice_uid": "CO1.NTC.4747392",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.26235999&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.26260408",
       "notice_uid": "CO1.NTC.4756685",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.26260408&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.26241646",
       "notice_uid": "CO1.NTC.4756559",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.26241646&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.26291020",
       "notice_uid": "CO1.NTC.4769359",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.26291020&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.25539623",
@@ -1655,155 +1551,99 @@
       "process_id": "CO1.PPI.26285608",
       "notice_uid": "CO1.NTC.4756690",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.26285608&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.26286441",
       "notice_uid": "CO1.NTC.4756695",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.26286441&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.26342998",
       "notice_uid": "CO1.NTC.4774408",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.26342998&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.26488622",
       "notice_uid": "CO1.NTC.4834661",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.26488622&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.26515941",
       "notice_uid": "CO1.NTC.4804665",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.26515941&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.26513882",
       "notice_uid": "CO1.NTC.4804667",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.26513882&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.26511899",
       "notice_uid": "CO1.NTC.4804775",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.26511899&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.26396219",
@@ -1837,45 +1677,29 @@
       "process_id": "CO1.PPI.27364452",
       "notice_uid": "CO1.NTC.4974670",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.27364452&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.27173687",
       "notice_uid": "CO1.NTC.4937657",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.27173687&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.26289293",
@@ -1895,23 +1719,15 @@
       "process_id": "CO1.PPI.27366908",
       "notice_uid": "CO1.NTC.4974671",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.27366908&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.26779991",
@@ -1931,45 +1747,29 @@
       "process_id": "CO1.PPI.27940838",
       "notice_uid": "CO1.NTC.5086780",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.27940838&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.28308397",
       "notice_uid": "CO1.NTC.5364522",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.28308397&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.27523055",
@@ -1989,89 +1789,57 @@
       "process_id": "CO1.PPI.28246751",
       "notice_uid": "CO1.NTC.5194540",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.28246751&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.28346236",
       "notice_uid": "CO1.NTC.5194630",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.28346236&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.28427943",
       "notice_uid": "CO1.NTC.5225651",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.28427943&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.28605022",
       "notice_uid": "CO1.NTC.5254118",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.28605022&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.27832634",
@@ -2091,133 +1859,85 @@
       "process_id": "CO1.PPI.28520078",
       "notice_uid": "CO1.NTC.5224851",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.28520078&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.28517758",
       "notice_uid": "CO1.NTC.5224941",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.28517758&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.28515093",
       "notice_uid": "CO1.NTC.5224935",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.28515093&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.28595950",
       "notice_uid": "CO1.NTC.5254113",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.28595950&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.28621237",
       "notice_uid": "CO1.NTC.5254117",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.28621237&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.28571332",
       "notice_uid": "CO1.NTC.5253954",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.28571332&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.28107700",
@@ -2237,353 +1957,225 @@
       "process_id": "CO1.PPI.28566681",
       "notice_uid": "CO1.NTC.5239226",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.28566681&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.28598949",
       "notice_uid": "CO1.NTC.5243667",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.28598949&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.28667555",
       "notice_uid": "CO1.NTC.5268456",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.28667555&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.28599117",
       "notice_uid": "CO1.NTC.5253955",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.28599117&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.28626789",
       "notice_uid": "CO1.NTC.5268631",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.28626789&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.28624489",
       "notice_uid": "CO1.NTC.5268588",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.28624489&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.28629480",
       "notice_uid": "CO1.NTC.5268955",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.28629480&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.28695569",
       "notice_uid": "CO1.NTC.5275461",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.28695569&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.28525495",
       "notice_uid": "CO1.NTC.5268882",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.28525495&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.28686004",
       "notice_uid": "CO1.NTC.5275398",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.28686004&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.28690146",
       "notice_uid": "CO1.NTC.5275456",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.28690146&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.28696742",
       "notice_uid": "CO1.NTC.5275458",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.28696742&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.28685528",
       "notice_uid": "CO1.NTC.5275394",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.28685528&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.28672483",
       "notice_uid": "CO1.NTC.5275455",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.28672483&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.28691223",
       "notice_uid": "CO1.NTC.5289409",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.28691223&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.28727497",
       "notice_uid": "CO1.NTC.5289326",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.28727497&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2023"
       ],
       "vigencias": [
         "2023"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.27942182",
@@ -2617,23 +2209,15 @@
       "process_id": "CO1.PPI.17073560",
       "notice_uid": "CO1.NTC.2761656",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.17073560&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.17251566",
@@ -2653,23 +2237,15 @@
       "process_id": "CO1.PPI.17313850",
       "notice_uid": "CO1.NTC.2793186",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.17313850&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.17387010",
@@ -2703,23 +2279,15 @@
       "process_id": "CO1.PPI.17847475",
       "notice_uid": "CO1.NTC.2863921",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.17847475&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.15803264",
@@ -2865,67 +2433,43 @@
       "process_id": "CO1.PPI.20023017",
       "notice_uid": "CO1.NTC.3158834",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.20023017&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.20023855",
       "notice_uid": "CO1.NTC.3158767",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.20023855&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.20020770",
       "notice_uid": "CO1.NTC.3158828",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.20020770&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.19296056",
@@ -2959,23 +2503,15 @@
       "process_id": "CO1.PPI.20286887",
       "notice_uid": "CO1.NTC.3218736",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.20286887&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.19836768",
@@ -2995,23 +2531,15 @@
       "process_id": "CO1.PPI.20409576",
       "notice_uid": "CO1.NTC.3245711",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.20409576&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.19738651",
@@ -3101,45 +2629,29 @@
       "process_id": "CO1.PPI.21255920",
       "notice_uid": "CO1.NTC.3439138",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.21255920&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.21397544",
       "notice_uid": "CO1.NTC.3472296",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.21397544&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.20786365",
@@ -3173,23 +2685,15 @@
       "process_id": "CO1.PPI.21897356",
       "notice_uid": "CO1.NTC.3589225",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.21897356&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.21398423",
@@ -3209,23 +2713,15 @@
       "process_id": "CO1.PPI.21898210",
       "notice_uid": "CO1.NTC.3589223",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.21898210&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.21564988",
@@ -3245,23 +2741,15 @@
       "process_id": "CO1.PPI.21786159",
       "notice_uid": "CO1.NTC.3581017",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.21786159&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.21478240",
@@ -3281,419 +2769,267 @@
       "process_id": "CO1.PPI.21897957",
       "notice_uid": "CO1.NTC.3589139",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.21897957&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.21883304",
       "notice_uid": "CO1.NTC.3589328",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.21883304&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.21894902",
       "notice_uid": "CO1.NTC.3589226",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.21894902&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.21940758",
       "notice_uid": "CO1.NTC.3601716",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.21940758&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.21900263",
       "notice_uid": "CO1.NTC.3588946",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.21900263&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.21919033",
       "notice_uid": "CO1.NTC.3602105",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.21919033&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.21910461",
       "notice_uid": "CO1.NTC.3591348",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.21910461&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.21918216",
       "notice_uid": "CO1.NTC.3601712",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.21918216&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.21941288",
       "notice_uid": "CO1.NTC.3601713",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.21941288&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.21886711",
       "notice_uid": "CO1.NTC.3581104",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.21886711&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.21881507",
       "notice_uid": "CO1.NTC.3581102",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.21881507&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.21927913",
       "notice_uid": "CO1.NTC.3591605",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.21927913&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.21926462",
       "notice_uid": "CO1.NTC.3591503",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.21926462&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.21958919",
       "notice_uid": "CO1.NTC.3602534",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.21958919&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.21925841",
       "notice_uid": "CO1.NTC.3591462",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.21925841&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.21894121",
       "notice_uid": "CO1.NTC.3589227",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.21894121&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.21919854",
       "notice_uid": "CO1.NTC.3601711",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.21919854&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.21942942",
       "notice_uid": "CO1.NTC.3601714",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.21942942&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.21957549",
       "notice_uid": "CO1.NTC.3601718",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.21957549&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.21271731",
@@ -3713,133 +3049,85 @@
       "process_id": "CO1.PPI.21926407",
       "notice_uid": "CO1.NTC.3602106",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.21926407&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.21972592",
       "notice_uid": "CO1.NTC.3602107",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.21972592&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.21964690",
       "notice_uid": "CO1.NTC.3601717",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.21964690&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.21966211",
       "notice_uid": "CO1.NTC.3601715",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.21966211&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.21961771",
       "notice_uid": "CO1.NTC.3602246",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.21961771&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.21980399",
       "notice_uid": "CO1.NTC.3602247",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.21980399&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.21563113",
@@ -3901,23 +3189,15 @@
       "process_id": "CO1.PPI.22246733",
       "notice_uid": "CO1.NTC.3684656",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.22246733&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.21882615",
@@ -3937,23 +3217,15 @@
       "process_id": "CO1.PPI.22325434",
       "notice_uid": "CO1.NTC.3691306",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.22325434&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2022"
       ],
       "vigencias": [
         "2022"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.NTC.616817",
@@ -4311,23 +3583,15 @@
       "process_id": "CO1.PPI.7393392",
       "notice_uid": "CO1.NTC.1227823",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.7393392&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2018"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.NTC.1231908",
@@ -4707,23 +3971,15 @@
       "process_id": "CO1.NTC.772574",
       "notice_uid": null,
       "url": "https://www.secop.gov.co/CO1BusinessLine/Tendering/ContractNoticeView/Index?notice=CO1.NTC.772574#Contracts",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2019"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.REQ.804076",
@@ -4743,23 +3999,15 @@
       "process_id": "CO1.PPI.3157240",
       "notice_uid": "CO1.NTC.772574",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.3157240&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2019"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.NTC.1227911",
@@ -4787,23 +4035,15 @@
       "process_id": "CO1.PPI.6195531",
       "notice_uid": "CO1.NTC.1208161",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.6195531&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2020"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.NTC.1208217",
@@ -5751,67 +4991,43 @@
       "process_id": "CO1.PPI.7425984",
       "notice_uid": "CO1.NTC.1439422",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.7425984&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2020"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.10182564",
       "notice_uid": "CO1.NTC.1431821",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.10182564&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2020"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.10170671",
       "notice_uid": "CO1.NTC.1432423",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.10170671&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2020"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.9581469",
@@ -5831,23 +5047,15 @@
       "process_id": "CO1.PPI.10241791",
       "notice_uid": "CO1.NTC.1440650",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.10241791&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2020"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.NTC.1391748",
@@ -6853,111 +6061,71 @@
       "process_id": "CO1.PPI.11548327",
       "notice_uid": "CO1.NTC.1655925",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.11548327&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2020"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.11548162",
       "notice_uid": "CO1.NTC.1655864",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.11548162&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2020"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.11602162",
       "notice_uid": "CO1.NTC.1711730",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.11602162&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2020"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.11548530",
       "notice_uid": "CO1.NTC.1655767",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.11548530&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2020"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.11542652",
       "notice_uid": "CO1.NTC.1639026",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.11542652&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.11374230",
@@ -6991,45 +6159,29 @@
       "process_id": "CO1.PPI.12256122",
       "notice_uid": "CO1.NTC.1811360",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.12256122&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.12292954",
       "notice_uid": "CO1.NTC.1817606",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.12292954&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.12092581",
@@ -7077,23 +6229,15 @@
       "process_id": "CO1.PPI.12626974",
       "notice_uid": "CO1.NTC.1876223",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.12626974&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.12459914",
@@ -7177,67 +6321,43 @@
       "process_id": "CO1.PPI.12706046",
       "notice_uid": "CO1.NTC.1891591",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.12706046&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.12969085",
       "notice_uid": "CO1.NTC.1933630",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.12969085&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.12767600",
       "notice_uid": "CO1.NTC.1900867",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.12767600&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.12409525",
@@ -7271,89 +6391,57 @@
       "process_id": "CO1.PPI.13016871",
       "notice_uid": "CO1.NTC.1938717",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.13016871&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.12935563",
       "notice_uid": "CO1.NTC.1927012",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.12935563&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.12944968",
       "notice_uid": "CO1.NTC.1926492",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.12944968&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.13055826",
       "notice_uid": "CO1.NTC.1947418",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.13055826&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.12651547",
@@ -7415,89 +6503,57 @@
       "process_id": "CO1.PPI.13154779",
       "notice_uid": "CO1.NTC.1958057",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.13154779&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.13267191",
       "notice_uid": "CO1.NTC.1974305",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.13267191&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.13365178",
       "notice_uid": "CO1.NTC.1987636",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.13365178&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.13488790",
       "notice_uid": "CO1.NTC.2004614",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.13488790&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.13188326",
@@ -7545,45 +6601,29 @@
       "process_id": "CO1.PPI.13648695",
       "notice_uid": "CO1.NTC.2025364",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.13648695&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.13649446",
       "notice_uid": "CO1.NTC.2025723",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.13649446&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.13286747",
@@ -7631,45 +6671,29 @@
       "process_id": "CO1.PPI.13790520",
       "notice_uid": "CO1.NTC.2050827",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.13790520&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.14120744",
       "notice_uid": "CO1.NTC.2106341",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.14120744&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.13442567",
@@ -7717,89 +6741,57 @@
       "process_id": "CO1.PPI.14387732",
       "notice_uid": "CO1.NTC.2159451",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.14387732&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.14386560",
       "notice_uid": "CO1.NTC.2152753",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.14386560&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.14379832",
       "notice_uid": "CO1.NTC.2159454",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.14379832&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.14379871",
       "notice_uid": "CO1.NTC.2159652",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.14379871&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.13915707",
@@ -7819,23 +6811,15 @@
       "process_id": "CO1.PPI.14529613",
       "notice_uid": "CO1.NTC.2165238",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.14529613&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.13789208",
@@ -7855,23 +6839,15 @@
       "process_id": "CO1.PPI.14528150",
       "notice_uid": "CO1.NTC.2174535",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.14528150&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.14072066",
@@ -7891,23 +6867,15 @@
       "process_id": "CO1.PPI.14547954",
       "notice_uid": "CO1.NTC.2171728",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.14547954&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.13891678",
@@ -7927,23 +6895,15 @@
       "process_id": "CO1.PPI.14766782",
       "notice_uid": "CO1.NTC.2203953",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.14766782&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.14097120",
@@ -7963,111 +6923,71 @@
       "process_id": "CO1.PPI.14997723",
       "notice_uid": "CO1.NTC.2254727",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.14997723&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.15033417",
       "notice_uid": "CO1.NTC.2254455",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.15033417&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.15056334",
       "notice_uid": "CO1.NTC.2261361",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.15056334&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.15046658",
       "notice_uid": "CO1.NTC.2261073",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.15046658&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.15146576",
       "notice_uid": "CO1.NTC.2269746",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.15146576&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.14534762",
@@ -8129,23 +7049,15 @@
       "process_id": "CO1.PPI.15450423",
       "notice_uid": "CO1.NTC.2332444",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.15450423&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.15094588",
@@ -8193,67 +7105,43 @@
       "process_id": "CO1.PPI.15920492",
       "notice_uid": "CO1.NTC.2380586",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.15920492&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.16036160",
       "notice_uid": "CO1.NTC.2403751",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.16036160&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.15993557",
       "notice_uid": "CO1.NTC.2397515",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.15993557&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.15582305",
@@ -8273,133 +7161,85 @@
       "process_id": "CO1.PPI.16105996",
       "notice_uid": "CO1.NTC.2418541",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.16105996&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.16249047",
       "notice_uid": "CO1.NTC.2476103",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.16249047&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.16163601",
       "notice_uid": "CO1.NTC.2476109",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.16163601&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.16123163",
       "notice_uid": "CO1.NTC.2419063",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.16123163&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.16147965",
       "notice_uid": "CO1.NTC.2470223",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.16147965&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.16180027",
       "notice_uid": "CO1.NTC.2454463",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.16180027&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.15220911",
@@ -8419,199 +7259,127 @@
       "process_id": "CO1.PPI.16180447",
       "notice_uid": "CO1.NTC.2454611",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.16180447&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.16179743",
       "notice_uid": "CO1.NTC.2476108",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.16179743&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.16179799",
       "notice_uid": "CO1.NTC.2476107",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.16179799&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.16180456",
       "notice_uid": "CO1.NTC.2447627",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.16180456&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.16248124",
       "notice_uid": "CO1.NTC.2476104",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.16248124&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.16180437",
       "notice_uid": "CO1.NTC.2455108",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.16180437&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.16179764",
       "notice_uid": "CO1.NTC.2455019",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.16179764&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.16180417",
       "notice_uid": "CO1.NTC.2476106",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.16180417&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.16317765",
       "notice_uid": "CO1.NTC.2475904",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.16317765&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.NTC.2476105",
@@ -8639,45 +7407,29 @@
       "process_id": "CO1.PPI.16249027",
       "notice_uid": "CO1.NTC.2476102",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.16249027&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.16486976",
       "notice_uid": "CO1.NTC.2478268",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.16486976&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.16249067",
@@ -8697,177 +7449,113 @@
       "process_id": "CO1.PPI.16249430",
       "notice_uid": "CO1.NTC.2454608",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.16249430&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.17479987",
       "notice_uid": "CO1.NTC.2824638",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.17479987&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.16249445",
       "notice_uid": "CO1.NTC.2476101",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.16249445&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.16250314",
       "notice_uid": "CO1.NTC.2454743",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.16250314&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.16250331",
       "notice_uid": "CO1.NTC.2454672",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.16250331&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.16483524",
       "notice_uid": "CO1.NTC.2478630",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.16483524&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.16486394",
       "notice_uid": "CO1.NTC.2478636",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.16486394&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.16486567",
       "notice_uid": "CO1.NTC.2478230",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.16486567&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.15447445",
@@ -8887,45 +7575,29 @@
       "process_id": "CO1.PPI.16368640",
       "notice_uid": "CO1.NTC.2466308",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.16368640&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.16435025",
       "notice_uid": "CO1.NTC.2470028",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.16435025&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.16227984",
@@ -8959,23 +7631,15 @@
       "process_id": "CO1.PPI.16511633",
       "notice_uid": "CO1.NTC.2560632",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.16511633&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     },
     {
       "process_id": "CO1.PPI.16004777",
@@ -8995,23 +7659,15 @@
       "process_id": "CO1.PPI.16687554",
       "notice_uid": "CO1.NTC.2824468",
       "url": "https://community.secop.gov.co/Public/Tendering/ContractNoticePhases/View?PPI=CO1.PPI.16687554&isFromPublicArea=True&isModal=False",
-      "coverage": "none",
+      "coverage": "portal",
       "sheets": [
         "FEAB 2018-2021"
       ],
       "vigencias": [
         "2021"
       ],
-      "issues": [
-        {
-          "check": 13,
-          "severity": "scrape",
-          "msg": "coverage=none y no es borrador - candidato para scrape del portal community.secop"
-        }
-      ],
-      "issues_summary": {
-        "scrape": 1
-      }
+      "issues": [],
+      "issues_summary": {}
     }
   ]
 }
