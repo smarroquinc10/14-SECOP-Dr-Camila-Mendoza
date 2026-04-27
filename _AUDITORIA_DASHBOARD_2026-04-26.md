@@ -1,6 +1,6 @@
 # Auditoría Dashboard FEAB — 2026-04-26
 
-**Generado**: 2026-04-26T22:54:23.273781Z → 2026-04-26T22:54:24.964322Z
+**Generado**: 2026-04-26T23:10:29.670986Z → 2026-04-26T23:10:31.448049Z
 **Modo**: LIVE Socrata
 
 ## Sumario

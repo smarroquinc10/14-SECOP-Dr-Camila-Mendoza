@@ -193,19 +193,76 @@ def capa_5_canonicos() -> CapaResult:
 # Capa 6 — Cron jobs status
 # ─────────────────────────────────────────────────────────────────────
 def capa_6_crons() -> CapaResult:
+    """Verifica que los workflows de cron estén ACTIVOS Y que hayan tenido
+    runs success en los últimos N días (no solo "active" · hay que verificar
+    que realmente CORRAN). Detectado el 2026-04-27: el cron mensual estaba
+    "active" pero NUNCA había corrido success porque CAPSOLVER_API_KEY no
+    estaba en repo secrets. La capa antigua solo verificaba "active" → no
+    detectaba este tipo de gap silencioso."""
     code, out = run_cmd(["gh", "workflow", "list", "--all"], timeout=30)
     if code != 0:
         return CapaResult("Cron jobs activos", False, f"gh CLI no disponible · {out[-200:]}")
-    expected = ["Refrescar seeds", "Auditoria diaria", "Scrape Portal SECOP", "Deploy a GitHub Pages"]
-    missing = [w for w in expected if w not in out]
-    inactive = []
+    expected_with_freshness_days = {
+        "Refrescar seeds (datos.gov.co)": 2,        # cron diario → max 2 días sin success
+        "Auditoria diaria del Dashboard FEAB": 2,   # cron diario → max 2 días sin success
+        "Scrape Portal SECOP (mensual)": 35,        # cron mensual → max 35 días sin success
+        "Deploy a GitHub Pages": 30,                # cada push · 30 días sin push es raro pero OK
+    }
+    missing: list[str] = []
+    inactive: list[str] = []
+    no_recent_success: list[str] = []
+
+    # Verificar que cada uno está en la lista
     for line in out.splitlines():
-        for w in expected:
+        for w in expected_with_freshness_days:
             if w in line and "active" not in line.lower():
                 inactive.append(w)
-    if missing or inactive:
-        return CapaResult("Cron jobs activos", False, f"missing={missing} · inactive={inactive}")
-    return CapaResult("Cron jobs activos", True, f"4/4 workflows activos · {', '.join(expected)}")
+    for w in expected_with_freshness_days:
+        if w not in out:
+            missing.append(w)
+
+    # Verificar runs recientes con success
+    from datetime import datetime, timezone, timedelta
+    for wf, max_days in expected_with_freshness_days.items():
+        # Listamos runs (cualquier event) y vemos si hay alguno success reciente
+        c, o = run_cmd(
+            ["gh", "run", "list", "--workflow", wf, "--limit", "10", "--json", "status,conclusion,createdAt"],
+            timeout=20,
+        )
+        if c != 0:
+            no_recent_success.append(f"{wf} (gh error)")
+            continue
+        try:
+            runs = json.loads(o)
+        except Exception:
+            no_recent_success.append(f"{wf} (json parse)")
+            continue
+        success_runs = [r for r in runs if r.get("conclusion") == "success"]
+        if not success_runs:
+            no_recent_success.append(f"{wf} (0 runs success)")
+            continue
+        latest_dt = max(
+            datetime.fromisoformat(r["createdAt"].replace("Z", "+00:00"))
+            for r in success_runs
+        )
+        days_since = (datetime.now(timezone.utc) - latest_dt).days
+        if days_since > max_days:
+            no_recent_success.append(f"{wf} (último success hace {days_since} días · max {max_days})")
+
+    if missing or inactive or no_recent_success:
+        problems = []
+        if missing:
+            problems.append(f"missing={missing}")
+        if inactive:
+            problems.append(f"inactive={inactive}")
+        if no_recent_success:
+            problems.append(f"sin runs success recientes: {no_recent_success}")
+        return CapaResult("Cron jobs activos + recientes", False, " · ".join(problems))
+    return CapaResult(
+        "Cron jobs activos + recientes",
+        True,
+        f"{len(expected_with_freshness_days)}/{len(expected_with_freshness_days)} workflows con runs success recientes",
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────

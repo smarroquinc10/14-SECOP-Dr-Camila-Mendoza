@@ -324,6 +324,27 @@ Tiempo total se mantiene en ~1-2 segundos (los 2 fetches a Socrata corren en par
 
 ---
 
+### Error #15 — CAPSOLVER_API_KEY_NO_EN_REPO_SECRETS
+**Proceso (si aplica)**: ninguno (afecta TODOS los workflows del scrape mensual y on-demand)
+**Fecha / hora**: 2026-04-27 ~04:07 UTC (Bogotá ~23:07 del 26)
+**Reportado por**: yo durante intento de scrape selectivo on-demand de 158 UIDs
+**Síntoma exacto**: `gh workflow run "Scrape Portal SECOP (mensual)" -f uids="..."` falló en 11 segundos. Logs muestran:
+```
+ERROR: secret CAPSOLVER_API_KEY no esta configurado en el repo.
+Configurar en: Settings -> Secrets and variables -> Actions -> New repository secret
+##[error]Process completed with exit code 1.
+```
+**Causa**: el secret `CAPSOLVER_API_KEY` nunca se agregó a GitHub Secrets del repo. El workflow tiene un step explícito de validación que falla con exit 1 si el secret no está. Esto significa que TODOS los runs del scrape mensual nunca pudieron correr exitosamente. El cron schedule `0 4 1 * *` (día 1 cada mes 04:00 UTC) sigue disparándose pero falla en este step. El batch 2 que hicimos antes (los 131 NTCs nuevos) corrió LOCAL desde el `.env` de Sergio · por eso sí pudo. Pero CI nunca tuvo la key.
+**Fix propuesto**: Sergio agrega `CAPSOLVER_API_KEY` a GitHub Secrets desde la URL `https://github.com/smarroquinc10/14-SECOP-Dr-Camila-Mendoza/settings/secrets/actions`. Una vez configurado, los workflow_dispatch + cron schedule funcionan en CI sin tocar la PC de Sergio. Verificación: `gh run list --workflow="Scrape Portal SECOP (mensual)" --event=schedule --limit 5` debería mostrar runs con `conclusion: success`.
+**Impacto**: workflows scrape mensual + scrape selectivo · 100% bloqueados en CI · solo funcionaba LOCAL · el dashboard 24/7 quedaba a merced del último scrape local manual de Sergio
+**Test que regresione**: la capa #6 de `verify_multilayer.py` debería verificar también que el último run de cada cron schedule fue success. Hoy solo verifica que el workflow esté "active". Mejorar la capa para detectar este tipo de issue.
+**Smoke test canónico**: post-config del secret, disparar manual `gh workflow run "Scrape Portal SECOP (mensual)" -f uids="CO1.NTC.1234567"` debe pasar el step "Verificar CAPSOLVER_API_KEY".
+**Status**: **PENDIENTE_USUARIO** — Sergio debe configurar el secret en GitHub UI (3 minutos)
+
+**Lección persistida**: `memory/reference_capsolver_secret_repo.md`
+
+---
+
 ## Cierre de cada incidente — checklist
 
 Antes de marcar un Error como **DEPLOYED**:
