@@ -834,16 +834,29 @@ export function UnifiedTable({
               )}
               {r.data_source === "portal" && (() => {
                 const age = formatAge(r.data_source_scraped_at);
+                const fechaCorta =
+                  r.data_source_scraped_at?.slice(0, 10) ?? null;
                 const tooltip = r.data_source_scraped_at
-                  ? `Cache del portal community.secop.gov.co — leído ${r.data_source_scraped_at.slice(0, 10)} (${age ?? "fecha desconocida"}). No se actualiza en vivo; se refresca con cada scrape periódico.`
+                  ? `Cache del portal community.secop.gov.co — leído ${fechaCorta} (${age ?? "fecha desconocida"}). Se refresca con el cron mensual o con "Refrescar seleccionados" cuando lo necesités.`
                   : "Datos del cache estático del portal community.secop.gov.co. Se actualiza con un scrape periódico (no en vivo).";
                 return (
-                  <div
-                    className="mt-1 inline-flex items-center px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 text-[9px] font-medium"
-                    title={tooltip}
-                  >
-                    vía portal cache{age ? ` · ${age}` : ""}
-                  </div>
+                  <>
+                    <div
+                      className="mt-1 inline-flex items-center px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 text-[9px] font-medium"
+                      title={tooltip}
+                    >
+                      vía portal cache{age ? ` · ${age}` : ""}
+                    </div>
+                    {/* Feature G (2026-04-26): fecha exacta del ultimo
+                        scrape VISIBLE (no en tooltip). La Dra ve cuando
+                        cada celda fue actualizada por ultima vez sin
+                        tener que pasar el mouse encima. */}
+                    {fechaCorta && (
+                      <div className="text-[9px] text-ink-soft mt-0.5 font-mono">
+                        Actualizado: {fechaCorta}
+                      </div>
+                    )}
+                  </>
                 );
               })()}
               <div className="text-ink-soft mt-1 truncate">

@@ -14,6 +14,7 @@ import {
 
 import { DetailDialog } from "@/components/detail-dialog";
 import { ModsPanel } from "@/components/mods-panel";
+import { RefreshModal } from "@/components/refresh-modal";
 import { SlicerPills } from "@/components/slicer-pills";
 import {
   buildUnifiedRows,
@@ -138,6 +139,13 @@ export default function HomePage() {
       return next;
     });
   }, []);
+
+  // Feature G (2026-04-26): modal para mostrar UIDs seleccionados + las
+  // 3 acciones (copiar / GitHub Action / mailto). null = cerrado.
+  const [refreshModal, setRefreshModal] = React.useState<{
+    uids: string[];
+    mode: "selected" | "all_visible";
+  } | null>(null);
 
   // ---- Build unified rows + busy/feedback state for actions -----------
   // Cardinal rule: cada celda con su procedencia clara.
@@ -559,6 +567,36 @@ export default function HomePage() {
     onlyMod ||
     onlyExpiringSoon ||
     onlyAttention;
+
+  // Feature G (2026-04-26): UIDs seleccionados (Set → Array deduplicado).
+  // Persisten cross-filtros: si la Dra selecciona 30 procesos y luego
+  // cambia el filtro de hoja, los 30 siguen marcados. La accion "Refrescar
+  // seleccionados" refresca todos los marcados sin importar visibilidad
+  // actual — se asume que la Dra seleccionó conscientemente.
+  const selectedUidsArr = React.useMemo(
+    () => Array.from(selectedIds),
+    [selectedIds]
+  );
+
+  // Feature G: UIDs scrapeables visibles tras filtros. Solo los watched
+  // con notice_uid (o process_id formato CO1.NTC.* como fallback) son
+  // re-scrapeables. Los REQ/BDOS/PCCNTR sin notice_uid quedan fuera —
+  // matchea la lógica del checkbox column en unified-table.tsx.
+  const visibleScrapeableUids = React.useMemo(() => {
+    const out: string[] = [];
+    const seen = new Set<string>();
+    for (const r of filtered) {
+      if (!r.watched) continue;
+      const uid =
+        r.notice_uid ??
+        (r.process_id?.startsWith("CO1.NTC.") ? r.process_id : null);
+      if (uid && !seen.has(uid)) {
+        seen.add(uid);
+        out.push(uid);
+      }
+    }
+    return out;
+  }, [filtered]);
 
   return (
     <main className="min-h-screen bg-background">
@@ -1145,12 +1183,12 @@ export default function HomePage() {
 
       {/* TABLA UNIFICADA */}
       <div className="mx-auto max-w-7xl px-8 pb-12">
-        <div className="flex items-center justify-between mb-4 gap-3">
+        <div className="flex flex-wrap items-center justify-between mb-4 gap-3">
           <h2 className="serif text-2xl font-semibold text-ink">
             {onlyMine ? "Mis procesos seguidos" : "Inventario completo"}
           </h2>
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-ink-soft">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs text-ink-soft mr-1">
               {/* Bug C fix (2026-04-26): el divisor era allRows.length que
                   incluye 282 contratos huerfanos del SECOP no presentes en
                   el watch list. Con onlyMine=true esos quedan filtrados,
@@ -1159,6 +1197,49 @@ export default function HomePage() {
                   ahora refleja solo lo realmente mostrable. */}
               {filtered.length} de {allRows.filter((r) => r.watched).length} mostrados
             </span>
+
+            {/* Feature G (2026-04-26): "Refrescar seleccionados" — solo
+                aparece cuando la Dra marcó al menos un checkbox. Click
+                abre el modal con UIDs + 3 caminos para disparar el scrape.
+                Estilo prominente burgundy para diferenciar de "visibles". */}
+            {selectedUidsArr.length > 0 && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  setRefreshModal({
+                    uids: selectedUidsArr,
+                    mode: "selected",
+                  })
+                }
+                className="gap-2 border-burgundy/40 bg-burgundy/5 text-burgundy hover:bg-burgundy/10"
+                title="Refresca contra community.secop solo los procesos que marcaste con el checkbox"
+              >
+                <RefreshCcw className="h-4 w-4" />
+                Refrescar seleccionados ({selectedUidsArr.length})
+              </Button>
+            )}
+
+            {/* Feature G: "Refrescar todos los visibles" — refresca los
+                UIDs scrapeables del filter activo (puede ser muchos: si
+                no hay filtros, son los 491 - 105 sin cobertura ≈ 386). */}
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={visibleScrapeableUids.length === 0}
+              onClick={() =>
+                setRefreshModal({
+                  uids: visibleScrapeableUids,
+                  mode: "all_visible",
+                })
+              }
+              className="gap-2"
+              title="Refresca contra community.secop todos los procesos visibles tras los filtros actuales. Toma ~30-55s por proceso."
+            >
+              <Globe className="h-4 w-4" />
+              Refrescar visibles ({visibleScrapeableUids.length})
+            </Button>
+
             <Button
               size="sm"
               variant="outline"
@@ -1213,6 +1294,16 @@ export default function HomePage() {
         open={!!selected}
         onOpenChange={(o) => !o && setSelected(null)}
       />
+
+      {/* Feature G (2026-04-26): modal de refresh selectivo o masivo. */}
+      {refreshModal && (
+        <RefreshModal
+          uids={refreshModal.uids}
+          mode={refreshModal.mode}
+          open={true}
+          onClose={() => setRefreshModal(null)}
+        />
+      )}
 
       {/* Institutional footer — sellos del Estado Colombiano + identidad FEAB */}
       <div className="border-t border-rule bg-surface mt-12">
