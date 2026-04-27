@@ -1,0 +1,126 @@
+name: Scrape Portal SECOP (mensual)
+
+# Re-scrape mensual del portal community.secop para los procesos del watch
+# list que viven SOLO en el portal (no en APIs publicas). CapSolver resuelve
+# captchas automaticamente sin intervencion humana.
+#
+# Cron: dia 1 de cada mes a las 04:00 UTC (23:00 Bogota dia anterior)
+# Manual: workflow_dispatch para correr on-demand desde la UI de GitHub
+#
+# Requisitos: el secret CAPSOLVER_API_KEY debe estar configurado en
+# repo settings → Secrets → Actions. Sin ese secret, el job falla y no
+# gasta nada (CapSolver requiere la key para resolver captchas).
+
+on:
+  schedule:
+    # Dia 1 de cada mes 04:00 UTC = 23:00 Bogota del ultimo dia del mes
+    # Con weekday=any (al inicio del mes el cron de actualizacion)
+    - cron: '0 4 1 * *'
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: 'Limit (vacio = todos los pendientes)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360  # 6h max - el batch usual tarda 3-4h
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 1
+
+      - name: Setup Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Verificar que CAPSOLVER_API_KEY esta configurada
+        run: |
+          if [ -z "${{ secrets.CAPSOLVER_API_KEY }}" ]; then
+            echo "ERROR: secret CAPSOLVER_API_KEY no esta configurado en el repo."
+            echo "Configurar en: Settings -> Secrets and variables -> Actions -> New repository secret"
+            exit 1
+          fi
+          echo "OK CapSolver key configurada"
+
+      - name: Instalar dependencias Python
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -e .
+
+      - name: Instalar Playwright + browsers
+        run: |
+          python -m playwright install chromium --with-deps
+
+      - name: Setup Xvfb para Chrome headed
+        # Chrome headed (headless=False) requiere display. Ubuntu runners
+        # no tienen display por default. Xvfb crea uno virtual sin GUI.
+        run: |
+          sudo apt-get install -y xvfb
+          Xvfb :99 -screen 0 1920x1080x24 &
+          echo "DISPLAY=:99" >> $GITHUB_ENV
+
+      - name: Correr scrape masivo
+        env:
+          CAPSOLVER_API_KEY: ${{ secrets.CAPSOLVER_API_KEY }}
+          PYTHONUNBUFFERED: "1"
+        run: |
+          # Limite opcional para tests rapidos. Sin limit = procesa todos.
+          if [ -n "${{ inputs.limit }}" ]; then
+            python -X utf8 scripts/scrape_portal.py \
+              --limit ${{ inputs.limit }} \
+              --progress-file .cache/portal_progress.jsonl
+          else
+            python -X utf8 scripts/scrape_portal.py \
+              --progress-file .cache/portal_progress.jsonl
+          fi
+
+      - name: Copiar cache → seed deployable
+        run: |
+          if [ -f .cache/portal_opportunity.json ]; then
+            cp .cache/portal_opportunity.json app/public/data/portal_opportunity_seed.json
+            echo "Seed actualizado"
+          else
+            echo "ERROR: cache portal_opportunity.json no existe"
+            exit 1
+          fi
+
+      - name: Re-correr auditoria
+        run: |
+          python -X utf8 scripts/audit_dashboard_full.py
+
+      - name: Upload reporte como artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scrape-mensual-${{ github.run_id }}
+          path: |
+            .cache/portal_progress.jsonl
+            _AUDITORIA_DASHBOARD_*.json
+            _AUDITORIA_DASHBOARD_*.md
+          retention-days: 90
+
+      - name: Commit + push del seed actualizado
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/public/data/portal_opportunity_seed.json
+          git add _AUDITORIA_DASHBOARD_*.json _AUDITORIA_DASHBOARD_*.md
+          if git diff --cached --quiet; then
+            echo "Sin cambios en seed - nada que commitear"
+          else
+            FECHA=$(date -u +'%Y-%m-%d')
+            git commit -m "scrape: refresh mensual automatico $FECHA"
+            git push
+            echo "Seed pushed - GitHub Action Deploy a Pages corre solo"
+          fi
