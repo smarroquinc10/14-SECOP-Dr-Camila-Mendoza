@@ -54,7 +54,18 @@ export interface WatchedItemRow {
     vigencia: string | null;
     row: number | null;
     url: string;
+    /** Consecutivo FEAB de ESTA aparición específica (col 1 del Excel).
+     *  Una URL puede aparecer en N sheets/rows con consecutivos distintos
+     *  cuando un mismo proceso tiene varios contratos firmados. */
+    numero_contrato?: string | null;
   }>;
+  /** Lista de consecutivos `CONTRATO-FEAB-NNNN-AAAA` asociados al
+   *  proceso (modelo 1↔N: una URL puede tener hasta 13 contratos en
+   *  subastas con múltiples adjudicaciones). Vacío si la Dra todavía
+   *  no firmó contrato para este proceso. CARDINAL · proviene del
+   *  Excel de la Dra (col 1 de FEAB 2026/2025/2024/2023/2022 o
+   *  construido virtualmente desde cols 2+3 en FEAB 2018-2021). */
+  numero_contrato_excel?: string[];
   added_at: string;
   edited_at?: string;
   note: string | null;

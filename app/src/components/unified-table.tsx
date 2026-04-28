@@ -80,7 +80,17 @@ export interface UnifiedRow {
   process_id: string | null;
   id_contrato: string | null;
   notice_uid: string | null;
-  numero_contrato: string | null;  // CONTRATO-FEAB-NNNN-AAAA from Excel
+  /** Consecutivo primario para mostrar en la celda principal de la
+   *  tabla. Cardinal: prioridad Excel > portal SECOP. Cuando Excel
+   *  trae N contratos, se muestra el primero acá y la lista completa
+   *  vive en `numero_contratos_excel` para el modal. */
+  numero_contrato: string | null;  // CONTRATO-FEAB-NNNN-AAAA
+  /** Lista completa de consecutivos FEAB del Excel asociados a este
+   *  proceso (modelo 1↔N · una URL puede tener hasta 13 contratos
+   *  cuando una subasta tuvo múltiples adjudicaciones). Se renderiza
+   *  en el modal en sección "Contratos FEAB asociados". Vacío para
+   *  procesos sin contrato firmado todavía. */
+  numero_contratos_excel: string[];
   url: string | null;
 
   // From SECOP contracts dataset (if matched)
@@ -422,10 +432,22 @@ export function buildUnifiedRows(
       process_id: w.process_id,
       id_contrato: null,
       notice_uid: w.notice_uid ?? null,
+      // CARDINAL (2026-04-28 · Sergio corrige): preservar los dos
+      // consecutivos como campos separados. NO unificar.
+      //   - `numero_contrato`        → identificador que la entidad
+      //     subió al portal SECOP (texto libre del scrape · ej.
+      //     "FEAB 0001 DE 2024" / "CPM-0001-2025"). Sale del scrape.
+      //   - `numero_contratos_excel` → consecutivo FEAB formal del
+      //     Excel de la Dra (`CONTRATO-FEAB-NNNN-AAAA`). Lista por
+      //     modelo 1↔N. Sale del Excel.
+      // Ambos son legítimos · el modal y la tabla muestran cada uno
+      // con su etiqueta para que la Dra vea las dos vistas del mismo
+      // contrato sin que una oculte a la otra.
       numero_contrato:
         portalSnap?.fields?.numero_contrato ??
         portalSnap?.fields?.numero_proceso ??
         null,
+      numero_contratos_excel: w.numero_contrato_excel ?? [],
       url: w.url,
       objeto:
         portalSnap?.fields?.descripcion ??
@@ -625,8 +647,15 @@ export function UnifiedTable({
         // procesos scrapeables (con notice_uid o process_id formato NTC).
         id: "contrato",
         header: "Contrato",
+        // CARDINAL (2026-04-28) · sortable por consecutivo FEAB del Excel
+        // primero (lo que la Dra usa para hablar de sus contratos), con
+        // fallback al numero_contrato del portal y luego process_id.
         accessorFn: (r) =>
-          r.numero_contrato ?? r.id_contrato ?? r.process_id ?? "",
+          r.numero_contratos_excel?.[0] ??
+          r.numero_contrato ??
+          r.id_contrato ??
+          r.process_id ??
+          "",
         cell: ({ row }) => {
           const r = row.original;
           const vigencia =
@@ -636,6 +665,30 @@ export function UnifiedTable({
             r.notice_uid ??
             (r.process_id?.startsWith("CO1.NTC.") ? r.process_id : null);
           const isScrapeable = !!uid && r.watched;
+          // CARDINAL (2026-04-28 · Sergio "preserva los dos") · dos
+          // consecutivos distintos coexisten:
+          //   1. consecFeabExcel · `CONTRATO-FEAB-NNNN-AAAA` del Excel
+          //      (ID interno formal del FEAB · lo que dice la Dra).
+          //   2. numero_contrato  · texto libre del portal SECOP (lo
+          //      que la entidad escribió al subir, ej. "FEAB 0001 DE
+          //      2024", "CPM-0001-2025", etc.).
+          // Verificación 2026-04-28: el portal trae el consecutivo
+          // FEAB en `numero_proceso` solo en 33 % match exacto + 25 %
+          // loose · 42 % no lo trae. Por eso preservamos ambos.
+          const consecsExcel = r.numero_contratos_excel ?? [];
+          const consecPrimaryExcel = consecsExcel[0] ?? null;
+          const moreExcel = consecsExcel.length - 1;
+          // Solo mostrar la línea del portal si difiere del Excel para
+          // no duplicar (cuando coinciden, mostrar uno solo basta).
+          const showPortalLine =
+            r.numero_contrato &&
+            consecPrimaryExcel &&
+            r.numero_contrato.replace(/[\s-]/g, "").toLowerCase() !==
+              consecPrimaryExcel.replace(/[\s-]/g, "").toLowerCase();
+          // Fallback cuando no hay consecutivo Excel: usa portal o IDs.
+          const primaryLine =
+            consecPrimaryExcel ?? r.numero_contrato ?? r.id_contrato ??
+            r.process_id ?? "—";
           return (
             <div className="flex items-start gap-2 font-mono text-[11px]">
               {/* Checkbox a la izquierda · solo para procesos scrapeables.
@@ -663,15 +716,40 @@ export function UnifiedTable({
                     onPick(r.id_contrato ?? r.process_id ?? r.key)
                   }
                   className="block text-burgundy hover:underline text-left break-all"
+                  title={
+                    consecPrimaryExcel
+                      ? "Consecutivo FEAB del Excel de la Dra"
+                      : "Identificador del proceso"
+                  }
                 >
-                  {r.numero_contrato ?? r.id_contrato ?? r.process_id ?? "—"}
+                  {primaryLine}
+                  {moreExcel > 0 && (
+                    <span
+                      className="ml-1 inline-flex items-center px-1 py-0.5 rounded bg-burgundy/10 text-burgundy text-[10px] font-sans"
+                      title={`Este proceso tiene ${consecsExcel.length} contratos FEAB asociados: ${consecsExcel.join(", ")}`}
+                    >
+                      +{moreExcel}
+                    </span>
+                  )}
                 </button>
-                {r.numero_contrato && (r.id_contrato ?? r.process_id) && (
-                  <span className="block text-[10px] text-ink-soft mt-0.5 break-all">
+                {/* Línea 2: numero_contrato del portal SECOP (si difiere
+                    del consecutivo del Excel) — distinto al Excel y útil
+                    para detectar discrepancias. */}
+                {showPortalLine && (
+                  <span
+                    className="block text-[10px] text-ink-soft mt-0.5 break-all"
+                    title="Número del contrato según el portal SECOP (texto que escribió la entidad)"
+                  >
+                    En portal: {r.numero_contrato}
+                  </span>
+                )}
+                {/* Línea 3: process_id / id_contrato técnicos. */}
+                {(r.id_contrato ?? r.process_id) && (
+                  <span className="block text-[10px] text-ink-soft/70 mt-0.5 break-all">
                     {r.id_contrato ?? r.process_id}
                   </span>
                 )}
-                {r.notice_uid && (
+                {r.notice_uid && r.notice_uid !== r.process_id && (
                   <span className="block text-[10px] text-ink-soft/70 mt-0.5 break-all">
                     {r.notice_uid}
                   </span>

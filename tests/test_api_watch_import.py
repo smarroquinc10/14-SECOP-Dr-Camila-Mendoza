@@ -188,3 +188,186 @@ class TestWatchImportFromExcel:
         sheet_notes = {it["note"] for it in items}
         assert any("FEAB 2026" in n for n in sheet_notes)
         assert any("FEAB 2018-2021" in n for n in sheet_notes)
+
+
+# ---------------------------------------------------------------------------
+# Consecutivo FEAB extraction (CARDINAL · 2026-04-28)
+#
+# La Dra habla por consecutivo (CONTRATO-FEAB-0001-2024), no por process_id.
+# El importer debe extraerlo del Excel para que la app hable SU idioma.
+# Modelo 1↔N: una URL puede tener hasta 13 contratos (subasta con N
+# adjudicaciones) → persistir como lista, no scalar.
+# ---------------------------------------------------------------------------
+
+
+class TestConsecutivoExtraction:
+    """Tests directos del helper `_extract_consecutivo_feab`."""
+
+    def test_literal_format_normalizes_padding(self):
+        from secop_ii.api import _extract_consecutivo_feab
+        assert _extract_consecutivo_feab(
+            "CONTRATO-FEAB-0001-2024", None
+        ) == "CONTRATO-FEAB-0001-2024"
+        # Sin padding del Excel → padded a 4 dígitos
+        assert _extract_consecutivo_feab(
+            "CONTRATO-FEAB-1-2024", None
+        ) == "CONTRATO-FEAB-0001-2024"
+        # Con espacios en lugar de guiones
+        assert _extract_consecutivo_feab(
+            "CONTRATO FEAB 42 2023", None
+        ) == "CONTRATO-FEAB-0042-2023"
+
+    def test_numeric_format_uses_fallback_vigencia(self):
+        """FEAB 2018-2021 trae solo un entero en col 2 + vigencia col 3."""
+        from secop_ii.api import _extract_consecutivo_feab
+        assert _extract_consecutivo_feab(1, "2018") == "CONTRATO-FEAB-0001-2018"
+        assert _extract_consecutivo_feab("42", "2020") == "CONTRATO-FEAB-0042-2020"
+        # Float (Excel siempre devuelve float para int cells)
+        assert _extract_consecutivo_feab(7.0, "2019") == "CONTRATO-FEAB-0007-2019"
+
+    def test_returns_none_for_invalid_input(self):
+        from secop_ii.api import _extract_consecutivo_feab
+        assert _extract_consecutivo_feab(None, "2024") is None
+        assert _extract_consecutivo_feab("", "2024") is None
+        assert _extract_consecutivo_feab("hola mundo", "2024") is None
+        # Numeric mode requiere fallback_vigencia
+        assert _extract_consecutivo_feab(5, None) is None
+        assert _extract_consecutivo_feab(5, "no-es-año") is None
+        # Out of plausible range
+        assert _extract_consecutivo_feab(0, "2018") is None
+
+
+@pytest.fixture
+def fixture_workbook_with_consecutivo(tmp_path: Path) -> Path:
+    """Workbook con consecutivos en col 1 (formato literal) y formato
+    numérico (col 2 con vigencia col 3) para FEAB 2018-2021."""
+    wb = Workbook()
+    # Sheet con header row 1 + col 1 = numero contrato literal
+    s1 = wb.active
+    s1.title = "FEAB 2024"
+    s1.append(["2. NÚMERO DE CONTRATO", "3.VIGENCIA", "OBJETO", "LINK"])
+    s1.append(["CONTRATO-FEAB-0001-2024", 2024, "Contrato A",
+              "https://community.secop.gov.co/Public/Tendering/"
+              "OpportunityDetail/Index?noticeUID=CO1.NTC.1111111"])
+    # Mismo URL — modelo 1↔N · debe acumular consecutivos en lista
+    s1.append(["CONTRATO-FEAB-0002-2024", 2024, "Contrato B (mismo proceso)",
+              "https://community.secop.gov.co/Public/Tendering/"
+              "OpportunityDetail/Index?noticeUID=CO1.NTC.1111111"])
+    # URL distinta sin consecutivo (proceso sin contrato firmado)
+    s1.append([None, 2024, "Sin contrato",
+              "https://community.secop.gov.co/Public/Tendering/"
+              "OpportunityDetail/Index?noticeUID=CO1.NTC.2222222"])
+
+    # Sheet con header row 4 + col 2 numérica (FEAB 2018-2021 layout)
+    s2 = wb.create_sheet("FEAB 2018-2021")
+    s2.append(["PROCESO GESTIÓN CONTRACTUAL"])
+    s2.append(["FORMATO"])
+    s2.append([])
+    s2.append(["#", "2. NÚMERO DE CONTRATO", "3.VIGENCIA", "OBJETO", "LINK"])
+    s2.append([1, 1, 2018, "Contrato D",
+              "https://community.secop.gov.co/Public/Tendering/"
+              "OpportunityDetail/Index?noticeUID=CO1.NTC.4444444"])
+
+    out = tmp_path / "fixture_consec.xlsx"
+    wb.save(out)
+    return out
+
+
+class TestImportExtractsConsecutivo:
+    def test_consecutivo_persisted_as_list(
+            self, client, fixture_workbook_with_consecutivo):
+        """Cada URL termina con un `numero_contrato_excel: list[str]`."""
+        client.post("/watch/import-from-excel",
+                   json={"workbook": str(fixture_workbook_with_consecutivo)})
+        items = client.get("/watch").json()["items"]
+        by_pid = {it["process_id"]: it for it in items}
+
+        # NTC.1111111 tuvo 2 consecutivos asociados (modelo 1↔N)
+        assert by_pid["CO1.NTC.1111111"]["numero_contrato_excel"] == [
+            "CONTRATO-FEAB-0001-2024",
+            "CONTRATO-FEAB-0002-2024",
+        ]
+        # NTC.2222222 sin consecutivo en Excel → lista vacía honesta
+        assert by_pid["CO1.NTC.2222222"]["numero_contrato_excel"] == []
+        # NTC.4444444 con consecutivo numérico construido virtualmente
+        assert by_pid["CO1.NTC.4444444"]["numero_contrato_excel"] == [
+            "CONTRATO-FEAB-0001-2018",
+        ]
+
+    def test_per_sheet_consec_extracted_count(
+            self, client, fixture_workbook_with_consecutivo):
+        body = client.post(
+            "/watch/import-from-excel",
+            json={"workbook": str(fixture_workbook_with_consecutivo)},
+        ).json()
+        per_sheet = body["per_sheet"]
+        # FEAB 2024: 3 URLs encontradas (incluyendo dup), 2 con consecutivo
+        assert per_sheet["FEAB 2024"]["found"] == 3
+        assert per_sheet["FEAB 2024"]["consec_extracted"] == 2
+        # FEAB 2018-2021: 1 URL, 1 consecutivo construido
+        assert per_sheet["FEAB 2018-2021"]["consec_extracted"] == 1
+
+    def test_idempotent_does_not_duplicate_consecutivos(
+            self, client, fixture_workbook_with_consecutivo):
+        """Re-correr el import NO duplica consecutivos en la lista."""
+        for _ in range(2):
+            client.post("/watch/import-from-excel",
+                       json={"workbook": str(fixture_workbook_with_consecutivo)})
+        items = client.get("/watch").json()["items"]
+        by_pid = {it["process_id"]: it for it in items}
+        # Sigue siendo 2 consecutivos, no 4
+        assert by_pid["CO1.NTC.1111111"]["numero_contrato_excel"] == [
+            "CONTRATO-FEAB-0001-2024",
+            "CONTRATO-FEAB-0002-2024",
+        ]
+
+    def test_backfill_consecutivo_for_preexisting_items(
+            self, client, monkeypatch, tmp_path,
+            fixture_workbook_with_consecutivo):
+        """REGRESSION (2026-04-28): el watch list ya existe con appearances
+        pero sin numero_contrato_excel (legacy). Re-importar el Excel debe
+        backfillear los consecutivos sin duplicar appearances."""
+        from secop_ii import api as api_module
+        import json
+
+        # Simular el watch list legacy: 1 item ya registrado con la URL
+        # y appearance de FEAB 2024 row 2 — pero SIN numero_contrato_excel.
+        legacy_item = {
+            "url": "https://community.secop.gov.co/Public/Tendering/"
+                   "OpportunityDetail/Index?noticeUID=CO1.NTC.1111111",
+            "process_id": "CO1.NTC.1111111",
+            "notice_uid": None,
+            "sheets": ["FEAB 2024"],
+            "vigencias": ["2024"],
+            "appearances": [{
+                "sheet": "FEAB 2024",
+                "vigencia": "2024",
+                "row": 2,
+                "url": "https://community.secop.gov.co/Public/Tendering/"
+                       "OpportunityDetail/Index?noticeUID=CO1.NTC.1111111",
+            }],
+            "added_at": "2026-04-25T00:00:00+00:00",
+            "note": "legacy item sin numero_contrato_excel",
+        }
+        api_module._WATCH_PATH.write_text(
+            json.dumps([legacy_item], ensure_ascii=False),
+            encoding="utf-8",
+        )
+
+        body = client.post(
+            "/watch/import-from-excel",
+            json={"workbook": str(fixture_workbook_with_consecutivo)},
+        ).json()
+
+        # Debe contar la row 2 como already_recorded (no nueva appearance)
+        # pero el item DEBE recibir su consecutivo via backfill.
+        items = client.get("/watch").json()["items"]
+        by_pid = {it["process_id"]: it for it in items}
+        assert "CONTRATO-FEAB-0001-2024" in \
+               by_pid["CO1.NTC.1111111"]["numero_contrato_excel"]
+        # Sin duplicar appearances: la row 2 ya estaba, sigue siendo 1
+        appearances_row2 = [
+            a for a in by_pid["CO1.NTC.1111111"]["appearances"]
+            if a["sheet"] == "FEAB 2024" and a["row"] == 2
+        ]
+        assert len(appearances_row2) == 1

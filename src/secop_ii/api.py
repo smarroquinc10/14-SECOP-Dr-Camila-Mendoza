@@ -927,6 +927,87 @@ def _vigencia_from_sheet_name(sheet_name: str) -> str | None:
     return m.group(1) if m else None
 
 
+# Regex para parsear consecutivos `CONTRATO-FEAB-NNNN-AAAA` o variantes
+# con espacios: `CONTRATO FEAB 0001 2024`. Tolerante a múltiples separadores.
+# Detectado en 2026-04-28: hojas FEAB 2026/2025/2024/2023/2022 traen el
+# consecutivo ya formateado en col 1; FEAB 2018-2021 trae solo un entero
+# en col 2 + vigencia en col 3 → componemos virtualmente.
+_CONSECUTIVO_RE = re.compile(
+    r"CONTRATO[-\s]*FEAB[-\s]*(\d{1,5})[-\s]*(\d{4})", re.I,
+)
+
+
+def _find_consecutivo_column(ws, header_row: int) -> int | None:
+    """Return the 1-indexed column that holds ``2. NÚMERO DE CONTRATO``.
+
+    Header text matched by stripped uppercase prefix-after-digits, mirror
+    of ``_find_vigencia_column``. Skips false positives like
+    "70. NÚMERO DE PROCESO ASOCIADO AL CONTRATO" (the proceso/contract
+    relationship column) by requiring the head to start with "NÚMERO DE
+    CONTRATO" exactly — not "NÚMERO DE PROCESO".
+    """
+    try:
+        row = next(ws.iter_rows(min_row=header_row, max_row=header_row,
+                                values_only=True))
+    except StopIteration:
+        return None
+    for i, v in enumerate(row, start=1):
+        if v is None:
+            continue
+        text = str(v).strip().upper()
+        # Strip leading "N. " or "NN. " or "NN " prefix
+        head = text.lstrip("0123456789. ")
+        # Match "NÚMERO DE CONTRATO" / "NUMERO DE CONTRATO" exactly,
+        # not "NÚMERO DE PROCESO ASOCIADO AL CONTRATO".
+        if head.startswith("NÚMERO DE CONTRATO") or \
+           head.startswith("NUMERO DE CONTRATO"):
+            return i
+    return None
+
+
+def _extract_consecutivo_feab(
+    cell_value: object,
+    fallback_vigencia: str | None,
+) -> str | None:
+    """Normaliza un valor de celda a ``CONTRATO-FEAB-NNNN-AAAA``.
+
+    Dos modos según el formato real observado en el Excel de la Dra:
+
+    1. Formato literal (FEAB 2026/2025/2024/2023/2022):
+       ``"CONTRATO-FEAB-0001-2024"`` → match directo del regex,
+       normalizo padding a 4 dígitos.
+
+    2. Formato numérico (FEAB 2018-2021):
+       ``cell_value=1`` con ``fallback_vigencia="2018"`` →
+       compongo ``"CONTRATO-FEAB-0001-2018"``.
+
+    Returns ``None`` si el valor no puede normalizarse · NUNCA inventa.
+    """
+    if cell_value is None:
+        return None
+    text = str(cell_value).strip()
+    if not text:
+        return None
+    # Modo 1: regex sobre texto literal
+    m = _CONSECUTIVO_RE.search(text)
+    if m:
+        try:
+            num = int(m.group(1))
+            year = m.group(2)
+            return f"CONTRATO-FEAB-{num:04d}-{year}"
+        except ValueError:
+            pass
+    # Modo 2: entero puro + fallback vigencia (FEAB 2018-2021)
+    if fallback_vigencia and fallback_vigencia.isdigit():
+        try:
+            num = int(float(text))
+            if 1 <= num <= 99999:
+                return f"CONTRATO-FEAB-{num:04d}-{fallback_vigencia}"
+        except (ValueError, TypeError):
+            pass
+    return None
+
+
 def _find_obs_column(ws, header_row: int) -> int | None:
     """Locate the ``OBSERVACIONES`` column in a sheet by header text."""
     try:
@@ -1279,6 +1360,7 @@ def _import_workbook_urls(workbook_path: Path) -> dict[str, Any]:
             it.setdefault("sheets", [])
             it.setdefault("vigencias", [])
             it.setdefault("appearances", [])
+            it.setdefault("numero_contrato_excel", [])
 
         per_sheet: dict[str, dict[str, int]] = {}
         new_items_count = 0
@@ -1296,9 +1378,11 @@ def _import_workbook_urls(workbook_path: Path) -> dict[str, Any]:
                 continue
             header_row, link_col = link_loc
             vig_col = _find_vigencia_column(ws, header_row)
+            consec_col = _find_consecutivo_column(ws, header_row)
             sheet_fallback_vig = _vigencia_from_sheet_name(sheet_name)
             stats = {"found": 0, "added_new": 0, "merged": 0,
-                    "already_recorded": 0, "no_link_col": 0}
+                    "already_recorded": 0, "no_link_col": 0,
+                    "consec_extracted": 0}
 
             for excel_row_idx, row in enumerate(
                 ws.iter_rows(min_row=header_row + 1, values_only=True),
@@ -1333,6 +1417,21 @@ def _import_workbook_urls(workbook_path: Path) -> dict[str, Any]:
                 if not vigencia:
                     vigencia = sheet_fallback_vig
 
+                # CARDINAL (2026-04-28) · leer el consecutivo FEAB del
+                # Excel. La Dra habla por consecutivo (CONTRATO-FEAB-0001-2024),
+                # no por process_id. Modelo 1 ↔ N: una URL puede tener
+                # hasta 13 contratos asociados (subasta con N adjudicaciones),
+                # por eso persistimos como lista. CLAUDE.md autoriza
+                # extraer numero_contrato del Excel como excepción legítima
+                # junto a vigencia + link.
+                consecutivo: str | None = None
+                if consec_col is not None and len(row) >= consec_col:
+                    consecutivo = _extract_consecutivo_feab(
+                        row[consec_col - 1], vigencia,
+                    )
+                if consecutivo:
+                    stats["consec_extracted"] += 1
+
                 process_id = None
                 try:
                     ref = parse_secop_url(url)
@@ -1345,6 +1444,8 @@ def _import_workbook_urls(workbook_path: Path) -> dict[str, Any]:
                     "vigencia": vigencia,
                     "row": excel_row_idx,
                     "url": url,
+                    # Consecutivo de ESTA aparición (puede haber N por URL)
+                    "numero_contrato": consecutivo,
                 }
 
                 # Find a matching existing item by process_id, then URL
@@ -1363,6 +1464,7 @@ def _import_workbook_urls(workbook_path: Path) -> dict[str, Any]:
                         "sheets": [],
                         "vigencias": [],
                         "appearances": [],
+                        "numero_contrato_excel": [],
                         "added_at": datetime.now(timezone.utc)
                                            .isoformat(timespec="seconds"),
                         "note": f"Importado de Excel · primera vista en "
@@ -1386,6 +1488,20 @@ def _import_workbook_urls(workbook_path: Path) -> dict[str, Any]:
                     if already_seen:
                         already_recorded += 1
                         stats["already_recorded"] += 1
+                        # CARDINAL (2026-04-28) · backfill consecutivo
+                        # aunque la appearance ya estuviera registrada.
+                        # Sin esto, los items pre-existentes del watch
+                        # list nunca reciben su numero_contrato_excel
+                        # cuando el cron re-corre el import. Bug detectado
+                        # en la primera corrida: solo 69/491 items
+                        # quedaron con consecutivo aunque el Excel tenía
+                        # 467 pares (consec, link).
+                        if consecutivo:
+                            target.setdefault("numero_contrato_excel", [])
+                            if consecutivo not in target["numero_contrato_excel"]:
+                                target["numero_contrato_excel"].append(
+                                    consecutivo
+                                )
                         continue
                     merged_count += 1
                     stats["merged"] += 1
@@ -1398,6 +1514,11 @@ def _import_workbook_urls(workbook_path: Path) -> dict[str, Any]:
                     "vigencias", []
                 ):
                     target["vigencias"].append(vigencia)
+                # Acumular consecutivo único en lista raíz (modelo 1↔N)
+                if consecutivo:
+                    target.setdefault("numero_contrato_excel", [])
+                    if consecutivo not in target["numero_contrato_excel"]:
+                        target["numero_contrato_excel"].append(consecutivo)
 
             per_sheet[sheet_name] = stats
 

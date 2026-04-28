@@ -106,6 +106,29 @@ export function DetailDialog({ contractId, open, onOpenChange }: Props) {
     { revalidateOnFocus: false },
   );
 
+  // CARDINAL (2026-04-28) · lookup de consecutivos FEAB del Excel.
+  // SWR cachea la lista entera entre aperturas del modal · O(1) lookup
+  // dentro de `useMemo`. La Dra habla por consecutivo (CONTRATO-FEAB-XXXX-AAAA),
+  // no por process_id · sin esto la sección no aparece en el modal.
+  const { data: watchListData } = useSWR(
+    open ? "watchList:cache" : null,
+    () => api.watchList(),
+    { revalidateOnFocus: false },
+  );
+  const numerosContratos: string[] = React.useMemo(() => {
+    if (!contractId || !watchListData) return [];
+    const items = watchListData.items;
+    // Match por process_id, notice_uid o url ending — el contractId puede
+    // ser el `key` de UnifiedRow que típicamente es la URL completa.
+    const item = items.find(
+      (it) =>
+        it.process_id === contractId ||
+        it.notice_uid === contractId ||
+        it.url === contractId,
+    );
+    return item?.numero_contrato_excel ?? [];
+  }, [contractId, watchListData]);
+
   if (!open) return null;
 
   const fields = portalData?.fields ?? {};
@@ -129,8 +152,12 @@ export function DetailDialog({ contractId, open, onOpenChange }: Props) {
       ? `https://community.secop.gov.co/Public/Tendering/OpportunityDetail/Index?noticeUID=${contractId}`
       : null);
 
-  // Título del modal: número del contrato si existe, sino process_id
+  // Título del modal · CARDINAL (2026-04-28): prioridad Excel > portal SECOP.
+  // Si la Dra escribió `CONTRATO-FEAB-0001-2024` en su Excel, ese es el
+  // título canónico (lo que ella usa para hablar del contrato). Caemos a
+  // numero_contrato del portal solo si el Excel no lo trae.
   const modalTitle =
+    numerosContratos[0] ??
     fields.numero_contrato ??
     fields.numero_proceso ??
     contractId ??
@@ -179,6 +206,38 @@ export function DetailDialog({ contractId, open, onOpenChange }: Props) {
         </DialogHeader>
 
         <div className="space-y-5 mt-4">
+          {/* CONTRATOS FEAB ASOCIADOS · CARDINAL (2026-04-28).
+              La Dra registra cada contrato firmado en su Excel con su
+              consecutivo CONTRATO-FEAB-NNNN-VIGENCIA. Una URL del SECOP
+              puede tener N contratos asociados (subasta con varias
+              adjudicaciones · max observado: 13 contratos en una sola
+              URL). Sección visible solo si hay al menos 1 consecutivo
+              vinculado. Sin consecutivo → sección oculta · "—" honesto. */}
+          {numerosContratos.length > 0 && (
+            <section className="border border-rule rounded-md overflow-hidden">
+              <div className="bg-stone-50 px-4 py-2.5 border-b border-rule">
+                <h3 className="serif text-base font-semibold text-ink">
+                  {numerosContratos.length === 1
+                    ? "Contrato FEAB asociado"
+                    : `Contratos FEAB asociados (${numerosContratos.length})`}
+                </h3>
+                <p className="text-xs text-ink-soft mt-0.5">
+                  Consecutivos del Excel de gestión contractual
+                </p>
+              </div>
+              <ul className="divide-y divide-rule">
+                {numerosContratos.map((c) => (
+                  <li
+                    key={c}
+                    className="px-4 py-2 text-sm font-mono text-ink"
+                  >
+                    {c}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           {/* LOADING STATE */}
           {isLoading && (
             <div className="flex items-center gap-2 text-ink-soft py-8 justify-center">

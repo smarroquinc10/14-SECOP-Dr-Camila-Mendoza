@@ -64,7 +64,10 @@ import {
 // El seed_version se usa por la lógica de `ensureSeed` para decidir si
 // repoblar la store. Bumpealo cuando cambies el `/data/watched_urls.json`
 // y querés que Cami reciba los nuevos URLs en su próximo refresh.
-const SEED_VERSION = "2026-04-25";
+//
+// 2026-04-28: bump para sembrar `numero_contrato_excel` en las 491 filas
+// existentes (consecutivo FEAB extraído del Excel · cardinal · 80.4 %).
+const SEED_VERSION = "2026-04-28";
 
 // Bandera para no llamar `ensureSeed` 491 veces por segundo: lo intentamos
 // una sola vez y guardamos la promise. Si falla, los próximos calls fallan
@@ -238,6 +241,10 @@ export interface WatchedItem {
   sheets: string[];
   vigencias: string[];
   appearances: WatchedAppearance[];
+  /** Consecutivos FEAB asociados a este proceso (modelo 1↔N).
+   *  Lista de `CONTRATO-FEAB-NNNN-AAAA` extraída del Excel. La Dra
+   *  habla por consecutivo, no por process_id. */
+  numero_contrato_excel?: string[];
   excel_data?: ExcelData | null;
   obs_brief?: string | null;
   is_modificado_excel?: boolean;
@@ -435,6 +442,7 @@ function rowToWatchedItem(row: WatchedItemRow, obs?: string | null): WatchedItem
     sheets: row.sheets,
     vigencias: row.vigencias,
     appearances: row.appearances,
+    numero_contrato_excel: row.numero_contrato_excel ?? [],
     added_at: row.added_at,
     note: row.note,
     obs_brief: obs ?? null,
