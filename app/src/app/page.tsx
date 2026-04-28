@@ -22,7 +22,7 @@ import { DetailDialog } from "@/components/detail-dialog";
 // con cardinal puro real desde el link community.secop.
 import { RefreshModal } from "@/components/refresh-modal";
 import { SlicerPills } from "@/components/slicer-pills";
-import { SyncIndicator } from "@/components/sync-indicator";
+import { OfflineBanner, SyncIndicator } from "@/components/sync-indicator";
 import {
   buildUnifiedRows,
   expandRowsByAppearance,
@@ -658,6 +658,7 @@ export default function HomePage() {
       </div>
 
       {/* Burgundy accent line */}
+      <OfflineBanner />
       <div className="h-1 bg-burgundy" />
 
       {/* Header — program title + personal greeting */}
