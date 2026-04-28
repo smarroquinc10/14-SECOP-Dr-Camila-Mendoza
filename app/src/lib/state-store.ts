@@ -240,17 +240,77 @@ export async function ensureSeed(seedVersion: string): Promise<{
   }
   const items: WatchedItemRow[] = await res.json();
 
-  // Vacío la store y la repueblo. Esto NO toca audit_log ni observaciones —
-  // esas son de la usuaria, no del seed.
+  // CARDINAL (2026-04-28) · MERGE inteligente · NO destruir el trabajo
+  // de la Dra al re-seed.
+  //
+  // Antes: `clear() + repueblo` borraba items que ella agregó manualmente
+  // y cualquier edición de consecutivos/vigencias/sheets/notas. Ese era
+  // un bug grave · cada bump de SEED_VERSION le costaba sus correcciones.
+  //
+  // Ahora preservamos:
+  //   - Items con `edited_at` set → fueron tocados por la Dra → conservar
+  //     campos editables (URL, note, numero_contrato_excel, vigencias,
+  //     sheets) tal cual ella los dejó. Otros campos (process_id,
+  //     notice_uid, appearances, added_at) se actualizan desde el seed
+  //     nuevo si la URL existe en el seed.
+  //   - Items que existen en IDB pero NO en el seed nuevo → se asume que
+  //     la Dra los agregó manualmente (addWatched) → conservar tal cual.
+  //   - Items en el seed nuevo que no estaban en IDB → agregar.
+  //   - Items con la misma URL en seed e IDB sin edited_at → actualizar
+  //     totalmente desde el seed (re-importer corrió, los datos del seed
+  //     son más nuevos que IDB · no hay ediciones manuales que proteger).
+  const existing = await getAll<WatchedItemRow>("watch_list");
+  const existingByUrl = new Map(existing.map((it) => [it.url, it]));
+  const seedUrls = new Set(items.map((it) => it.url));
+
+  const merged: WatchedItemRow[] = [];
+  let preservedEdits = 0;
+  let preservedManualAdds = 0;
+
+  for (const fromSeed of items) {
+    const local = existingByUrl.get(fromSeed.url);
+    if (local?.edited_at) {
+      // La Dra editó este item · preservar sus campos editables sobre
+      // los del seed. process_id/notice_uid/appearances vienen del seed.
+      merged.push({
+        ...fromSeed,
+        edited_at: local.edited_at,
+        note: local.note,
+        numero_contrato_excel:
+          local.numero_contrato_excel ?? fromSeed.numero_contrato_excel ?? [],
+        vigencias: local.vigencias.length > 0 ? local.vigencias
+                                              : fromSeed.vigencias,
+        sheets: local.sheets.length > 0 ? local.sheets : fromSeed.sheets,
+      });
+      preservedEdits += 1;
+    } else {
+      merged.push(fromSeed);
+    }
+  }
+
+  // Items en IDB que NO están en el seed → manual adds, conservar.
+  for (const local of existing) {
+    if (!seedUrls.has(local.url)) {
+      merged.push(local);
+      preservedManualAdds += 1;
+    }
+  }
+
   await clear("watch_list");
   const db = await openDb();
   await new Promise<void>((resolve, reject) => {
     const tx = db.transaction("watch_list", "readwrite");
     const store = tx.objectStore("watch_list");
-    for (const it of items) store.put(it);
+    for (const it of merged) store.put(it);
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
+  if (preservedEdits > 0 || preservedManualAdds > 0) {
+    // Marca en consola para evidencia · audit log abajo registra el evento.
+    console.info(
+      `[ensureSeed] merge: ${preservedEdits} edits + ${preservedManualAdds} manual adds preservados`,
+    );
+  }
   await put<MetaRow>("meta", {
     key: "seed_version",
     value: seedVersion,
@@ -335,18 +395,69 @@ export async function addWatched(input: {
   return item;
 }
 
+/**
+ * Edita un item del watch list. Permite cambiar URL, nota, consecutivos
+ * FEAB del Excel, vigencias y sheets/períodos. Cualquier campo omitido
+ * (undefined) se preserva como estaba; pasar `null` o `[]` lo limpia
+ * explícitamente. Cardinal (2026-04-28): la Dra puede corregir errores
+ * en consecutivos/vigencias/períodos sin tocar el Excel · sus ediciones
+ * sobreviven al re-seed gracias al `edited_at` flag (ver `ensureSeed`).
+ */
 export async function editWatched(
   oldUrl: string,
-  newUrl: string,
-  note?: string | null
+  patch: {
+    newUrl?: string;
+    note?: string | null;
+    numero_contrato_excel?: string[];
+    vigencias?: string[];
+    sheets?: string[];
+  }
 ): Promise<WatchedItemRow> {
+  const newUrl = patch.newUrl ?? oldUrl;
   // Mismo check que `addWatched`: bloquea esquemas no-http(s).
   assertSafeUrl(newUrl);
   const existing = await get<WatchedItemRow>("watch_list", oldUrl);
   if (!existing) throw new Error("No encontré ese URL en tu lista.");
-  if (oldUrl === newUrl && (note ?? null) === existing.note) {
+
+  // Normaliza listas: trim + elimina vacíos + dedup preservando orden.
+  const normList = (xs: string[] | undefined): string[] | undefined => {
+    if (xs === undefined) return undefined;
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const raw of xs) {
+      const v = String(raw ?? "").trim();
+      if (!v || seen.has(v)) continue;
+      seen.add(v);
+      out.push(v);
+    }
+    return out;
+  };
+
+  const consecPatch = normList(patch.numero_contrato_excel);
+  const vigPatch = normList(patch.vigencias);
+  const sheetsPatch = normList(patch.sheets);
+
+  // Detect no-op: nada cambió → devolvemos el existing sin tocar IDB.
+  const noteEffective = patch.note === undefined ? existing.note : patch.note;
+  const noUrlChange = oldUrl === newUrl;
+  const noNoteChange = (noteEffective ?? null) === (existing.note ?? null);
+  const noConsecChange =
+    consecPatch === undefined ||
+    JSON.stringify(consecPatch) ===
+      JSON.stringify(existing.numero_contrato_excel ?? []);
+  const noVigChange =
+    vigPatch === undefined ||
+    JSON.stringify(vigPatch) === JSON.stringify(existing.vigencias);
+  const noSheetsChange =
+    sheetsPatch === undefined ||
+    JSON.stringify(sheetsPatch) === JSON.stringify(existing.sheets);
+  if (
+    noUrlChange && noNoteChange && noConsecChange && noVigChange &&
+    noSheetsChange
+  ) {
     return existing;
   }
+
   // Si la URL cambió, removemos la fila vieja antes de poner la nueva
   // (porque keyPath = url).
   if (oldUrl !== newUrl) {
@@ -355,20 +466,36 @@ export async function editWatched(
   const updated: WatchedItemRow = {
     ...existing,
     url: newUrl,
-    process_id: inferProcessId(newUrl),
-    note: note ?? existing.note ?? null,
+    process_id: noUrlChange ? existing.process_id : inferProcessId(newUrl),
+    note: noteEffective ?? null,
     edited_at: new Date().toISOString(),
     appearances: existing.appearances.map((a) =>
       a.url === oldUrl ? { ...a, url: newUrl } : a
     ),
+    numero_contrato_excel:
+      consecPatch ?? existing.numero_contrato_excel ?? [],
+    vigencias: vigPatch ?? existing.vigencias,
+    sheets: sheetsPatch ?? existing.sheets,
   };
   await put<WatchedItemRow>("watch_list", updated);
   await appendAudit({
     op: "watch_edit",
     url: newUrl,
     process_id: updated.process_id,
-    old: { url: oldUrl, note: existing.note },
-    new: { url: newUrl, note: updated.note },
+    old: {
+      url: oldUrl,
+      note: existing.note,
+      numero_contrato_excel: existing.numero_contrato_excel ?? [],
+      vigencias: existing.vigencias,
+      sheets: existing.sheets,
+    },
+    new: {
+      url: newUrl,
+      note: updated.note,
+      numero_contrato_excel: updated.numero_contrato_excel ?? [],
+      vigencias: updated.vigencias,
+      sheets: updated.sheets,
+    },
   });
   return updated;
 }

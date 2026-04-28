@@ -28,6 +28,13 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Popover,
@@ -613,7 +620,16 @@ export function UnifiedTable({
   rows: UnifiedRow[];
   onPick: (id: string) => void;
   onAdd: (url: string) => Promise<void>;
-  onUpdate: (oldUrl: string, newUrl: string) => Promise<void>;
+  onUpdate: (
+    oldUrl: string,
+    patch: {
+      newUrl?: string;
+      note?: string | null;
+      numero_contrato_excel?: string[];
+      vigencias?: string[];
+      sheets?: string[];
+    },
+  ) => Promise<void>;
   onRemove: (url: string) => Promise<void>;
   busy: boolean;
   totalAppearances: number;
@@ -624,8 +640,11 @@ export function UnifiedTable({
   onToggleSelect: (uid: string) => void;
 }) {
   const [addUrl, setAddUrl] = React.useState("");
-  const [editingKey, setEditingKey] = React.useState<string | null>(null);
-  const [editDraft, setEditDraft] = React.useState("");
+  // Editor expandido (2026-04-28 · Sergio): la Dra abre un dialog para
+  // corregir URL, consecutivos FEAB, vigencias y períodos. Todo desde
+  // una sola pantalla · sus cambios se persisten en IndexedDB y sobreviven
+  // al re-seed (merge inteligente en `ensureSeed`).
+  const [editingRow, setEditingRow] = React.useState<UnifiedRow | null>(null);
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     [],
@@ -1017,53 +1036,6 @@ export function UnifiedTable({
         enableColumnFilter: false,
         cell: ({ row }) => {
           const r = row.original;
-          const isEditing = editingKey === r.key;
-          if (isEditing) {
-            return (
-              <div className="flex items-center justify-end gap-1">
-                <Input
-                  autoFocus
-                  value={editDraft}
-                  onChange={(e) => setEditDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Escape") setEditingKey(null);
-                    if (
-                      e.key === "Enter" &&
-                      editDraft.trim() &&
-                      r.watch_url
-                    ) {
-                      onUpdate(r.watch_url, editDraft.trim()).then(() =>
-                        setEditingKey(null),
-                      );
-                    }
-                  }}
-                  className="h-7 text-[11px] w-56"
-                  placeholder="Nueva URL SECOP…"
-                />
-                <button
-                  onClick={() => {
-                    if (editDraft.trim() && r.watch_url) {
-                      onUpdate(r.watch_url, editDraft.trim()).then(() =>
-                        setEditingKey(null),
-                      );
-                    }
-                  }}
-                  disabled={busy || !editDraft.trim()}
-                  className="inline-flex items-center justify-center h-7 w-7 rounded text-emerald-700 hover:bg-emerald-50 disabled:opacity-50"
-                  title="Guardar"
-                >
-                  <Check className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => setEditingKey(null)}
-                  className="inline-flex items-center justify-center h-7 w-7 rounded text-ink-soft hover:bg-stone-100"
-                  title="Cancelar"
-                >
-                  <XIcon className="h-4 w-4" />
-                </button>
-              </div>
-            );
-          }
           return (
             <div className="flex items-center justify-end gap-1">
               {r.url && (
@@ -1081,13 +1053,10 @@ export function UnifiedTable({
               {r.watched && r.watch_url && (
                 <>
                   <button
-                    onClick={() => {
-                      setEditingKey(r.key);
-                      setEditDraft(r.watch_url ?? "");
-                    }}
+                    onClick={() => setEditingRow(r)}
                     disabled={busy}
                     className="inline-flex items-center gap-1 px-2 h-7 rounded text-[11px] text-burgundy hover:bg-burgundy/10 border border-transparent hover:border-burgundy/30 disabled:opacity-50"
-                    title="Corregir el link del proceso si está mal"
+                    title="Corregir consecutivo FEAB, vigencia, período o link"
                   >
                     <Pencil className="h-3.5 w-3.5" />
                     Editar
@@ -1109,7 +1078,7 @@ export function UnifiedTable({
         size: 170,
       },
     ],
-    [editingKey, editDraft, busy, onPick, onUpdate, onRemove],
+    [busy, onPick, onUpdate, onRemove, selectedIds, onToggleSelect],
   );
 
   const table = useReactTable({
@@ -1302,7 +1271,372 @@ export function UnifiedTable({
         {visibleCount} de {rows.length} procesos · click cualquier fila para
         ver detalle completo
       </div>
+
+      {/* Editor expandido (2026-04-28 · Sergio "esto editar"). Permite
+          corregir consecutivo FEAB, vigencia, período y link sin
+          tocar el Excel. Cambios se guardan en IndexedDB y sobreviven
+          al re-seed (merge inteligente · ensureSeed). */}
+      {editingRow && (
+        <WatchEditDialog
+          row={editingRow}
+          allSheets={allKnownSheets(rows)}
+          onClose={() => setEditingRow(null)}
+          onSave={async (patch) => {
+            if (!editingRow.watch_url) return;
+            await onUpdate(editingRow.watch_url, patch);
+            setEditingRow(null);
+          }}
+          busy={busy}
+        />
+      )}
     </div>
+  );
+}
+
+/** Returns the union of all sheets/períodos seen across the watch list,
+ *  sorted alphabetically. Used as the suggested options in the editor
+ *  so the Dra puede elegir uno conocido en lugar de tipearlo. Cardinal:
+ *  permite tambien tipear uno nuevo (Excel evolves). */
+function allKnownSheets(rows: UnifiedRow[]): string[] {
+  const set = new Set<string>();
+  for (const r of rows) {
+    for (const s of r.sheets) set.add(s);
+  }
+  return Array.from(set).sort();
+}
+
+/**
+ * WatchEditDialog · editor cardinal del watch list.
+ *
+ * La Dra abre este modal cuando hace click en "Editar" en una fila. Le
+ * permite corregir TODOS los campos del Excel que el dashboard mantiene
+ * por proceso:
+ *   - Consecutivos FEAB asociados (modelo 1↔N · chips agregar/quitar)
+ *   - Vigencias (chips · ej. ["2024", "2025"] cuando hay vigencias futuras)
+ *   - Períodos / sheets ("FEAB 2024", "FEAB 2025", ...)
+ *   - URL del SECOP (si la copió mal)
+ *   - Nota libre
+ *
+ * Diseño:
+ *   - Cada campo lista es de chips (badges) con X para quitar + input
+ *     pequeño para agregar.
+ *   - Períodos sugiere los que ya existen en el watch list (con dropdown).
+ *   - Validación cardinal: la Dra puede vaciar campos · vacío = "—"
+ *     honesto en la tabla, no inventa.
+ */
+function WatchEditDialog({
+  row,
+  allSheets,
+  onClose,
+  onSave,
+  busy,
+}: {
+  row: UnifiedRow;
+  allSheets: string[];
+  onClose: () => void;
+  onSave: (patch: {
+    newUrl?: string;
+    numero_contrato_excel?: string[];
+    vigencias?: string[];
+    sheets?: string[];
+  }) => Promise<void>;
+  busy: boolean;
+}) {
+  const [url, setUrl] = React.useState(row.watch_url ?? "");
+  const [consecs, setConsecs] = React.useState<string[]>(
+    row.numero_contratos_excel ?? [],
+  );
+  const [vigencias, setVigencias] = React.useState<string[]>(row.vigencias);
+  const [sheets, setSheets] = React.useState<string[]>(row.sheets);
+  const [draftConsec, setDraftConsec] = React.useState("");
+  const [draftVig, setDraftVig] = React.useState("");
+  const [draftSheet, setDraftSheet] = React.useState("");
+  const [error, setError] = React.useState<string | null>(null);
+
+  const addToList = (
+    list: string[],
+    setList: (xs: string[]) => void,
+    draft: string,
+    setDraft: (s: string) => void,
+  ) => {
+    const v = draft.trim();
+    if (!v) return;
+    if (list.includes(v)) {
+      setDraft("");
+      return;
+    }
+    setList([...list, v]);
+    setDraft("");
+  };
+
+  const removeFromList = (
+    list: string[],
+    setList: (xs: string[]) => void,
+    idx: number,
+  ) => {
+    setList(list.filter((_, i) => i !== idx));
+  };
+
+  const handleSave = async () => {
+    setError(null);
+    const trimmedUrl = url.trim();
+    if (!trimmedUrl) {
+      setError("El link no puede quedar vacío.");
+      return;
+    }
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const _ = new URL(trimmedUrl);
+    } catch {
+      setError("Pegá un link válido que empiece con https://");
+      return;
+    }
+    await onSave({
+      newUrl: trimmedUrl !== row.watch_url ? trimmedUrl : undefined,
+      numero_contrato_excel: consecs,
+      vigencias,
+      sheets,
+    });
+  };
+
+  return (
+    <Dialog open={true} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <p className="text-[10px] uppercase tracking-wider text-ink-soft">
+            Editar proceso
+          </p>
+          <DialogTitle className="serif text-xl text-ink">
+            Corregir datos de este proceso
+          </DialogTitle>
+          <DialogDescription className="text-ink-soft text-xs">
+            Tus cambios se guardan en este navegador y se preservan aunque el
+            sistema vuelva a importar tu Excel maestro.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 mt-3">
+          {/* Consecutivos FEAB */}
+          <div>
+            <label className="block text-xs font-semibold text-ink mb-1">
+              Consecutivos del contrato (Excel FEAB)
+            </label>
+            <p className="text-[11px] text-ink-soft mb-2">
+              Formato <code className="font-mono">CONTRATO-FEAB-NNNN-AAAA</code>{" "}
+              · agregá uno o varios cuando una subasta tuvo varias adjudicaciones.
+            </p>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {consecs.map((c, i) => (
+                <span
+                  key={`${c}-${i}`}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-burgundy/10 text-burgundy text-[11px] font-mono"
+                >
+                  {c}
+                  <button
+                    onClick={() => removeFromList(consecs, setConsecs, i)}
+                    className="hover:bg-burgundy/20 rounded-full px-1"
+                    title={`Quitar ${c}`}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+              {consecs.length === 0 && (
+                <span className="text-[11px] text-ink-soft italic">
+                  (sin consecutivo asociado · proceso sin contrato firmado)
+                </span>
+              )}
+            </div>
+            <div className="flex gap-1">
+              <Input
+                value={draftConsec}
+                onChange={(e) => setDraftConsec(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addToList(consecs, setConsecs, draftConsec, setDraftConsec);
+                  }
+                }}
+                placeholder="CONTRATO-FEAB-0001-2024"
+                className="text-xs h-7 font-mono"
+              />
+              <button
+                type="button"
+                onClick={() =>
+                  addToList(consecs, setConsecs, draftConsec, setDraftConsec)
+                }
+                disabled={!draftConsec.trim()}
+                className="px-3 h-7 rounded text-[11px] bg-burgundy text-white hover:bg-burgundy/90 disabled:opacity-50"
+              >
+                Agregar
+              </button>
+            </div>
+          </div>
+
+          {/* Vigencias */}
+          <div>
+            <label className="block text-xs font-semibold text-ink mb-1">
+              Vigencias presupuestales
+            </label>
+            <p className="text-[11px] text-ink-soft mb-2">
+              Año o años en los que aplica el contrato (ej.{" "}
+              <code className="font-mono">2024</code>{" "}
+              o <code className="font-mono">2024, 2025</code>{" "}
+              cuando hay vigencias futuras).
+            </p>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {vigencias.map((v, i) => (
+                <span
+                  key={`${v}-${i}`}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-stone-100 text-ink text-[11px]"
+                >
+                  {v}
+                  <button
+                    onClick={() => removeFromList(vigencias, setVigencias, i)}
+                    className="hover:bg-stone-200 rounded-full px-1"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+              {vigencias.length === 0 && (
+                <span className="text-[11px] text-ink-soft italic">
+                  (sin vigencia · ingresá al menos una)
+                </span>
+              )}
+            </div>
+            <div className="flex gap-1">
+              <Input
+                value={draftVig}
+                onChange={(e) => setDraftVig(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addToList(vigencias, setVigencias, draftVig, setDraftVig);
+                  }
+                }}
+                placeholder="2024"
+                className="text-xs h-7 w-32"
+              />
+              <button
+                type="button"
+                onClick={() =>
+                  addToList(vigencias, setVigencias, draftVig, setDraftVig)
+                }
+                disabled={!draftVig.trim()}
+                className="px-3 h-7 rounded text-[11px] bg-burgundy text-white hover:bg-burgundy/90 disabled:opacity-50"
+              >
+                Agregar
+              </button>
+            </div>
+          </div>
+
+          {/* Períodos / sheets */}
+          <div>
+            <label className="block text-xs font-semibold text-ink mb-1">
+              Período / hoja del Excel
+            </label>
+            <p className="text-[11px] text-ink-soft mb-2">
+              Cómo organizaste este proceso originalmente (ej.{" "}
+              <code className="font-mono">FEAB 2024</code>). Podés ponerlo en
+              varios períodos cuando aparece en más de una hoja.
+            </p>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {sheets.map((s, i) => (
+                <span
+                  key={`${s}-${i}`}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-burgundy/10 text-burgundy text-[11px]"
+                >
+                  {s}
+                  <button
+                    onClick={() => removeFromList(sheets, setSheets, i)}
+                    className="hover:bg-burgundy/20 rounded-full px-1"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+              {sheets.length === 0 && (
+                <span className="text-[11px] text-ink-soft italic">
+                  (sin período · ingresá al menos uno)
+                </span>
+              )}
+            </div>
+            <div className="flex gap-1 items-center">
+              <Input
+                value={draftSheet}
+                onChange={(e) => setDraftSheet(e.target.value)}
+                list="known-sheets"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addToList(sheets, setSheets, draftSheet, setDraftSheet);
+                  }
+                }}
+                placeholder="FEAB 2024"
+                className="text-xs h-7 w-44"
+              />
+              <datalist id="known-sheets">
+                {allSheets.map((s) => (
+                  <option key={s} value={s} />
+                ))}
+              </datalist>
+              <button
+                type="button"
+                onClick={() =>
+                  addToList(sheets, setSheets, draftSheet, setDraftSheet)
+                }
+                disabled={!draftSheet.trim()}
+                className="px-3 h-7 rounded text-[11px] bg-burgundy text-white hover:bg-burgundy/90 disabled:opacity-50"
+              >
+                Agregar
+              </button>
+            </div>
+          </div>
+
+          {/* URL */}
+          <div>
+            <label className="block text-xs font-semibold text-ink mb-1">
+              Link del SECOP
+            </label>
+            <Input
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://community.secop.gov.co/..."
+              className="text-xs h-8"
+            />
+            <p className="text-[10px] text-ink-soft mt-1">
+              Si corregís el link, el sistema asocia este proceso a la nueva
+              dirección y vuelve a leer los datos del SECOP en el próximo
+              refresh.
+            </p>
+          </div>
+
+          {error && (
+            <div className="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded px-3 py-2">
+              {error}
+            </div>
+          )}
+        </div>
+
+        <div className="flex justify-end gap-2 mt-5 pt-3 border-t border-rule">
+          <button
+            onClick={onClose}
+            disabled={busy}
+            className="px-4 h-9 rounded text-sm text-ink-soft hover:bg-stone-100 disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={busy}
+            className="px-4 h-9 rounded text-sm bg-burgundy text-white hover:bg-burgundy/90 disabled:opacity-50"
+          >
+            {busy ? "Guardando…" : "Guardar cambios"}
+          </button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

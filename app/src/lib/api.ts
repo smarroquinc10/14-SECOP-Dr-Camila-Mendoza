@@ -67,7 +67,12 @@ import {
 //
 // 2026-04-28: bump para sembrar `numero_contrato_excel` en las 491 filas
 // existentes (consecutivo FEAB extraído del Excel · cardinal · 80.4 %).
-const SEED_VERSION = "2026-04-28";
+// 2026-04-28b: bump para que el merge inteligente (preserva ediciones
+// manuales · ver `ensureSeed`) tome efecto en sesiones que ya estaban
+// en 2026-04-28. Si un usuario tiene 2026-04-28, el repueblo previo no
+// aplicó merge porque ese código todavía no existía · este bump fuerza
+// la primera corrida del nuevo código de merge.
+const SEED_VERSION = "2026-04-28b";
 
 // Bandera para no llamar `ensureSeed` 491 veces por segundo: lo intentamos
 // una sola vez y guardamos la promise. Si falla, los próximos calls fallan
@@ -722,11 +727,16 @@ export const api = {
 
   watchUpdate: async (
     oldUrl: string,
-    newUrl: string,
-    note?: string
+    patch: {
+      newUrl?: string;
+      note?: string | null;
+      numero_contrato_excel?: string[];
+      vigencias?: string[];
+      sheets?: string[];
+    },
   ): Promise<{ updated: boolean; item: WatchedItem; total: number }> => {
     await ensureSeeded();
-    const item = await editWatched(oldUrl, newUrl, note ?? null);
+    const item = await editWatched(oldUrl, patch);
     const all = await listWatched();
     return { updated: true, item: rowToWatchedItem(item), total: all.length };
   },

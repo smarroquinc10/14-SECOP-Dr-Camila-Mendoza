@@ -92,7 +92,7 @@ export function WatchListPanel({
     setBusy(true);
     setFeedback(null);
     try {
-      const res = await api.watchUpdate(oldUrl, newUrl);
+      const res = await api.watchUpdate(oldUrl, { newUrl });
       setFeedback({
         kind: "ok",
         text: `Link actualizado · ${res.item.process_id ?? "URL aceptada"}`,

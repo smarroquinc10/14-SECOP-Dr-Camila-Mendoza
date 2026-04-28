@@ -528,14 +528,23 @@ export default function HomePage() {
     }
   }
 
-  async function handleUpdate(oldUrl: string, newUrl: string) {
+  async function handleUpdate(
+    oldUrl: string,
+    patch: {
+      newUrl?: string;
+      note?: string | null;
+      numero_contrato_excel?: string[];
+      vigencias?: string[];
+      sheets?: string[];
+    },
+  ) {
     setBusy(true);
     setFeedback(null);
     try {
-      const res = await api.watchUpdate(oldUrl, newUrl);
+      const res = await api.watchUpdate(oldUrl, patch);
       setFeedback({
         kind: "ok",
-        text: `Link actualizado · ${res.item.process_id ?? "URL aceptada"}`,
+        text: `Cambios guardados · ${res.item.process_id ?? "URL aceptada"}`,
       });
       await reloadWatch();
     } catch (err) {
@@ -1139,6 +1148,7 @@ export default function HomePage() {
           {sheetOptions.length > 0 && (
             <SlicerPills
               label="Período (cómo los organizaste originalmente)"
+              hint="Cada proceso tiene tu Excel FEAB de referencia · su link del SECOP · su consecutivo interno. Editá cualquiera con el botón “Editar” de la fila."
               options={sheetOptions}
               selected={sheets}
               onChange={setSheets}
