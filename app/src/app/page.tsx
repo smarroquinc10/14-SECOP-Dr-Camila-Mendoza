@@ -22,6 +22,7 @@ import { DetailDialog } from "@/components/detail-dialog";
 // con cardinal puro real desde el link community.secop.
 import { RefreshModal } from "@/components/refresh-modal";
 import { SlicerPills } from "@/components/slicer-pills";
+import { SyncIndicator } from "@/components/sync-indicator";
 import {
   buildUnifiedRows,
   expandRowsByAppearance,
@@ -661,8 +662,9 @@ export default function HomePage() {
 
       {/* Header — program title + personal greeting */}
       <div className="mx-auto max-w-7xl px-8 pt-10 pb-6">
-        <div className="eyebrow mb-3">
-          Sistema de Seguimiento de Contratos · SECOP II
+        <div className="eyebrow mb-3 flex items-center justify-between">
+          <span>Sistema de Seguimiento de Contratos · SECOP II</span>
+          <SyncIndicator />
         </div>
         <h1 className="serif text-4xl md:text-5xl font-bold tracking-tight text-ink mb-2">
           Bienvenida, Dra. María Camila Mendoza Zubiría

@@ -111,6 +111,11 @@ export function AccessGate({ children }: { children: React.ReactNode }) {
       const hash = await pbkdf2Hex(input);
       if (hash === EXPECTED_HASH) {
         sessionStorage.setItem(STORAGE_KEY, "true");
+        // CARDINAL (2026-04-28 · sync C-light): la passphrase verificada
+        // se guarda en sessionStorage para que `state-store.ts` pueda
+        // descifrar el PAT y sincronizar con el gist privado. Vive solo
+        // en la pestaña actual · no persiste al cerrar el browser.
+        sessionStorage.setItem("feab.passphrase", input);
         setUnlocked(true);
       } else {
         setError("Passphrase incorrecto. Intentá de nuevo.");

@@ -311,6 +311,13 @@ export async function ensureSeed(seedVersion: string): Promise<{
       `[ensureSeed] merge: ${preservedEdits} edits + ${preservedManualAdds} manual adds preservados`,
     );
   }
+
+  // CARDINAL (2026-04-28 · sync C-light): después de mergear el seed,
+  // pull del gist privado y mergear con lo que vino del seed. Si la
+  // Dra editó en otra máquina, sus cambios remotos se aplican aquí
+  // antes de que ella vea la pantalla. Failure-safe: si la red falla
+  // o el gist está vacío, seguimos con el state local sin error.
+  await mergeFromRemoteIfAvailable();
   await put<MetaRow>("meta", {
     key: "seed_version",
     value: seedVersion,
@@ -392,6 +399,7 @@ export async function addWatched(input: {
     process_id,
     new: { vigencia: input.vigencia, sheet, note: input.note ?? null },
   });
+  triggerSync();
   return item;
 }
 
@@ -497,6 +505,7 @@ export async function editWatched(
       sheets: updated.sheets,
     },
   });
+  triggerSync();
   return updated;
 }
 
@@ -510,6 +519,7 @@ export async function removeWatched(url: string): Promise<void> {
     process_id: existing.process_id,
     old: existing,
   });
+  triggerSync();
 }
 
 // ---- Public API: audit log -------------------------------------------------
@@ -581,6 +591,7 @@ export async function setObservacion(notice_uid: string, text: string): Promise<
         process_id: notice_uid,
         old: old.text,
       });
+      triggerSync();
     }
     return;
   }
@@ -595,6 +606,7 @@ export async function setObservacion(notice_uid: string, text: string): Promise<
     old: old?.text ?? null,
     new: text,
   });
+  triggerSync();
 }
 
 // ---- Public API: meta -----------------------------------------------------
@@ -643,3 +655,221 @@ export function withBasePath(path: string): string {
   if (path.startsWith("/")) return `${base}${path}`;
   return `${base}/${path}`;
 }
+
+// ---- Sync con Gist privado (C-light · Sergio 2026-04-28) -----------------
+//
+// Estrategia:
+//   - Todas las mutaciones (addWatched, editWatched, removeWatched,
+//     setObservacion) llaman a `triggerSync()` después de persistir
+//     localmente. Eso programa un push debounced (2s desde el último
+//     cambio · agrupa varias ediciones rápidas en un solo PUSH).
+//   - `ensureSeed` después del merge local llama a
+//     `mergeFromRemoteIfAvailable()` para traer cambios de otra máquina.
+//   - Failure-safe: si la red falla, todo sigue funcionando localmente.
+//     El próximo edit reintenta el push.
+//   - La passphrase se obtiene de sessionStorage donde la dejó AccessGate.
+
+import { pullFromGist, pushToGist } from "./sync/gist";
+import { isSyncConfigured } from "./sync/config";
+
+const PASSPHRASE_SS_KEY = "feab.passphrase";
+
+interface SyncStatus {
+  configured: boolean;
+  state: "idle" | "syncing" | "ok" | "error";
+  last_synced_at: string | null;
+  last_error: string | null;
+}
+
+let _syncStatus: SyncStatus = {
+  configured: isSyncConfigured(),
+  state: "idle",
+  last_synced_at: null,
+  last_error: null,
+};
+
+const _syncListeners = new Set<(s: SyncStatus) => void>();
+
+export function getSyncStatus(): SyncStatus {
+  return { ..._syncStatus };
+}
+
+export function onSyncStatus(cb: (s: SyncStatus) => void): () => void {
+  _syncListeners.add(cb);
+  return () => _syncListeners.delete(cb);
+}
+
+function setSyncStatus(patch: Partial<SyncStatus>): void {
+  _syncStatus = { ..._syncStatus, ...patch };
+  for (const cb of _syncListeners) {
+    try { cb(_syncStatus); } catch { /* swallow */ }
+  }
+}
+
+function getPassphrase(): string | null {
+  if (typeof window === "undefined") return null;
+  return sessionStorage.getItem(PASSPHRASE_SS_KEY);
+}
+
+/** Llamada por AccessGate al verificar passphrase OK · habilita sync. */
+export function setPassphraseForSync(passphrase: string): void {
+  if (typeof window !== "undefined") {
+    sessionStorage.setItem(PASSPHRASE_SS_KEY, passphrase);
+  }
+}
+
+let _pushTimer: ReturnType<typeof setTimeout> | null = null;
+let _pushInFlight = false;
+let _pushPendingAfter = false;
+
+/** Programar un push debounced (2s desde el último cambio). */
+export function triggerSync(): void {
+  if (!isSyncConfigured()) return;
+  if (_pushTimer) clearTimeout(_pushTimer);
+  _pushTimer = setTimeout(() => {
+    void doPush();
+  }, 2000);
+}
+
+async function doPush(): Promise<void> {
+  if (_pushInFlight) {
+    _pushPendingAfter = true;
+    return;
+  }
+  const passphrase = getPassphrase();
+  if (!passphrase) {
+    setSyncStatus({ state: "error", last_error: "passphrase no disponible" });
+    return;
+  }
+  _pushInFlight = true;
+  setSyncStatus({ state: "syncing", last_error: null });
+  try {
+    const watch = await getAll<WatchedItemRow>("watch_list");
+    const audit = await getAll<AuditEntry>("audit_log");
+    const obs = await getAll<Observacion>("observaciones");
+    const result = await pushToGist(
+      {
+        watch_list: watch,
+        audit_log: audit,
+        observaciones: obs,
+        last_pushed_by: navigator.userAgent.slice(0, 40),
+      },
+      passphrase,
+    );
+    if (result.ok) {
+      setSyncStatus({
+        state: "ok",
+        last_synced_at: new Date().toISOString(),
+        last_error: null,
+      });
+    } else {
+      setSyncStatus({ state: "error", last_error: result.error });
+    }
+  } finally {
+    _pushInFlight = false;
+    if (_pushPendingAfter) {
+      _pushPendingAfter = false;
+      void doPush();
+    }
+  }
+}
+
+/**
+ * Pull desde el gist · merge con state local. Usado por ensureSeed
+ * después del merge del seed JSON. Conflict resolution simple:
+ *   - Si remote tiene un item con `edited_at` más nuevo que local
+ *     (o local no lo tenía) → remote gana.
+ *   - Si local tiene `edited_at` más nuevo → local gana (próximo
+ *     push lo replica).
+ */
+async function mergeFromRemoteIfAvailable(): Promise<void> {
+  if (!isSyncConfigured()) return;
+  const passphrase = getPassphrase();
+  if (!passphrase) return;
+  setSyncStatus({ state: "syncing", last_error: null });
+  const result = await pullFromGist(passphrase);
+  if (!result.ok) {
+    setSyncStatus({ state: "error", last_error: result.error });
+    return;
+  }
+  if (!result.state) {
+    setSyncStatus({
+      state: "ok",
+      last_synced_at: new Date().toISOString(),
+      last_error: null,
+    });
+    return;
+  }
+
+  const remoteWatch = (result.state.watch_list ?? []) as WatchedItemRow[];
+  const localWatch = await getAll<WatchedItemRow>("watch_list");
+  const localByUrl = new Map(localWatch.map((it) => [it.url, it]));
+
+  let remoteWins = 0;
+  let localWins = 0;
+  const merged: WatchedItemRow[] = [...localWatch];
+  const mergedByUrl = new Map(merged.map((it) => [it.url, it]));
+
+  for (const r of remoteWatch) {
+    const local = mergedByUrl.get(r.url);
+    if (!local) {
+      // Item solo remoto · agregar
+      merged.push(r);
+      mergedByUrl.set(r.url, r);
+      remoteWins += 1;
+      continue;
+    }
+    // Comparar edited_at (más nuevo gana). Si ninguno tiene, no tocar.
+    const rEdit = r.edited_at ?? "";
+    const lEdit = local.edited_at ?? "";
+    if (rEdit && rEdit > lEdit) {
+      const idx = merged.findIndex((m) => m.url === r.url);
+      if (idx >= 0) merged[idx] = r;
+      mergedByUrl.set(r.url, r);
+      remoteWins += 1;
+    } else if (lEdit && lEdit > rEdit) {
+      localWins += 1;
+    }
+  }
+
+  // Persistir merge en IndexedDB
+  await clear("watch_list");
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction("watch_list", "readwrite");
+    const store = tx.objectStore("watch_list");
+    for (const it of merged) store.put(it);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+
+  // Aplicar observaciones remotas (last-write-wins simple por updated_at)
+  const remoteObs = (result.state.observaciones ?? []) as Observacion[];
+  if (remoteObs.length > 0) {
+    const localObs = await getAll<Observacion>("observaciones");
+    const localObsByUid = new Map(localObs.map((o) => [o.notice_uid, o]));
+    for (const ro of remoteObs) {
+      const lo = localObsByUid.get(ro.notice_uid);
+      if (!lo || (ro.updated_at && ro.updated_at > (lo.updated_at ?? ""))) {
+        await put<Observacion>("observaciones", ro);
+      }
+    }
+  }
+
+  if (remoteWins > 0 || localWins > 0) {
+    console.info(
+      `[sync] pull merge: ${remoteWins} remote wins, ${localWins} local wins`,
+    );
+  }
+  setSyncStatus({
+    state: "ok",
+    last_synced_at: new Date().toISOString(),
+    last_error: null,
+  });
+}
+
+// Hook automático en las mutaciones existentes · agregar triggerSync
+// después de cada operación. Hacemos export wrappers que ya lo llaman:
+// ya están integrados en addWatched / editWatched / removeWatched abajo
+// vía un patch monkey-style en runtime. Pero como estamos en el mismo
+// archivo, los hooks van directo en cada función · ver implementaciones.
