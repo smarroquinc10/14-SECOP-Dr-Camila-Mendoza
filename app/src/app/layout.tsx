@@ -69,7 +69,7 @@ export default function RootLayout({
         */}
         <meta
           httpEquiv="Content-Security-Policy"
-          content="default-src 'self'; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https://www.datos.gov.co https://*.github.io; base-uri 'self'; form-action 'self';"
+          content="default-src 'self'; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https://www.datos.gov.co https://*.github.io https://api.github.com; base-uri 'self'; form-action 'self';"
         />
       </head>
       <body className="font-sans">
