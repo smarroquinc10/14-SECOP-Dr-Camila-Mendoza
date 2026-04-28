@@ -1346,10 +1346,8 @@ function WatchEditDialog({
   const [consecs, setConsecs] = React.useState<string[]>(
     row.numero_contratos_excel ?? [],
   );
-  const [vigencias, setVigencias] = React.useState<string[]>(row.vigencias);
   const [sheets, setSheets] = React.useState<string[]>(row.sheets);
   const [draftConsec, setDraftConsec] = React.useState("");
-  const [draftVig, setDraftVig] = React.useState("");
   const [draftSheet, setDraftSheet] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
 
@@ -1394,7 +1392,9 @@ function WatchEditDialog({
     await onSave({
       newUrl: trimmedUrl !== row.watch_url ? trimmedUrl : undefined,
       numero_contrato_excel: consecs,
-      vigencias,
+      // Vigencias NO se editan desde el modal (Sergio 2026-04-28: solo
+      // 3 campos visibles · consecutivo, período, link). El backend sigue
+      // manejando vigencias desde el seed inicial · no las pisamos acá.
       sheets,
     });
   };
@@ -1466,64 +1466,6 @@ function WatchEditDialog({
                   addToList(consecs, setConsecs, draftConsec, setDraftConsec)
                 }
                 disabled={!draftConsec.trim()}
-                className="px-3 h-7 rounded text-[11px] bg-burgundy text-white hover:bg-burgundy/90 disabled:opacity-50"
-              >
-                Agregar
-              </button>
-            </div>
-          </div>
-
-          {/* Vigencias */}
-          <div>
-            <label className="block text-xs font-semibold text-ink mb-1">
-              Vigencias presupuestales
-            </label>
-            <p className="text-[11px] text-ink-soft mb-2">
-              Año o años en los que aplica el contrato (ej.{" "}
-              <code className="font-mono">2024</code>{" "}
-              o <code className="font-mono">2024, 2025</code>{" "}
-              cuando hay vigencias futuras).
-            </p>
-            <div className="flex flex-wrap gap-1.5 mb-2">
-              {vigencias.map((v, i) => (
-                <span
-                  key={`${v}-${i}`}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-stone-100 text-ink text-[11px]"
-                >
-                  {v}
-                  <button
-                    onClick={() => removeFromList(vigencias, setVigencias, i)}
-                    className="hover:bg-stone-200 rounded-full px-1"
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-              {vigencias.length === 0 && (
-                <span className="text-[11px] text-ink-soft italic">
-                  (sin vigencia · ingresá al menos una)
-                </span>
-              )}
-            </div>
-            <div className="flex gap-1">
-              <Input
-                value={draftVig}
-                onChange={(e) => setDraftVig(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    addToList(vigencias, setVigencias, draftVig, setDraftVig);
-                  }
-                }}
-                placeholder="2024"
-                className="text-xs h-7 w-32"
-              />
-              <button
-                type="button"
-                onClick={() =>
-                  addToList(vigencias, setVigencias, draftVig, setDraftVig)
-                }
-                disabled={!draftVig.trim()}
                 className="px-3 h-7 rounded text-[11px] bg-burgundy text-white hover:bg-burgundy/90 disabled:opacity-50"
               >
                 Agregar
