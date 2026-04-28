@@ -55,13 +55,28 @@ export function SyncIndicator() {
   }
 
   if (status.state === "error") {
+    // Cardinal: si el error es por estar offline, mensaje calmo (no
+    // alarma · sus cambios están guardados localmente, suben solos
+    // al volver la red). Si es otro error, mostrar como warning real.
+    const offline = (status.last_error ?? "").toLowerCase().includes("sin internet");
+    if (offline) {
+      return (
+        <span
+          className="inline-flex items-center gap-1 text-[10px] text-ink-soft"
+          title={status.last_error ?? ""}
+        >
+          <CloudOff className="h-3 w-3" />
+          Sin internet · guardado local · subo al volver
+        </span>
+      );
+    }
     return (
       <span
         className="inline-flex items-center gap-1 text-[10px] text-amber-700"
         title={status.last_error ?? "Error desconocido"}
       >
         <AlertTriangle className="h-3 w-3" />
-        Error de sync
+        Reintentando…
       </span>
     );
   }

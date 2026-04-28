@@ -731,6 +731,22 @@ export function triggerSync(): void {
   }, 2000);
 }
 
+// CARDINAL (2026-04-28 · "hazlo ya"): retry exponencial cuando la red
+// falla u ocurre cualquier error transitorio. Backoff: 5s, 15s, 45s,
+// 2m, 5m, 15m, 30m (cap). Reset al primer push exitoso.
+let _retryAttempt = 0;
+let _retryTimer: ReturnType<typeof setTimeout> | null = null;
+const RETRY_DELAYS_MS = [5_000, 15_000, 45_000, 120_000, 300_000, 900_000, 1_800_000];
+
+function scheduleRetry(): void {
+  if (_retryTimer) clearTimeout(_retryTimer);
+  const delay = RETRY_DELAYS_MS[Math.min(_retryAttempt, RETRY_DELAYS_MS.length - 1)];
+  _retryAttempt += 1;
+  _retryTimer = setTimeout(() => {
+    void doPush();
+  }, delay);
+}
+
 async function doPush(): Promise<void> {
   if (_pushInFlight) {
     _pushPendingAfter = true;
@@ -739,6 +755,15 @@ async function doPush(): Promise<void> {
   const passphrase = getPassphrase();
   if (!passphrase) {
     setSyncStatus({ state: "error", last_error: "passphrase no disponible" });
+    return;
+  }
+  // Si el browser reporta offline, no intentes la red · cae al retry
+  // automático cuando vuelva online (event listener abajo).
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    setSyncStatus({
+      state: "error",
+      last_error: "Sin internet · tus cambios están guardados local · subo al volver red",
+    });
     return;
   }
   _pushInFlight = true;
@@ -757,6 +782,12 @@ async function doPush(): Promise<void> {
       passphrase,
     );
     if (result.ok) {
+      // Éxito · reset retry counter y limpiar timer pendiente
+      _retryAttempt = 0;
+      if (_retryTimer) {
+        clearTimeout(_retryTimer);
+        _retryTimer = null;
+      }
       setSyncStatus({
         state: "ok",
         last_synced_at: new Date().toISOString(),
@@ -764,6 +795,8 @@ async function doPush(): Promise<void> {
       });
     } else {
       setSyncStatus({ state: "error", last_error: result.error });
+      // Programar retry · backoff exponencial
+      scheduleRetry();
     }
   } finally {
     _pushInFlight = false;
@@ -772,6 +805,29 @@ async function doPush(): Promise<void> {
       void doPush();
     }
   }
+}
+
+// CARDINAL · listener nativo del browser para detectar reconexión.
+// Cuando la red vuelve, intentamos push inmediato (no esperamos al
+// debounce de 2s siguiente edición). La Dra ve "Sincronizado" rápido.
+if (typeof window !== "undefined") {
+  window.addEventListener("online", () => {
+    // Reset el contador del retry · vuelta de red es señal positiva
+    _retryAttempt = 0;
+    if (_retryTimer) {
+      clearTimeout(_retryTimer);
+      _retryTimer = null;
+    }
+    if (isSyncConfigured() && getPassphrase()) {
+      void doPush();
+    }
+  });
+  window.addEventListener("offline", () => {
+    setSyncStatus({
+      state: "error",
+      last_error: "Sin internet · tus cambios siguen guardados local",
+    });
+  });
 }
 
 /**
