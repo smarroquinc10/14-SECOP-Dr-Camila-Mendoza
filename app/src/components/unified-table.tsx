@@ -29,6 +29,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  classifyDocs,
+  summarizeModificatorios,
+  type ClassifiedModificatorio,
+} from "@/lib/classify-modificatorios";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -115,6 +120,13 @@ export interface UnifiedRow {
   // Es cardinal puro real: viene del scrape del link community.secop.
   modificatorios_count: number;
   modificatorios_docs: { name: string; url: string }[];
+  /** Modificatorios clasificados por tipo y número (Sergio 2026-04-28).
+   *  Cada entrada tiene `tipo` (Adición · Prórroga · Cesión · etc.),
+   *  `numero` (extraído del nombre del PDF si aparece) y el link.
+   *  TODO sesión OCR: agregar `valor_adicionado`, `dias_prorrogados`,
+   *  `fecha_documento` extraídos del contenido del PDF. */
+  modificatorios_classified: ClassifiedModificatorio[];
+  modificatorios_summary: string;
 
   // From watch list (if present)
   sheets: string[];
@@ -398,9 +410,16 @@ export function buildUnifiedRows(
     // Detectarlos cardinal puro = filtrar documents por patrón.
     // Memoria: project_porque_fundador.md, feedback_dashboard_es_scraper_de_links.md
     const portalDocs = portalSnap?.documents ?? [];
-    const modificatoriosDocs = portalDocs.filter((d) =>
-      /modificatorio|otros[ií]|adendo|adicional al contrato/i.test(d.name ?? ""),
-    );
+    // CARDINAL (2026-04-28 · Sergio): clasificación con 11 tipos +
+    // anti-FP (cobertura del 70 % vs 15 % del regex anterior). El campo
+    // `modificatoriosDocs` se mantiene legacy para `modificatorios_docs`
+    // que algunos componentes consumen (modal, export Excel).
+    const modificatoriosClassified = classifyDocs(portalDocs);
+    const modificatoriosSummary = summarizeModificatorios(modificatoriosClassified);
+    const modificatoriosDocs = modificatoriosClassified.map((c) => ({
+      name: c.nombre,
+      url: c.url,
+    }));
     // dias_adicionados ya no se calcula (jbjy es ruido) · sí contamos
     // modificatorios reales del link. Mantengo dias=null por compat con
     // export-excel que tiene una columna para eso.
@@ -476,11 +495,13 @@ export function buildUnifiedRows(
       notas,
       dias_adicionados: dias,
       liquidado: liq,
-      modificatorios_count: modificatoriosDocs.length,
+      modificatorios_count: modificatoriosClassified.length,
       modificatorios_docs: modificatoriosDocs.map((d) => ({
         name: d.name ?? "",
         url: d.url ?? "",
       })),
+      modificatorios_classified: modificatoriosClassified,
+      modificatorios_summary: modificatoriosSummary,
       sheets: w.sheets ?? [],
       vigencias: w.vigencias ?? [],
       appearances: w.appearances ?? [],
@@ -903,15 +924,14 @@ export function UnifiedTable({
       {
         id: "modificatorios",
         header: "Modificatorios",
-        // CARDINAL PURO REAL (Sergio 2026-04-27): los modificatorios vienen
-        // del scrape del link community.secop como PDFs adjuntos. El sistema
-        // los detecta automáticamente · Camila ve cuántos hay sin abrir el
-        // link · si quiere descargar el PDF, el modal tiene los links.
-        accessorFn: (r) => {
-          const n = r.modificatorios_count;
-          if (n === 0) return "Sin modificatorios";
-          return `${n} modificatorio${n > 1 ? "s" : ""}`;
-        },
+        // CARDINAL (Sergio 2026-04-28): los modificatorios vienen del scrape
+        // del link community.secop como PDFs adjuntos. El clasificador
+        // identifica TIPO (Adición · Prórroga · Cesión · Otrosí · Adenda ·
+        // Suspensión · Liquidación · etc.) y NÚMERO. Display en columnas:
+        // chip principal con summary cardinal + detalle por tipo en líneas
+        // de 1 sub-línea. Sin valor monetario / días todavía · esa capa
+        // viene del pipeline OCR (sesiones siguientes).
+        accessorFn: (r) => r.modificatorios_summary,
         cell: ({ row }) => {
           const r = row.original;
           const n = r.modificatorios_count;
@@ -919,28 +939,67 @@ export function UnifiedTable({
             return (
               <span
                 className="text-ink-soft/60 text-[10px]"
-                title="El portal community.secop no tiene PDFs de modificatorios para este proceso. Si te llega información de un modificatorio nuevo, click 'Refrescar' para que el sistema vuelva a leer el link."
+                title="El portal community.secop no tiene PDFs de modificatorios para este proceso."
               >
                 Sin modificatorios
               </span>
             );
           }
-          // Tooltip con nombres de los modificatorios para preview rápido
-          const tooltipNames = r.modificatorios_docs
-            .map((d) => `• ${d.name}`)
-            .join("\n");
+          // Detalle por tipo · agrupar para conteo por tipo
+          const byTipo = new Map<string, ClassifiedModificatorio[]>();
+          for (const m of r.modificatorios_classified) {
+            const arr = byTipo.get(m.tipo) ?? [];
+            arr.push(m);
+            byTipo.set(m.tipo, arr);
+          }
+          // Chip de color por tipo · cardinal-claro
+          const tipoColor: Record<string, string> = {
+            "Adicion": "bg-emerald-50 text-emerald-800 border-emerald-200",
+            "Prorroga": "bg-sky-50 text-sky-800 border-sky-200",
+            "Modificatorio": "bg-amber-50 text-amber-800 border-amber-200",
+            "Otrosi": "bg-violet-50 text-violet-800 border-violet-200",
+            "Adenda": "bg-violet-50 text-violet-800 border-violet-200",
+            "Cesion": "bg-rose-50 text-rose-800 border-rose-200",
+            "Suspension": "bg-stone-100 text-stone-800 border-stone-300",
+            "Reanudacion": "bg-stone-100 text-stone-800 border-stone-300",
+            "Terminacion anticipada": "bg-rose-50 text-rose-800 border-rose-200",
+            "Novacion": "bg-violet-50 text-violet-800 border-violet-200",
+            "Liquidacion": "bg-stone-100 text-stone-800 border-stone-300",
+          };
           return (
-            <div className="text-[11px]">
+            <div className="text-[11px] flex flex-col gap-0.5">
+              {/* Línea 1: total */}
+              <span className="text-ink font-medium text-[10px]">
+                {n} {n === 1 ? "acto" : "actos"}
+              </span>
+              {/* Líneas siguientes: chip por tipo con # */}
+              {Array.from(byTipo.entries()).map(([tipo, arr]) => {
+                const cls = tipoColor[tipo] ?? "bg-stone-100 text-stone-800 border-stone-300";
+                const numbers = arr
+                  .map((m) => m.numero ? `N°${m.numero}` : "")
+                  .filter(Boolean);
+                return (
+                  <span
+                    key={tipo}
+                    className={`inline-flex items-center px-1.5 py-0.5 rounded border text-[9px] whitespace-nowrap w-fit ${cls}`}
+                    title={arr.map((m) => `• ${m.tipo} ${m.numero ? `N° ${m.numero}` : ""} · ${m.nombre}`).join("\n")}
+                  >
+                    {arr.length > 1 ? `${arr.length} ` : ""}
+                    {tipo}
+                    {numbers.length > 0 && ` ${numbers.join(", ")}`}
+                  </span>
+                );
+              })}
               <span
-                className="inline-flex items-center px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 text-[10px] whitespace-nowrap font-medium"
-                title={`Modificatorios detectados como PDFs en el link community.secop:\n${tooltipNames}\n\nClick en la fila para ver el modal con los links de descarga.`}
+                className="text-ink-soft/60 text-[8px] italic mt-0.5"
+                title="Tipo se infiere del nombre del PDF · valor monetario y plazo se agregarán cuando termine el procesamiento OCR del contenido"
               >
-                {n} modificatorio{n > 1 ? "s" : ""}
+                valor pendiente OCR
               </span>
             </div>
           );
         },
-        size: 130,
+        size: 175,
       },
       {
         id: "origen",
