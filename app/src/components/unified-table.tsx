@@ -127,6 +127,15 @@ export interface UnifiedRow {
    *  `fecha_documento` extraídos del contenido del PDF. */
   modificatorios_classified: ClassifiedModificatorio[];
   modificatorios_summary: string;
+  /** Modificatorios v3 · cardinal por contenido OCR (Sergio 2026-04-30).
+   *  Trae detalles enriquecidos: subtipos (Adicion + Prorroga combinables),
+   *  valor adicionado en COP, días prorrogados, fecha del documento, y
+   *  warnings honestos cuando la extracción es ambigua. null cuando el
+   *  bundle no incluye seed v3 (deploy previo) · la UI cae al layer-1 (regex
+   *  por nombre) como fallback. */
+  modificatorios_v3:
+    | import("@/lib/api").ProcessModificatoriosV3
+    | null;
 
   // From watch list (if present)
   sheets: string[];
@@ -315,6 +324,9 @@ export function buildUnifiedRows(
   integradoBulk?: IntegradoBulk | null,
   portalBulk?: PortalBulk | null,
   discrepanciasBulk?: import("@/lib/api").DiscrepanciasBulk | null,
+  modificatoriosClassifiedBulk?:
+    | import("@/lib/api").ModificatoriosClassifiedBulk
+    | null,
 ): UnifiedRow[] {
   // Index contracts by every key we may match against
   const byIdContrato = new Map<string, Contract>();
@@ -420,6 +432,24 @@ export function buildUnifiedRows(
       name: c.nombre,
       url: c.url,
     }));
+
+    // CARDINAL v3 (Sergio 2026-04-30): lookup del JSON cardinal generado
+    // por el pipeline OCR · trae subtipos + valor + plazo + fecha extraídos
+    // del CONTENIDO de cada PDF (no del nombre). Cuando hay match, la UI
+    // (modal y tabla) prefiere estos detalles cardinales sobre la
+    // clasificación layer-1 por nombre. Cuando no hay match → fallback
+    // honesto al layer-1 (compat con bundles previos al pipeline OCR).
+    let modificatoriosV3:
+      | import("@/lib/api").ProcessModificatoriosV3
+      | null = null;
+    if (modificatoriosClassifiedBulk) {
+      const v3Key1 = w.notice_uid ?? "";
+      const v3Key2 = w.process_id ?? "";
+      modificatoriosV3 =
+        modificatoriosClassifiedBulk.by_process[v3Key1] ??
+        modificatoriosClassifiedBulk.by_process[v3Key2] ??
+        null;
+    }
     // dias_adicionados ya no se calcula (jbjy es ruido) · sí contamos
     // modificatorios reales del link. Mantengo dias=null por compat con
     // export-excel que tiene una columna para eso.
@@ -502,6 +532,7 @@ export function buildUnifiedRows(
       })),
       modificatorios_classified: modificatoriosClassified,
       modificatorios_summary: modificatoriosSummary,
+      modificatorios_v3: modificatoriosV3,
       sheets: w.sheets ?? [],
       vigencias: w.vigencias ?? [],
       appearances: w.appearances ?? [],

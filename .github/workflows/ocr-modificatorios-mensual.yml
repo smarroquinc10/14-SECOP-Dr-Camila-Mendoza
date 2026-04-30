@@ -1,0 +1,142 @@
+name: OCR Modificatorios (mensual)
+
+# Pipeline cardinal de modificatorios:
+#  1. Descarga PDFs candidatos del scrape del portal community.secop
+#     (idempotente · skip si ya bajado · index sha256).
+#  2. OCR + clasificacion cardinal por contenido (spaCy POS tagger +
+#     pdfplumber + Tesseract spa).
+#  3. Extraccion de detalles cardinales: subtipos, valor adicionado,
+#     dias prorrogados, fecha del documento.
+#  4. Genera app/public/data/modificatorios_classified.json para frontend.
+#  5. Commit + push si hay diff (auto-detect por git diff).
+#
+# Cron: dia 5 de cada mes a las 06:00 UTC (despues del scrape-portal-mensual
+# que corre dia 1 · permite 4 dias de margen). El scrape-portal-mensual
+# refresca el seed del portal · este job lee el seed actualizado y
+# procesa los modificatorios nuevos.
+#
+# Manual: workflow_dispatch con --force para re-procesar todo desde cero.
+#
+# Politica de cache:
+#  - .cache/modificatorios_pdfs/ se preserva entre runs (actions/cache)
+#    invalidado cuando el seed del portal cambia (hash content).
+#  - Los PDFs descargados NO se commitean · solo el JSON resumen.
+
+on:
+  schedule:
+    # Dia 5 de cada mes 06:00 UTC = 01:00 Bogota
+    - cron: '0 6 5 * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Re-procesar TODOS los PDFs aunque ya esten clasificados'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  ocr:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240  # 4h max · OCR del universo es ~1-2h CPU
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 1
+
+      - name: Setup Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Instalar Tesseract spa + libs sistema
+        # Tesseract con lenguaje espanol es obligatorio para PDFs escaneados
+        # del SECOP. pdfplumber requiere libcairo2-dev como en el scrape.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            tesseract-ocr \
+            tesseract-ocr-spa \
+            libcairo2-dev \
+            libgirepository1.0-dev \
+            pkg-config \
+            python3-dev
+
+      - name: Instalar dependencias Python
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -e .
+
+      - name: Instalar modelo spaCy es_core_news_md
+        run: |
+          python -m spacy download es_core_news_md
+
+      - name: Calcular hash del seed para cache key
+        id: seed-hash
+        run: |
+          HASH=$(sha256sum app/public/data/portal_opportunity_seed.json | cut -c1-12)
+          echo "hash=$HASH" >> $GITHUB_OUTPUT
+          echo "Seed portal hash: $HASH"
+
+      - name: Restore cache de PDFs descargados
+        # Preserva los PDFs entre runs · idempotente. Invalida solo cuando
+        # el seed del portal cambia (nuevos procesos o procesos modificados
+        # con nuevos documentos). El index.json y ocr_classified.json se
+        # mantienen consistentes.
+        uses: actions/cache@v4
+        with:
+          path: .cache/modificatorios_pdfs
+          key: mods-pdfs-${{ steps.seed-hash.outputs.hash }}
+          restore-keys: |
+            mods-pdfs-
+
+      - name: Descargar PDFs candidatos (incremental)
+        # download_modificatorios_pdfs.py --filtered es IDEMPOTENTE: skip
+        # si el doc ya esta en el cache con status=ok. Solo baja los nuevos.
+        run: |
+          python -X utf8 scripts/download_modificatorios_pdfs.py --filtered
+
+      - name: OCR + clasificacion cardinal
+        # ocr_classify_modificatorios.py --all-cached procesa todos los PDFs
+        # del cache. Sin --force es incremental (skip si ya esta en
+        # ocr_classified.json con version=3). Con --force re-procesa todo.
+        run: |
+          if [ "${{ inputs.force }}" = "true" ]; then
+            python -X utf8 scripts/ocr_classify_modificatorios.py --all-cached --force
+          else
+            python -X utf8 scripts/ocr_classify_modificatorios.py --all-cached
+          fi
+
+      - name: Generar modificatorios_classified.json para frontend
+        run: |
+          python -X utf8 scripts/generate_modificatorios_classified.py
+
+      - name: Commit cambios si hay
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/public/data/modificatorios_classified.json
+          if git diff --cached --quiet; then
+            echo "Sin cambios en modificatorios_classified.json · skip commit"
+          else
+            STATS=$(jq -r '.stats | "\(.procesos_con_modificatorios) procesos · \(.total_actos_cardinales) actos · $\(.valor_adicionado_global_cop) adicionados"' app/public/data/modificatorios_classified.json)
+            git commit -m "chore(modificatorios): refresh OCR mensual · $STATS"
+            git push
+          fi
+
+      - name: Upload reporte como artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ocr-mods-${{ github.run_id }}
+          path: |
+            .cache/modificatorios_pdfs/index.json
+            .cache/modificatorios_pdfs/ocr_classified.json
+            app/public/data/modificatorios_classified.json
+          retention-days: 90

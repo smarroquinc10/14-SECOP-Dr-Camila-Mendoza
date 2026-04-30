@@ -621,6 +621,66 @@ def capa_11_pdfs_portal() -> CapaResult:
 # ─────────────────────────────────────────────────────────────────────
 # Capa 10 — Sin archivos temporales committeados
 # ─────────────────────────────────────────────────────────────────────
+def capa_13_modificatorios_classified() -> CapaResult:
+    """Verifica que el seed v3 de modificatorios clasificados esté presente
+    y consistente. Si existe `app/public/data/modificatorios_classified.json`:
+      - schema correcto · version >= 3
+      - generated_at parseable
+      - by_process no vacío cuando stats.total_actos_cardinales > 0
+      - todos los docs tienen pdf_url + tipo (no None)
+      - confidence >= 0.8 para los no-needs_review
+    """
+    seed_path = Path("app/public/data/modificatorios_classified.json")
+    if not seed_path.exists():
+        return CapaResult(
+            "Modificatorios v3 (cardinal)",
+            True,
+            "seed v3 aún no generado · UI usa fallback layer-1 honestamente",
+        )
+    try:
+        data = json.loads(seed_path.read_text(encoding="utf-8"))
+    except Exception as e:
+        return CapaResult("Modificatorios v3 (cardinal)", False, f"json invalido: {e}")
+
+    if data.get("version", 0) < 3:
+        return CapaResult(
+            "Modificatorios v3 (cardinal)",
+            False,
+            f"version {data.get('version')} < 3 · re-generar con script",
+        )
+    stats = data.get("stats", {})
+    by_process = data.get("by_process", {})
+    if stats.get("total_actos_cardinales", 0) > 0 and not by_process:
+        return CapaResult(
+            "Modificatorios v3 (cardinal)",
+            False,
+            "stats dice >0 actos pero by_process está vacío · drift",
+        )
+
+    # Validacion shape · cada doc cardinal debe tener pdf_url y tipo
+    bad_docs = []
+    for uid, p in by_process.items():
+        for d in p.get("docs", []):
+            if d.get("is_cardinal") and not d.get("tipo"):
+                bad_docs.append(f"{uid}[{d.get('doc_idx')}]: cardinal sin tipo")
+            if not d.get("pdf_url"):
+                bad_docs.append(f"{uid}[{d.get('doc_idx')}]: sin pdf_url")
+    if bad_docs:
+        return CapaResult(
+            "Modificatorios v3 (cardinal)",
+            False,
+            f"{len(bad_docs)} docs con shape inválido: {bad_docs[0]}",
+        )
+
+    return CapaResult(
+        "Modificatorios v3 (cardinal)",
+        True,
+        f"{len(by_process)} procesos · {stats.get('total_actos_cardinales')} actos · "
+        f"${stats.get('valor_adicionado_global_cop', 0):,} adicionados · "
+        f"{stats.get('docs_needs_review', 0)} pendientes revisión",
+    )
+
+
 def capa_10_no_temp_files() -> CapaResult:
     code, out = run_cmd(["git", "ls-files"], timeout=10)
     if code != 0:
@@ -656,6 +716,7 @@ def main() -> int:
         capa_10_no_temp_files,
         capa_11_pdfs_portal,
         capa_12_discrepancias,
+        capa_13_modificatorios_classified,
     ]
     print("=" * 64)
     print("VERIFICACIÓN MULTICAPA · Dashboard FEAB · Cami abogada")

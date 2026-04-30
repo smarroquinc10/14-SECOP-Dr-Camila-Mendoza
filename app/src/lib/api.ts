@@ -435,6 +435,96 @@ async function getDiscrepanciasBulk(): Promise<DiscrepanciasBulk | null> {
   return _discrepanciasPromise;
 }
 
+/** Modificatorios clasificados por contenido OCR · v3 (Sergio 2026-04-30).
+ *
+ * El pipeline OCR (`scripts/ocr_classify_modificatorios.py` +
+ * `scripts/extract_modificatorio_details.py`) lee CADA PDF descargado
+ * del scrape del link community.secop, extrae el texto con pdfplumber +
+ * Tesseract spa fallback, clasifica el tipo cardinal con spaCy POS
+ * tagger sobre el título, y extrae detalles cardinales del cuerpo:
+ *   - subtipos cardinales (Adicion, Prorroga combinables)
+ *   - valor adicionado en pesos COP
+ *   - dias prorrogados
+ *   - fecha de suscripción del documento
+ *
+ * Los warnings de extracción quedan visibles para honestidad cardinal:
+ * si el extractor no pudo separar valor mensual de valor total
+ * adicionado, el doc trae warning y la UI lo muestra textual.
+ *
+ * Generado por `scripts/generate_modificatorios_classified.py` y
+ * commiteado al deploy.
+ */
+export interface ModificatorioDocV3 {
+  doc_idx: number;
+  /** Tipo cardinal del documento (Modificatorio · Cesion · Liquidacion · etc.). */
+  tipo: string | null;
+  /** Subtipos cuando tipo es genérico (Adicion + Prorroga combinables). */
+  subtipos: string[];
+  numero: string | null;
+  valor_adicionado_cop: number | null;
+  dias_prorrogados: number | null;
+  fecha_documento: string | null; // ISO YYYY-MM-DD
+  pdf_url: string;
+  pdf_name: string;
+  /** True si el documento es un acto modificatorio cardinal (no soporte). */
+  is_cardinal: boolean;
+  /** True si es soporte (Aclaratorio · Legalización) · no cuenta para totales. */
+  is_soporte: boolean;
+  needs_human_review: boolean;
+  warnings: string[];
+  confidence: number | null;
+}
+
+export interface ProcessModificatoriosV3 {
+  process_id: string;
+  modificatorios_count: number;
+  valor_adicionado_total_cop: number | null;
+  dias_prorrogados_total: number | null;
+  docs: ModificatorioDocV3[];
+}
+
+export interface ModificatoriosClassifiedBulk {
+  version: number;
+  schema: string;
+  generated_at: string;
+  code_version: string;
+  stats: {
+    procesos_con_modificatorios: number;
+    total_actos_cardinales: number;
+    total_modificatorios_genericos: number;
+    total_adiciones: number;
+    total_prorrogas: number;
+    total_cesiones: number;
+    total_liquidaciones: number;
+    total_otros: number;
+    valor_adicionado_global_cop: number;
+    dias_prorrogados_global: number;
+    docs_needs_review: number;
+    docs_con_warnings: number;
+  };
+  by_process: Record<string, ProcessModificatoriosV3>;
+}
+
+let _modificatoriosClassifiedPromise:
+  | Promise<ModificatoriosClassifiedBulk | null>
+  | null = null;
+
+async function getModificatoriosClassified(): Promise<ModificatoriosClassifiedBulk | null> {
+  if (!_modificatoriosClassifiedPromise) {
+    _modificatoriosClassifiedPromise = (async () => {
+      try {
+        const url = withBasePath("/data/modificatorios_classified.json");
+        const res = await fetch(url, { cache: "no-store" });
+        if (!res.ok) return null;
+        return (await res.json()) as ModificatoriosClassifiedBulk;
+      } catch {
+        return null;
+      }
+    })();
+  }
+  return _modificatoriosClassifiedPromise;
+}
+
 function toContract(row: SocrataContrato): Contract {
   return row as Contract; // mismo shape exacto en runtime
 }
@@ -972,6 +1062,14 @@ export const api = {
 
   portalBulk: async (): Promise<PortalBulk> => {
     return getPortalBulk();
+  },
+
+  /** Modificatorios clasificados v3 · datos cardinales extraídos del
+   *  contenido de los PDFs (no del nombre). Indexado por process_id /
+   *  notice_uid. Cuando es null → bundle no incluye el seed (deploy
+   *  previo al pipeline OCR) · UI cae al regex layer-1 como fallback. */
+  modificatoriosClassified: async (): Promise<ModificatoriosClassifiedBulk | null> => {
+    return getModificatoriosClassified();
   },
 };
 

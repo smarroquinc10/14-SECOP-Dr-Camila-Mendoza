@@ -115,6 +115,26 @@ export function DetailDialog({ contractId, open, onOpenChange }: Props) {
     () => api.watchList(),
     { revalidateOnFocus: false },
   );
+
+  // CARDINAL v3 (2026-04-30) · modificatorios clasificados por contenido OCR.
+  // Lookup por contractId → ProcessModificatoriosV3 | null. La sección
+  // "Modificatorios detectados" del modal usa estos detalles cuando existen
+  // (tipo + subtipos + valor + plazo + fecha) · fallback al regex layer-1
+  // sobre el nombre del PDF cuando el bundle aún no incluye el seed v3.
+  const { data: modsV3Bulk } = useSWR(
+    open ? "mods-classified-v3:cache" : null,
+    () => api.modificatoriosClassified(),
+    { revalidateOnFocus: false },
+  );
+  const modsV3: import("@/lib/api").ProcessModificatoriosV3 | null = React.useMemo(() => {
+    if (!contractId || !modsV3Bulk) return null;
+    return (
+      modsV3Bulk.by_process[contractId] ??
+      // El contractId puede ser la URL completa (key de UnifiedRow). Buscar
+      // todos los process_id del watch list que matcheen.
+      null
+    );
+  }, [contractId, modsV3Bulk]);
   const numerosContratos: string[] = React.useMemo(() => {
     if (!contractId || !watchListData) return [];
     const items = watchListData.items;
@@ -291,12 +311,138 @@ export function DetailDialog({ contractId, open, onOpenChange }: Props) {
             </section>
           )}
 
-          {/* MODIFICATORIOS · CARDINAL PURO REAL · sección destacada
-              porque Camila los prioriza explícitamente (memoria
-              feedback_modal_modificatorios_destacada.md). Los detectamos
-              automáticamente del scrape del link community.secop por
-              patrón de nombre PDF. */}
-          {!isLoading && hasPortalData && (() => {
+          {/* MODIFICATORIOS · CARDINAL v3 (Sergio 2026-04-30) · sección
+              destacada porque Camila los prioriza explícitamente. Cuando
+              el bundle incluye el seed v3 (pipeline OCR), mostramos
+              detalles cardinales por contenido del PDF: tipo + subtipos
+              (Adicion+Prorroga combinables) + valor adicionado COP +
+              días prorrogados + fecha del documento. Sumas cuadradas en
+              la cabecera. Cuando el seed v3 no está disponible (deploy
+              previo) caemos al regex layer-1 sobre el nombre del PDF. */}
+          {!isLoading && hasPortalData && modsV3 && modsV3.docs.length > 0 && (
+            <section className="border-2 border-amber-300 bg-amber-50/50 rounded-md overflow-hidden">
+              <div className="bg-amber-100/60 px-4 py-2.5 border-b border-amber-200">
+                <h3 className="serif text-base font-semibold text-amber-900">
+                  📝 Modificatorios detectados ({modsV3.modificatorios_count})
+                </h3>
+                {(modsV3.valor_adicionado_total_cop ||
+                  modsV3.dias_prorrogados_total) && (
+                  <p className="text-[12px] text-amber-900 mt-1">
+                    {modsV3.valor_adicionado_total_cop && (
+                      <>
+                        Valor adicionado al contrato:{" "}
+                        <strong>
+                          ${modsV3.valor_adicionado_total_cop.toLocaleString("es-CO")}
+                        </strong>
+                      </>
+                    )}
+                    {modsV3.valor_adicionado_total_cop && modsV3.dias_prorrogados_total && (
+                      <span className="mx-2">·</span>
+                    )}
+                    {modsV3.dias_prorrogados_total && (
+                      <>
+                        Plazo prorrogado:{" "}
+                        <strong>{modsV3.dias_prorrogados_total} días</strong>
+                      </>
+                    )}
+                  </p>
+                )}
+                <p className="text-[11px] text-amber-800 mt-0.5">
+                  Detalles extraídos del contenido de cada documento (tipo ·
+                  número · valor · fecha). Click en el nombre para abrir el PDF.
+                </p>
+              </div>
+              <ul className="divide-y divide-amber-200/50">
+                {modsV3.docs.map((d, i) => (
+                  <li key={i} className="px-3 py-2.5 hover:bg-amber-50">
+                    <div className="flex items-start gap-2">
+                      <ChevronRight className="h-3 w-3 mt-1 text-amber-700 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                          {d.tipo && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-amber-200 text-amber-900">
+                              {d.tipo}
+                            </span>
+                          )}
+                          {d.subtipos.map((s) => (
+                            <span
+                              key={s}
+                              className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-burgundy/10 text-burgundy border border-burgundy/30"
+                            >
+                              {s}
+                            </span>
+                          ))}
+                          {d.numero && (
+                            <span className="text-[11px] text-ink-soft">
+                              N° {d.numero}
+                            </span>
+                          )}
+                          {d.is_soporte && (
+                            <span className="text-[10px] text-ink-soft italic">
+                              (soporte · no cuenta para totales)
+                            </span>
+                          )}
+                          {d.needs_human_review && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-rose-100 text-rose-800 border border-rose-300">
+                              Pendiente revisión humana
+                            </span>
+                          )}
+                        </div>
+                        <a
+                          href={d.pdf_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-burgundy hover:underline text-sm font-medium block"
+                        >
+                          {d.pdf_name}
+                        </a>
+                        <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1 text-[11px] text-ink-soft">
+                          {d.valor_adicionado_cop && (
+                            <span>
+                              Valor adicionado:{" "}
+                              <strong className="text-ink">
+                                ${d.valor_adicionado_cop.toLocaleString("es-CO")}
+                              </strong>
+                            </span>
+                          )}
+                          {d.dias_prorrogados && (
+                            <span>
+                              Plazo:{" "}
+                              <strong className="text-ink">
+                                {d.dias_prorrogados} días
+                              </strong>
+                            </span>
+                          )}
+                          {d.fecha_documento && (
+                            <span>
+                              Fecha del documento:{" "}
+                              <strong className="text-ink">
+                                {d.fecha_documento}
+                              </strong>
+                            </span>
+                          )}
+                        </div>
+                        {d.warnings.length > 0 && (
+                          <ul className="mt-1 text-[10px] text-amber-800 list-disc list-inside">
+                            {d.warnings.map((w, j) => (
+                              <li key={j} className="italic">
+                                {w}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {/* FALLBACK · cuando el seed v3 no está disponible (deploy
+              previo al pipeline OCR), seguimos mostrando el regex
+              layer-1 por nombre · ningún proceso queda sin sección. */}
+          {!isLoading && hasPortalData && !modsV3 && (() => {
             const modDocs = documents.filter((d) =>
               /modificatorio|otros[ií]|adendo|adicional al contrato/i.test(
                 d.name ?? "",

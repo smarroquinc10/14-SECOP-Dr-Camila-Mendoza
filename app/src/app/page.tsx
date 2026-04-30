@@ -102,6 +102,19 @@ export default function HomePage() {
     { refreshInterval: 0, revalidateOnFocus: false }
   );
 
+  // Modificatorios clasificados v3 (Sergio 2026-04-30) — seed estático
+  // generado por scripts/generate_modificatorios_classified.py a partir
+  // del pipeline OCR. Trae detalles cardinales por contenido del PDF:
+  // tipo · subtipos (Adicion+Prorroga combinables) · valor adicionado COP
+  // · días prorrogados · fecha del documento · warnings honestos.
+  // Cuando es null (deploy previo al pipeline OCR) la UI cae al regex
+  // layer-1 por nombre como fallback compatible.
+  const { data: modificatoriosV3Bulk } = useSWR(
+    "mods-classified-v3",
+    api.modificatoriosClassified,
+    { refreshInterval: 0, revalidateOnFocus: false }
+  );
+
   // Loading state: solo dependemos del watch list ahora (cardinal puro).
   const isLoading = loadingWatch;
 
@@ -164,8 +177,9 @@ export default function HomePage() {
       null,        // integradoBulk (rpmr-utcd) → cardinal puro · no en UI
       portalBulk ?? null,
       null,        // discrepanciasBulk → no aplica sin jbjy/rpmr en UI
+      modificatoriosV3Bulk ?? null,  // v3 cardinal por contenido OCR
     ),
-    [watched, portalBulk]
+    [watched, portalBulk, modificatoriosV3Bulk]
   );
 
   const totalAppearances = React.useMemo(
