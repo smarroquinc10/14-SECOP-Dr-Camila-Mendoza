@@ -319,11 +319,33 @@ export function DetailDialog({ contractId, open, onOpenChange }: Props) {
               días prorrogados + fecha del documento. Sumas cuadradas en
               la cabecera. Cuando el seed v3 no está disponible (deploy
               previo) caemos al regex layer-1 sobre el nombre del PDF. */}
-          {!isLoading && hasPortalData && modsV3 && modsV3.docs.length > 0 && (
-            <section className="border-2 border-amber-300 bg-amber-50/50 rounded-md overflow-hidden">
-              <div className="bg-amber-100/60 px-4 py-2.5 border-b border-amber-200">
-                <h3 className="serif text-base font-semibold text-amber-900">
-                  📝 Modificatorios detectados ({modsV3.modificatorios_count})
+          {!isLoading && hasPortalData && modsV3 && modsV3.docs.length > 0 && (() => {
+            // CARDINAL anti-FN (Sergio 2026-04-30): cuando modificatorios_count
+            // es 0 pero hay docs procesados, son procesos con SOLO docs
+            // pendientes de revisión humana (oficios sin título cardinal claro
+            // detectado por el OCR). Mostramos un header diferente para no
+            // confundir a la Dra con "Modificatorios detectados (0)".
+            const onlyPending = modsV3.modificatorios_count === 0;
+            return (
+            <section className={cn(
+              "border-2 rounded-md overflow-hidden",
+              onlyPending
+                ? "border-rose-300 bg-rose-50/50"
+                : "border-amber-300 bg-amber-50/50",
+            )}>
+              <div className={cn(
+                "px-4 py-2.5 border-b",
+                onlyPending
+                  ? "bg-rose-100/60 border-rose-200"
+                  : "bg-amber-100/60 border-amber-200",
+              )}>
+                <h3 className={cn(
+                  "serif text-base font-semibold",
+                  onlyPending ? "text-rose-900" : "text-amber-900",
+                )}>
+                  {onlyPending
+                    ? `⚠️ Documentos pendientes de revisión (${modsV3.docs.length})`
+                    : `📝 Modificatorios detectados (${modsV3.modificatorios_count})`}
                 </h3>
                 {(modsV3.valor_adicionado_total_cop ||
                   modsV3.dias_prorrogados_total) && (
@@ -347,9 +369,13 @@ export function DetailDialog({ contractId, open, onOpenChange }: Props) {
                     )}
                   </p>
                 )}
-                <p className="text-[11px] text-amber-800 mt-0.5">
-                  Detalles extraídos del contenido de cada documento (tipo ·
-                  número · valor · fecha). Click en el nombre para abrir el PDF.
+                <p className={cn(
+                  "text-[11px] mt-0.5",
+                  onlyPending ? "text-rose-800" : "text-amber-800",
+                )}>
+                  {onlyPending
+                    ? "El sistema no pudo identificar el tipo del acto contractual del contenido del PDF. Abrí cada uno y verificá manualmente."
+                    : "Detalles extraídos del contenido de cada documento (tipo · número · valor · fecha). Click en el nombre para abrir el PDF."}
                 </p>
               </div>
               <ul className="divide-y divide-amber-200/50">
@@ -437,7 +463,8 @@ export function DetailDialog({ contractId, open, onOpenChange }: Props) {
                 ))}
               </ul>
             </section>
-          )}
+            );
+          })()}
 
           {/* FALLBACK · cuando el seed v3 no está disponible (deploy
               previo al pipeline OCR), seguimos mostrando el regex

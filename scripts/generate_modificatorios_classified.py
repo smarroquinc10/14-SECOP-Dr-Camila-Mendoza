@@ -78,6 +78,7 @@ def main() -> int:
     output_processes: dict[str, dict] = {}
     totals_global = {
         "procesos_con_modificatorios": 0,
+        "procesos_solo_pendientes_revision": 0,
         "total_actos_cardinales": 0,
         "total_modificatorios_genericos": 0,
         "total_adiciones": 0,
@@ -131,47 +132,62 @@ def main() -> int:
             }
             docs_out.append(doc_out)
 
-            # Contadores
+            # Acumular valor / dias del proceso (solo cardinal)
             if is_cardinal:
+                if valor_adic:
+                    valor_total_proc += valor_adic
+                if dias_prorr:
+                    dias_total_proc += dias_prorr
+
+        # CARDINAL (regla suprema #2 · 0 datos comidos): persistir TODOS los
+        # procesos con al menos UN doc procesado · incluso si todos son
+        # tipo=None (oficios sin titulo cardinal claro). La UI muestra el
+        # badge "Pendiente revision humana" en lugar de ocultar el proceso
+        # · Cami puede ver los oficios y revisarlos manualmente.
+        # Anti-FN cardinal · Sergio 2026-04-30: descubrimos 14 procesos
+        # silenciados por el predicado anterior (any cardinal/soporte).
+        if not docs_out:
+            continue
+        modif_count = sum(1 for d in docs_out if d["is_cardinal"])
+        output_processes[uid] = {
+            "process_id": uid,
+            "modificatorios_count": modif_count,
+            "valor_adicionado_total_cop": valor_total_proc or None,
+            "dias_prorrogados_total": dias_total_proc or None,
+            "docs": docs_out,
+        }
+        if modif_count > 0:
+            totals_global["procesos_con_modificatorios"] += 1
+        elif not any(d["is_soporte"] for d in docs_out):
+            # Procesos donde TODOS los docs son tipo=None · solo pendientes
+            # de revision · Cami los ve con badge en UI
+            totals_global["procesos_solo_pendientes_revision"] += 1
+
+        # Stats globales · cuentan SOLO sobre lo persistido (sin drift)
+        for d in docs_out:
+            if d["is_cardinal"]:
                 totals_global["total_actos_cardinales"] += 1
-                if tipo == "Modificatorio":
+                t = d["tipo"]
+                if t == "Modificatorio":
                     totals_global["total_modificatorios_genericos"] += 1
-                elif tipo == "Adicion":
+                elif t == "Adicion":
                     totals_global["total_adiciones"] += 1
-                elif tipo == "Prorroga":
+                elif t == "Prorroga":
                     totals_global["total_prorrogas"] += 1
-                elif tipo == "Cesion":
+                elif t == "Cesion":
                     totals_global["total_cesiones"] += 1
-                elif tipo == "Liquidacion":
+                elif t == "Liquidacion":
                     totals_global["total_liquidaciones"] += 1
                 else:
                     totals_global["total_otros"] += 1
-
-                # Acumular valor / dias del proceso (solo cardinal)
-                if valor_adic:
-                    valor_total_proc += valor_adic
-                    totals_global["valor_adicionado_global_cop"] += valor_adic
-                if dias_prorr:
-                    dias_total_proc += dias_prorr
-                    totals_global["dias_prorrogados_global"] += dias_prorr
-
-            if doc.get("needs_human_review"):
+                if d["valor_adicionado_cop"]:
+                    totals_global["valor_adicionado_global_cop"] += d["valor_adicionado_cop"]
+                if d["dias_prorrogados"]:
+                    totals_global["dias_prorrogados_global"] += d["dias_prorrogados"]
+            if d["needs_human_review"]:
                 totals_global["docs_needs_review"] += 1
-            if warnings_doc:
+            if d["warnings"]:
                 totals_global["docs_con_warnings"] += 1
-
-        # Solo persistir procesos con al menos UN doc cardinal o soporte
-        if any(d["is_cardinal"] or d["is_soporte"] for d in docs_out):
-            modif_count = sum(1 for d in docs_out if d["is_cardinal"])
-            output_processes[uid] = {
-                "process_id": uid,
-                "modificatorios_count": modif_count,
-                "valor_adicionado_total_cop": valor_total_proc or None,
-                "dias_prorrogados_total": dias_total_proc or None,
-                "docs": docs_out,
-            }
-            if modif_count > 0:
-                totals_global["procesos_con_modificatorios"] += 1
 
     output = {
         "version": 3,

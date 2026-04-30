@@ -1,10 +1,11 @@
 {
   "version": 3,
   "schema": "modificatorios_classified.v3",
-  "generated_at": "2026-04-30T20:40:44.793194+00:00",
-  "code_version": "1e910d9",
+  "generated_at": "2026-04-30T20:53:44.064924+00:00",
+  "code_version": "1dd0738",
   "stats": {
     "procesos_con_modificatorios": 304,
+    "procesos_solo_pendientes_revision": 11,
     "total_actos_cardinales": 524,
     "total_modificatorios_genericos": 133,
     "total_adiciones": 8,
@@ -1978,6 +1979,30 @@
         }
       ]
     },
+    "CO1.NTC.1252131": {
+      "process_id": "CO1.NTC.1252131",
+      "modificatorios_count": 0,
+      "valor_adicionado_total_cop": null,
+      "dias_prorrogados_total": null,
+      "docs": [
+        {
+          "doc_idx": 9,
+          "tipo": null,
+          "subtipos": [],
+          "numero": null,
+          "valor_adicionado_cop": null,
+          "dias_prorrogados": null,
+          "fecha_documento": "2014-06-13",
+          "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=49744575",
+          "pdf_name": "DEFINITIVO ANEXO No 3 INCLUYE ADENDA No 1 (1).pdf",
+          "is_cardinal": false,
+          "is_soporte": false,
+          "needs_human_review": true,
+          "warnings": [],
+          "confidence": 0.3
+        }
+      ]
+    },
     "CO1.NTC.1254134": {
       "process_id": "CO1.NTC.1254134",
       "modificatorios_count": 1,
@@ -2510,6 +2535,34 @@
           "needs_human_review": false,
           "warnings": [],
           "confidence": 0.96
+        }
+      ]
+    },
+    "CO1.NTC.1314402": {
+      "process_id": "CO1.NTC.1314402",
+      "modificatorios_count": 0,
+      "valor_adicionado_total_cop": null,
+      "dias_prorrogados_total": null,
+      "docs": [
+        {
+          "doc_idx": 34,
+          "tipo": null,
+          "subtipos": [
+            "Suspension",
+            "Reanudacion",
+            "Liquidacion"
+          ],
+          "numero": null,
+          "valor_adicionado_cop": null,
+          "dias_prorrogados": null,
+          "fecha_documento": "2020-06-24",
+          "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=87853198",
+          "pdf_name": "Acta de Liquidación Contrato No 0028 de 2020.pdf",
+          "is_cardinal": false,
+          "is_soporte": false,
+          "needs_human_review": true,
+          "warnings": [],
+          "confidence": 0.3
         }
       ]
     },
@@ -5861,6 +5914,54 @@
         }
       ]
     },
+    "CO1.NTC.2159454": {
+      "process_id": "CO1.NTC.2159454",
+      "modificatorios_count": 0,
+      "valor_adicionado_total_cop": null,
+      "dias_prorrogados_total": null,
+      "docs": [
+        {
+          "doc_idx": 14,
+          "tipo": null,
+          "subtipos": [],
+          "numero": null,
+          "valor_adicionado_cop": null,
+          "dias_prorrogados": null,
+          "fecha_documento": "2021-07-15",
+          "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=117296879",
+          "pdf_name": "16.Oficio confirmando interes en renovación contrato.pdf",
+          "is_cardinal": false,
+          "is_soporte": false,
+          "needs_human_review": true,
+          "warnings": [],
+          "confidence": 0.3
+        }
+      ]
+    },
+    "CO1.NTC.2159652": {
+      "process_id": "CO1.NTC.2159652",
+      "modificatorios_count": 0,
+      "valor_adicionado_total_cop": null,
+      "dias_prorrogados_total": null,
+      "docs": [
+        {
+          "doc_idx": 18,
+          "tipo": null,
+          "subtipos": [],
+          "numero": null,
+          "valor_adicionado_cop": null,
+          "dias_prorrogados": null,
+          "fecha_documento": "2021-06-08",
+          "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=117296527",
+          "pdf_name": "16.Oficio confirmando interes en renovación contrato.pdf",
+          "is_cardinal": false,
+          "is_soporte": false,
+          "needs_human_review": true,
+          "warnings": [],
+          "confidence": 0.3
+        }
+      ]
+    },
     "CO1.NTC.2164893": {
       "process_id": "CO1.NTC.2164893",
       "modificatorios_count": 2,
@@ -8329,6 +8430,32 @@
         }
       ]
     },
+    "CO1.NTC.3205869": {
+      "process_id": "CO1.NTC.3205869",
+      "modificatorios_count": 0,
+      "valor_adicionado_total_cop": null,
+      "dias_prorrogados_total": null,
+      "docs": [
+        {
+          "doc_idx": 6,
+          "tipo": null,
+          "subtipos": [],
+          "numero": null,
+          "valor_adicionado_cop": null,
+          "dias_prorrogados": null,
+          "fecha_documento": null,
+          "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=216914227",
+          "pdf_name": "6. CDP 7822 FEAB ADICION.pdf",
+          "is_cardinal": false,
+          "is_soporte": false,
+          "needs_human_review": true,
+          "warnings": [
+            "no se encontro fecha larga (DD de mes de YYYY)"
+          ],
+          "confidence": 0.3
+        }
+      ]
+    },
     "CO1.NTC.3245711": {
       "process_id": "CO1.NTC.3245711",
       "modificatorios_count": 1,
@@ -9301,6 +9428,32 @@
         }
       ]
     },
+    "CO1.NTC.4186434": {
+      "process_id": "CO1.NTC.4186434",
+      "modificatorios_count": 0,
+      "valor_adicionado_total_cop": null,
+      "dias_prorrogados_total": null,
+      "docs": [
+        {
+          "doc_idx": 41,
+          "tipo": null,
+          "subtipos": [],
+          "numero": null,
+          "valor_adicionado_cop": null,
+          "dias_prorrogados": null,
+          "fecha_documento": null,
+          "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=368434445",
+          "pdf_name": "ACTA DE LIQUIDACIÓN FIRMADA POR TODOS.pdf",
+          "is_cardinal": false,
+          "is_soporte": false,
+          "needs_human_review": true,
+          "warnings": [
+            "no se encontro fecha larga (DD de mes de YYYY)"
+          ],
+          "confidence": 0.3
+        }
+      ]
+    },
     "CO1.NTC.4250783": {
       "process_id": "CO1.NTC.4250783",
       "modificatorios_count": 1,
@@ -10120,6 +10273,35 @@
           "fecha_documento": null,
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=590859780",
           "pdf_name": "20250318145519397 ACTA LIQUIDACION CN 0046-2023.pdf",
+          "is_cardinal": false,
+          "is_soporte": false,
+          "needs_human_review": true,
+          "warnings": [
+            "no se encontro fecha larga (DD de mes de YYYY)"
+          ],
+          "confidence": 0.3
+        }
+      ]
+    },
+    "CO1.NTC.5194630": {
+      "process_id": "CO1.NTC.5194630",
+      "modificatorios_count": 0,
+      "valor_adicionado_total_cop": null,
+      "dias_prorrogados_total": null,
+      "docs": [
+        {
+          "doc_idx": 37,
+          "tipo": null,
+          "subtipos": [
+            "Reanudacion",
+            "Liquidacion"
+          ],
+          "numero": null,
+          "valor_adicionado_cop": null,
+          "dias_prorrogados": null,
+          "fecha_documento": null,
+          "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=573152941",
+          "pdf_name": "20250130153640121.pdf ACTA LIQUIDACION.pdf",
           "is_cardinal": false,
           "is_soporte": false,
           "needs_human_review": true,
@@ -12139,6 +12321,104 @@
           "needs_human_review": false,
           "warnings": [],
           "confidence": 0.96
+        }
+      ]
+    },
+    "CO1.NTC.7114108": {
+      "process_id": "CO1.NTC.7114108",
+      "modificatorios_count": 0,
+      "valor_adicionado_total_cop": null,
+      "dias_prorrogados_total": null,
+      "docs": [
+        {
+          "doc_idx": 3,
+          "tipo": null,
+          "subtipos": [],
+          "numero": null,
+          "valor_adicionado_cop": null,
+          "dias_prorrogados": null,
+          "fecha_documento": null,
+          "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=542442447",
+          "pdf_name": "4. Renovacion de Viabilidad Tecnica 10-10-2024.pdf",
+          "is_cardinal": false,
+          "is_soporte": false,
+          "needs_human_review": true,
+          "warnings": [
+            "no se encontro fecha larga (DD de mes de YYYY)"
+          ],
+          "confidence": 0.3
+        }
+      ]
+    },
+    "CO1.NTC.7114109": {
+      "process_id": "CO1.NTC.7114109",
+      "modificatorios_count": 0,
+      "valor_adicionado_total_cop": null,
+      "dias_prorrogados_total": null,
+      "docs": [
+        {
+          "doc_idx": 4,
+          "tipo": null,
+          "subtipos": [],
+          "numero": null,
+          "valor_adicionado_cop": null,
+          "dias_prorrogados": null,
+          "fecha_documento": "2024-08-29",
+          "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=542442830",
+          "pdf_name": "8. Requisitos Renovacion Contratacion Arrendamiento Patio El Bordo.pdf",
+          "is_cardinal": false,
+          "is_soporte": false,
+          "needs_human_review": true,
+          "warnings": [],
+          "confidence": 0.3
+        }
+      ]
+    },
+    "CO1.NTC.7114111": {
+      "process_id": "CO1.NTC.7114111",
+      "modificatorios_count": 0,
+      "valor_adicionado_total_cop": null,
+      "dias_prorrogados_total": null,
+      "docs": [
+        {
+          "doc_idx": 5,
+          "tipo": null,
+          "subtipos": [],
+          "numero": null,
+          "valor_adicionado_cop": null,
+          "dias_prorrogados": null,
+          "fecha_documento": "2024-08-29",
+          "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=542443175",
+          "pdf_name": "8.Requisitos Renovacion Contratacion Arrendamiento Patio Popayán.pdf",
+          "is_cardinal": false,
+          "is_soporte": false,
+          "needs_human_review": true,
+          "warnings": [],
+          "confidence": 0.3
+        }
+      ]
+    },
+    "CO1.NTC.7114112": {
+      "process_id": "CO1.NTC.7114112",
+      "modificatorios_count": 0,
+      "valor_adicionado_total_cop": null,
+      "dias_prorrogados_total": null,
+      "docs": [
+        {
+          "doc_idx": 5,
+          "tipo": null,
+          "subtipos": [],
+          "numero": null,
+          "valor_adicionado_cop": null,
+          "dias_prorrogados": null,
+          "fecha_documento": "2024-08-29",
+          "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=542443545",
+          "pdf_name": "8.Requisitos Renovacion Contratacion Arrendamiento Patio Santander de Quilichao.pdf",
+          "is_cardinal": false,
+          "is_soporte": false,
+          "needs_human_review": true,
+          "warnings": [],
+          "confidence": 0.3
         }
       ]
     },
