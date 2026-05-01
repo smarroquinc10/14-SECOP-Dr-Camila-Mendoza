@@ -63,10 +63,16 @@ _VERB_PRORROGAR = re.compile(
 )
 
 _VERB_ADICIONAR = re.compile(
-    r"\badicion[ae]r\s+(?:el\s+)?(?:contrato|valor|plazo|la\s+suma)"
-    r"|\badici[oó]n[ae]se\b"
-    r"|\bincrement[ae]r?\b\s+(?:el\s+)?(?:valor|cu(?:a|á)nt[ií]a|canon)"
-    r"|en\s+la\s+suma\s+de\s+[A-Z]",  # "en la suma de DIECIOCHO MILLONES"
+    # CARDINAL ANTI-FP (Sergio 2026-04-30): "tu tienes que estar 100% seguro"
+    # Solo el verbo ADICIONAR/ADICIONESE literal, NUNCA "modificar el valor"
+    # ni "incrementar" ni "establecer en la suma de" (esos pueden ser
+    # modificaciones de canon o actualizaciones del valor total).
+    # 4 de 5 top valores eran FP por matchear "modificar el valor del contrato"
+    # como Adicion. Refinamos: solo el verbo ADICIONAR vale.
+    r"\badicion[ae]r\s+(?:el\s+)?(?:contrato|valor\s+(?:total\s+)?del\s+contrato|"
+    r"la\s+(?:cuant[ií]a|suma)\s+(?:total\s+)?del\s+contrato|"
+    r"plazo\s+del\s+contrato)"
+    r"|\badici[oó]n[ae]se\s+(?:el\s+)?(?:contrato|la\s+suma|el\s+valor)",
     re.IGNORECASE,
 )
 
@@ -123,14 +129,21 @@ def detect_subtipos(text: str, tipo_primary: str | None = None) -> list[str]:
     suspensiones, reanudaciones, modificatorios anteriores), pero el tipo
     cardinal del documento es Liquidacion · no es un combo.
 
+    Cardinal anti-FP (Sergio 2026-04-30): si tipo_primary es None (el
+    clasificador primario falló por OCR pobre o título ambiguo), TAMPOCO
+    inferir subtipos · esos serían FP de extracción ciega. Mejor None
+    honesto que Modificatorio/Adicion inferido del cuerpo de un doc que
+    capaz no es modificatorio. Caso real: ACTA LIQUIDACION sin titulo
+    clasificado capturaba "Adicion" y valor del cuerpo narrativo.
+
     Solo cuando tipo_primary es generico (Modificatorio, Otrosi, Adenda)
-    o None tiene sentido buscar subtipos en el cuerpo.
+    tiene sentido buscar subtipos en el cuerpo.
     """
     if not text:
         return []
-    GENERIC_TIPOS = {None, "Modificatorio", "Otrosi", "Adenda"}
+    GENERIC_TIPOS = {"Modificatorio", "Otrosi", "Adenda"}
     if tipo_primary not in GENERIC_TIPOS:
-        # Tipo primary ya es especifico · NO inferir subtipos accesorios
+        # Tipo primary especifico O None · NO inferir subtipos accesorios
         return []
     found = []
     for tipo, pat in _VERB_RULES:
@@ -193,9 +206,11 @@ _ADICIONAR_CONTRATO_RE = re.compile(
 # Patron de FP que se debe IGNORAR · canon mensual / pago periodico no es valor adicionado
 _CANON_MENSUAL_RE = re.compile(
     r"(?:canon\s+(?:mensual|de\s+arrendamiento)|"
-    r"valor\s+mensual|pago\s+mensual|"
-    r"asciende\s+a\s+la\s+suma\s+de\s+UN\s+MILL[OÓ]N|"
-    r"se\s+incrementa\s+en\s+la\s+suma\s+de)",
+    r"valor\s+(?:mensual|del\s+canon)|"
+    r"pago\s+mensual|"
+    r"valor\s+total\s+del?\s+canon|"
+    r"se\s+incrementa\s+en\s+la\s+suma\s+de|"
+    r"el\s+canon\s+(?:de\s+arrendamiento\s+)?(?:mensual|asciende|se))",
     re.IGNORECASE,
 )
 
@@ -248,12 +263,29 @@ def extract_valor_adicionado(text: str, has_adicion: bool) -> tuple[int | None, 
         )
         return candidates[0][1], warnings
 
-    # 3. Fallback final
+    # 3. Fallback final · busca frase cardinal pero EXCLUYE canon mensual
+    # CARDINAL ANTI-FP (Sergio 2026-04-30): "tu tienes que estar 100% seguro".
+    # Si el match esta cerca de "canon mensual" o "se incrementa la suma de"
+    # NO devolver valor · es canon periodico, no valor adicionado total.
+    # Mejor None honesto que cifra incorrecta · Cami va al PDF y lee.
     m = _VALOR_FRASE_RE.search(text)
     if m:
         val = parse_pesos(m.group(1))
         if val:
-            warnings.append("valor extraido por frase cardinal · no clausula directa")
+            # Chequear contexto del match · 200 chars antes/despues
+            ctx_start = max(0, m.start() - 200)
+            ctx_end = min(len(text), m.end() + 200)
+            context = text[ctx_start:ctx_end]
+            if _CANON_MENSUAL_RE.search(context):
+                warnings.append(
+                    "valor cerca de 'canon mensual' · NO es valor adicionado "
+                    "total · ver clausulas del PDF para cifra correcta"
+                )
+                return None, warnings
+            warnings.append(
+                "valor extraido por frase cardinal · no clausula directa · "
+                "verificar contra PDF"
+            )
             return val, warnings
 
     warnings.append("subtipo Adicion detectado pero no se pudo extraer valor numerico")

@@ -1,39 +1,38 @@
 {
   "version": 3,
   "schema": "modificatorios_classified.v3",
-  "generated_at": "2026-04-30T20:53:44.064924+00:00",
-  "code_version": "1dd0738",
+  "generated_at": "2026-05-01T15:01:48.609215+00:00",
+  "code_version": "d0719fc",
   "stats": {
     "procesos_con_modificatorios": 304,
-    "procesos_solo_pendientes_revision": 11,
-    "total_actos_cardinales": 524,
-    "total_modificatorios_genericos": 133,
-    "total_adiciones": 8,
-    "total_prorrogas": 14,
-    "total_cesiones": 90,
+    "procesos_solo_pendientes_revision": 10,
+    "total_actos_cardinales": 499,
+    "total_modificatorios_genericos": 127,
+    "total_adiciones": 0,
+    "total_prorrogas": 5,
+    "total_cesiones": 89,
     "total_liquidaciones": 196,
-    "total_otros": 83,
-    "valor_adicionado_global_cop": 4311867936,
+    "total_otros": 82,
+    "valor_adicionado_global_cop": 1296342527,
     "dias_prorrogados_global": 13135,
-    "docs_needs_review": 59,
-    "docs_con_warnings": 211
+    "docs_needs_review": 48,
+    "docs_con_warnings": 206
   },
   "by_process": {
     "CO1.NTC.5405127": {
       "process_id": "CO1.NTC.5405127",
       "modificatorios_count": 2,
-      "valor_adicionado_total_cop": 2157652,
+      "valor_adicionado_total_cop": null,
       "dias_prorrogados_total": 730,
       "docs": [
         {
           "doc_idx": 27,
           "tipo": "Modificatorio",
           "subtipos": [
-            "Prorroga",
-            "Adicion"
+            "Prorroga"
           ],
           "numero": null,
-          "valor_adicionado_cop": 1052000,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": 365,
           "fecha_documento": "2024-01-24",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=571247791",
@@ -41,20 +40,17 @@
           "is_cardinal": true,
           "is_soporte": false,
           "needs_human_review": false,
-          "warnings": [
-            "valor extraido por frase cardinal · no clausula directa"
-          ],
+          "warnings": [],
           "confidence": 0.96
         },
         {
           "doc_idx": 44,
           "tipo": "Modificatorio",
           "subtipos": [
-            "Prorroga",
-            "Adicion"
+            "Prorroga"
           ],
           "numero": null,
-          "valor_adicionado_cop": 1105652,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": 365,
           "fecha_documento": "2027-01-24",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=739984710",
@@ -67,7 +63,7 @@
         },
         {
           "doc_idx": 55,
-          "tipo": "Legalizacion (soporte)",
+          "tipo": "Poliza (soporte)",
           "subtipos": [],
           "numero": "2",
           "valor_adicionado_cop": null,
@@ -79,7 +75,7 @@
           "is_soporte": true,
           "needs_human_review": false,
           "warnings": [],
-          "confidence": 0.92
+          "confidence": 0.95
         }
       ]
     },
@@ -454,7 +450,7 @@
     },
     "CO1.NTC.1227734": {
       "process_id": "CO1.NTC.1227734",
-      "modificatorios_count": 6,
+      "modificatorios_count": 5,
       "valor_adicionado_total_cop": null,
       "dias_prorrogados_total": null,
       "docs": [
@@ -508,21 +504,21 @@
         },
         {
           "doc_idx": 4,
-          "tipo": "Cesion",
+          "tipo": "Compromiso (soporte)",
           "subtipos": [],
-          "numero": "113",
+          "numero": null,
           "valor_adicionado_cop": null,
           "dias_prorrogados": null,
           "fecha_documento": null,
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=47694588",
           "pdf_name": "REP_EPG003_ComprobanteCompromiso18820 Cesion Cto 113 de 2018 Arrendamiento Arauca patio.pdf",
-          "is_cardinal": true,
-          "is_soporte": false,
+          "is_cardinal": false,
+          "is_soporte": true,
           "needs_human_review": false,
           "warnings": [
             "no se encontro fecha larga (DD de mes de YYYY)"
           ],
-          "confidence": 0.9
+          "confidence": 0.95
         },
         {
           "doc_idx": 6,
@@ -641,9 +637,7 @@
         {
           "doc_idx": 3,
           "tipo": null,
-          "subtipos": [
-            "Cesion"
-          ],
+          "subtipos": [],
           "numero": null,
           "valor_adicionado_cop": null,
           "dias_prorrogados": null,
@@ -751,10 +745,7 @@
         {
           "doc_idx": 13,
           "tipo": null,
-          "subtipos": [
-            "Reanudacion",
-            "Liquidacion"
-          ],
+          "subtipos": [],
           "numero": null,
           "valor_adicionado_cop": null,
           "dias_prorrogados": null,
@@ -1200,9 +1191,7 @@
         {
           "doc_idx": 2,
           "tipo": null,
-          "subtipos": [
-            "Cesion"
-          ],
+          "subtipos": [],
           "numero": null,
           "valor_adicionado_cop": null,
           "dias_prorrogados": null,
@@ -1292,11 +1281,7 @@
         {
           "doc_idx": 13,
           "tipo": null,
-          "subtipos": [
-            "Cesion",
-            "Reanudacion",
-            "Liquidacion"
-          ],
+          "subtipos": [],
           "numero": null,
           "valor_adicionado_cop": null,
           "dias_prorrogados": null,
@@ -1732,9 +1717,7 @@
         {
           "doc_idx": 1,
           "tipo": null,
-          "subtipos": [
-            "Cesion"
-          ],
+          "subtipos": [],
           "numero": null,
           "valor_adicionado_cop": null,
           "dias_prorrogados": null,
@@ -1830,9 +1813,7 @@
         {
           "doc_idx": 1,
           "tipo": null,
-          "subtipos": [
-            "Cesion"
-          ],
+          "subtipos": [],
           "numero": null,
           "valor_adicionado_cop": null,
           "dias_prorrogados": null,
@@ -2038,9 +2019,7 @@
         {
           "doc_idx": 10,
           "tipo": null,
-          "subtipos": [
-            "Terminacion anticipada"
-          ],
+          "subtipos": [],
           "numero": null,
           "valor_adicionado_cop": null,
           "dias_prorrogados": null,
@@ -2547,11 +2526,7 @@
         {
           "doc_idx": 34,
           "tipo": null,
-          "subtipos": [
-            "Suspension",
-            "Reanudacion",
-            "Liquidacion"
-          ],
+          "subtipos": [],
           "numero": null,
           "valor_adicionado_cop": null,
           "dias_prorrogados": null,
@@ -2568,7 +2543,7 @@
     },
     "CO1.NTC.1316609": {
       "process_id": "CO1.NTC.1316609",
-      "modificatorios_count": 5,
+      "modificatorios_count": 3,
       "valor_adicionado_total_cop": null,
       "dias_prorrogados_total": null,
       "docs": [
@@ -2594,7 +2569,7 @@
         },
         {
           "doc_idx": 26,
-          "tipo": "Prorroga",
+          "tipo": "Poliza (soporte)",
           "subtipos": [],
           "numero": "4",
           "valor_adicionado_cop": null,
@@ -2602,27 +2577,27 @@
           "fecha_documento": "2020-12-22",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=78638662",
           "pdf_name": "Acta Aprobación de Garantia de Cumplimiento mod CPS 0029 DE 2020.pdf",
-          "is_cardinal": true,
-          "is_soporte": false,
+          "is_cardinal": false,
+          "is_soporte": true,
           "needs_human_review": false,
           "warnings": [],
-          "confidence": 0.9
+          "confidence": 0.95
         },
         {
           "doc_idx": 27,
-          "tipo": "Prorroga",
+          "tipo": "Poliza (soporte)",
           "subtipos": [],
-          "numero": "15",
+          "numero": null,
           "valor_adicionado_cop": null,
           "dias_prorrogados": null,
           "fecha_documento": "2020-12-23",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=78638663",
           "pdf_name": "Acta Aprobación Poliza de RCE Modificatorio 1 CPS 0029 de 2020.pdf",
-          "is_cardinal": true,
-          "is_soporte": false,
+          "is_cardinal": false,
+          "is_soporte": true,
           "needs_human_review": false,
           "warnings": [],
-          "confidence": 0.9
+          "confidence": 0.95
         },
         {
           "doc_idx": 28,
@@ -2667,9 +2642,7 @@
         {
           "doc_idx": 12,
           "tipo": null,
-          "subtipos": [
-            "Cesion"
-          ],
+          "subtipos": [],
           "numero": null,
           "valor_adicionado_cop": null,
           "dias_prorrogados": null,
@@ -2756,25 +2729,25 @@
     },
     "CO1.NTC.1350934": {
       "process_id": "CO1.NTC.1350934",
-      "modificatorios_count": 2,
+      "modificatorios_count": 1,
       "valor_adicionado_total_cop": null,
       "dias_prorrogados_total": null,
       "docs": [
         {
           "doc_idx": 20,
-          "tipo": "Prorroga",
+          "tipo": "Poliza (soporte)",
           "subtipos": [],
-          "numero": "413",
+          "numero": null,
           "valor_adicionado_cop": null,
           "dias_prorrogados": null,
           "fecha_documento": "2020-07-22",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=78638211",
           "pdf_name": "ACTA APROBACION POLIZA MODIFICATORIO 1 CTO FEAB 0040 DE 2020 EXOGENA[2].pdf",
-          "is_cardinal": true,
-          "is_soporte": false,
+          "is_cardinal": false,
+          "is_soporte": true,
           "needs_human_review": false,
           "warnings": [],
-          "confidence": 0.9
+          "confidence": 0.95
         },
         {
           "doc_idx": 23,
@@ -4927,11 +4900,9 @@
         {
           "doc_idx": 28,
           "tipo": null,
-          "subtipos": [
-            "Adicion"
-          ],
+          "subtipos": [],
           "numero": null,
-          "valor_adicionado_cop": 936907,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": null,
           "fecha_documento": "2022-07-31",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=171249941",
@@ -4939,9 +4910,7 @@
           "is_cardinal": false,
           "is_soporte": false,
           "needs_human_review": true,
-          "warnings": [
-            "valor extraido por frase cardinal · no clausula directa"
-          ],
+          "warnings": [],
           "confidence": 0.3
         },
         {
@@ -5182,7 +5151,7 @@
     },
     "CO1.NTC.1933630": {
       "process_id": "CO1.NTC.1933630",
-      "modificatorios_count": 3,
+      "modificatorios_count": 2,
       "valor_adicionado_total_cop": null,
       "dias_prorrogados_total": null,
       "docs": [
@@ -5208,7 +5177,7 @@
         },
         {
           "doc_idx": 21,
-          "tipo": null,
+          "tipo": "Compromiso (soporte)",
           "subtipos": [],
           "numero": null,
           "valor_adicionado_cop": null,
@@ -5217,16 +5186,16 @@
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=161061633",
           "pdf_name": "REGISTRO PRESUPUESTAL MODIFICATORIO.pdf",
           "is_cardinal": false,
-          "is_soporte": false,
-          "needs_human_review": true,
+          "is_soporte": true,
+          "needs_human_review": false,
           "warnings": [
             "no se encontro fecha larga (DD de mes de YYYY)"
           ],
-          "confidence": 0.3
+          "confidence": 0.95
         },
         {
           "doc_idx": 22,
-          "tipo": "Modificatorio",
+          "tipo": "Poliza (soporte)",
           "subtipos": [],
           "numero": null,
           "valor_adicionado_cop": null,
@@ -5234,11 +5203,11 @@
           "fecha_documento": "2021-12-30",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=161061634",
           "pdf_name": "acta de aprobaciòn modificatorio.pdf",
-          "is_cardinal": true,
-          "is_soporte": false,
+          "is_cardinal": false,
+          "is_soporte": true,
           "needs_human_review": false,
           "warnings": [],
-          "confidence": 0.9
+          "confidence": 0.95
         },
         {
           "doc_idx": 24,
@@ -5796,7 +5765,7 @@
         },
         {
           "doc_idx": 25,
-          "tipo": null,
+          "tipo": "Compromiso (soporte)",
           "subtipos": [],
           "numero": null,
           "valor_adicionado_cop": null,
@@ -5805,12 +5774,12 @@
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=112202557",
           "pdf_name": "Certificado de Disponibilidad Presupuestal – CDP - Adenda 3.pdf",
           "is_cardinal": false,
-          "is_soporte": false,
-          "needs_human_review": true,
+          "is_soporte": true,
+          "needs_human_review": false,
           "warnings": [
             "no se encontro fecha larga (DD de mes de YYYY)"
           ],
-          "confidence": 0.3
+          "confidence": 0.95
         }
       ]
     },
@@ -6090,7 +6059,7 @@
     },
     "CO1.NTC.2203953": {
       "process_id": "CO1.NTC.2203953",
-      "modificatorios_count": 4,
+      "modificatorios_count": 2,
       "valor_adicionado_total_cop": null,
       "dias_prorrogados_total": null,
       "docs": [
@@ -6128,7 +6097,7 @@
         },
         {
           "doc_idx": 42,
-          "tipo": null,
+          "tipo": "Compromiso (soporte)",
           "subtipos": [],
           "numero": null,
           "valor_adicionado_cop": null,
@@ -6137,46 +6106,46 @@
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=180593899",
           "pdf_name": "Registro Presupuestal Modificatorio 1.pdf",
           "is_cardinal": false,
-          "is_soporte": false,
-          "needs_human_review": true,
+          "is_soporte": true,
+          "needs_human_review": false,
           "warnings": [
             "no se encontro fecha larga (DD de mes de YYYY)"
           ],
-          "confidence": 0.3
+          "confidence": 0.95
         },
         {
           "doc_idx": 43,
-          "tipo": "Adicion",
+          "tipo": "Poliza (soporte)",
           "subtipos": [],
-          "numero": "33",
+          "numero": null,
           "valor_adicionado_cop": null,
           "dias_prorrogados": null,
           "fecha_documento": null,
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=180593900",
           "pdf_name": "Acta Aprobación de Poliza de Cumplimiento Modificatorio 1 .pdf",
-          "is_cardinal": true,
-          "is_soporte": false,
+          "is_cardinal": false,
+          "is_soporte": true,
           "needs_human_review": false,
           "warnings": [
             "no se encontro fecha larga (DD de mes de YYYY)"
           ],
-          "confidence": 0.9
+          "confidence": 0.95
         },
         {
           "doc_idx": 44,
-          "tipo": "Modificatorio",
+          "tipo": "Poliza (soporte)",
           "subtipos": [],
-          "numero": "570",
+          "numero": null,
           "valor_adicionado_cop": null,
           "dias_prorrogados": null,
           "fecha_documento": "2022-03-30",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=180593901",
           "pdf_name": "Poliza Modificatorio 1.pdf",
-          "is_cardinal": true,
-          "is_soporte": false,
+          "is_cardinal": false,
+          "is_soporte": true,
           "needs_human_review": false,
           "warnings": [],
-          "confidence": 0.9
+          "confidence": 0.95
         }
       ]
     },
@@ -6283,8 +6252,8 @@
     },
     "CO1.NTC.2269746": {
       "process_id": "CO1.NTC.2269746",
-      "modificatorios_count": 8,
-      "valor_adicionado_total_cop": 1518748587,
+      "modificatorios_count": 6,
+      "valor_adicionado_total_cop": null,
       "dias_prorrogados_total": null,
       "docs": [
         {
@@ -6325,19 +6294,19 @@
         },
         {
           "doc_idx": 38,
-          "tipo": "Modificatorio",
+          "tipo": "Poliza (soporte)",
           "subtipos": [],
-          "numero": "570",
+          "numero": null,
           "valor_adicionado_cop": null,
           "dias_prorrogados": null,
           "fecha_documento": "2022-01-27",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=172518017",
           "pdf_name": "Póliza Modificatorio 1.pdf",
-          "is_cardinal": true,
-          "is_soporte": false,
+          "is_cardinal": false,
+          "is_soporte": true,
           "needs_human_review": false,
           "warnings": [],
-          "confidence": 0.9
+          "confidence": 0.95
         },
         {
           "doc_idx": 39,
@@ -6362,11 +6331,10 @@
           "tipo": "Modificatorio",
           "subtipos": [
             "Prorroga",
-            "Adicion",
             "Liquidacion"
           ],
           "numero": null,
-          "valor_adicionado_cop": 1518748587,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": null,
           "fecha_documento": "2023-01-30",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=204274939",
@@ -6417,19 +6385,19 @@
         },
         {
           "doc_idx": 52,
-          "tipo": "Modificatorio",
+          "tipo": "Poliza (soporte)",
           "subtipos": [],
-          "numero": "106",
+          "numero": null,
           "valor_adicionado_cop": null,
           "dias_prorrogados": null,
           "fecha_documento": "2022-07-27",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=256587586",
           "pdf_name": "Acta de Aprobación de Póliza Modificatorio 3 contrato 0079 de 2021.pdf",
-          "is_cardinal": true,
-          "is_soporte": false,
+          "is_cardinal": false,
+          "is_soporte": true,
           "needs_human_review": false,
           "warnings": [],
-          "confidence": 0.9
+          "confidence": 0.95
         }
       ]
     },
@@ -6491,33 +6459,31 @@
     },
     "CO1.NTC.2380586": {
       "process_id": "CO1.NTC.2380586",
-      "modificatorios_count": 3,
+      "modificatorios_count": 2,
       "valor_adicionado_total_cop": 52517680,
       "dias_prorrogados_total": null,
       "docs": [
         {
           "doc_idx": 32,
-          "tipo": "Otrosi",
-          "subtipos": [
-            "Liquidacion"
-          ],
-          "numero": "11",
+          "tipo": "Poliza (soporte)",
+          "subtipos": [],
+          "numero": null,
           "valor_adicionado_cop": null,
           "dias_prorrogados": null,
           "fecha_documento": null,
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=205435442",
           "pdf_name": "Poliza de cumplimiento otrosi 1 - Firmada.pdf",
-          "is_cardinal": true,
-          "is_soporte": false,
+          "is_cardinal": false,
+          "is_soporte": true,
           "needs_human_review": false,
           "warnings": [
             "no se encontro fecha larga (DD de mes de YYYY)"
           ],
-          "confidence": 0.9
+          "confidence": 0.95
         },
         {
           "doc_idx": 34,
-          "tipo": null,
+          "tipo": "Compromiso (soporte)",
           "subtipos": [],
           "numero": null,
           "valor_adicionado_cop": null,
@@ -6526,12 +6492,12 @@
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=205437486",
           "pdf_name": "REP_EPG003_ComprobanteCompromiso 88822 Modificatorio y Adicion CN 0096 de 2021 arrendamiento inmuble Palermo-Neiva FEAB.pdf",
           "is_cardinal": false,
-          "is_soporte": false,
-          "needs_human_review": true,
+          "is_soporte": true,
+          "needs_human_review": false,
           "warnings": [
             "no se encontro fecha larga (DD de mes de YYYY)"
           ],
-          "confidence": 0.3
+          "confidence": 0.95
         },
         {
           "doc_idx": 36,
@@ -6619,7 +6585,7 @@
     },
     "CO1.NTC.2403751": {
       "process_id": "CO1.NTC.2403751",
-      "modificatorios_count": 3,
+      "modificatorios_count": 2,
       "valor_adicionado_total_cop": 20313948,
       "dias_prorrogados_total": null,
       "docs": [
@@ -6662,7 +6628,7 @@
         },
         {
           "doc_idx": 40,
-          "tipo": "Adicion",
+          "tipo": "Poliza (soporte)",
           "subtipos": [],
           "numero": null,
           "valor_adicionado_cop": null,
@@ -6670,11 +6636,11 @@
           "fecha_documento": "2022-06-08",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=207002866",
           "pdf_name": "POLIZA CN - 097 PRORROGA.pdf",
-          "is_cardinal": true,
-          "is_soporte": false,
+          "is_cardinal": false,
+          "is_soporte": true,
           "needs_human_review": false,
           "warnings": [],
-          "confidence": 0.9
+          "confidence": 0.95
         },
         {
           "doc_idx": 45,
@@ -6696,7 +6662,7 @@
     },
     "CO1.NTC.2418541": {
       "process_id": "CO1.NTC.2418541",
-      "modificatorios_count": 3,
+      "modificatorios_count": 2,
       "valor_adicionado_total_cop": 33356432,
       "dias_prorrogados_total": null,
       "docs": [
@@ -6723,7 +6689,7 @@
         },
         {
           "doc_idx": 35,
-          "tipo": "Adicion",
+          "tipo": "Compromiso (soporte)",
           "subtipos": [],
           "numero": null,
           "valor_adicionado_cop": null,
@@ -6731,13 +6697,13 @@
           "fecha_documento": null,
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=207003510",
           "pdf_name": "REP_EPG003_ComprobanteCompromiso 8332 Adición y Modificatorio FEAB00100 de 2021 Contrato arrendamiento Pitalito Patio de Comisos FEAB.pdf",
-          "is_cardinal": true,
-          "is_soporte": false,
+          "is_cardinal": false,
+          "is_soporte": true,
           "needs_human_review": false,
           "warnings": [
             "no se encontro fecha larga (DD de mes de YYYY)"
           ],
-          "confidence": 0.9
+          "confidence": 0.95
         },
         {
           "doc_idx": 40,
@@ -6760,18 +6726,17 @@
     "CO1.NTC.2419063": {
       "process_id": "CO1.NTC.2419063",
       "modificatorios_count": 2,
-      "valor_adicionado_total_cop": 27590572,
+      "valor_adicionado_total_cop": null,
       "dias_prorrogados_total": null,
       "docs": [
         {
           "doc_idx": 32,
           "tipo": "Modificatorio",
           "subtipos": [
-            "Prorroga",
-            "Adicion"
+            "Prorroga"
           ],
           "numero": "01",
-          "valor_adicionado_cop": 27590572,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": null,
           "fecha_documento": "2022-11-30",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=195783287",
@@ -6805,18 +6770,17 @@
     "CO1.NTC.2447627": {
       "process_id": "CO1.NTC.2447627",
       "modificatorios_count": 2,
-      "valor_adicionado_total_cop": 82598380,
+      "valor_adicionado_total_cop": null,
       "dias_prorrogados_total": null,
       "docs": [
         {
           "doc_idx": 33,
           "tipo": "Modificatorio",
           "subtipos": [
-            "Prorroga",
-            "Adicion"
+            "Prorroga"
           ],
           "numero": null,
-          "valor_adicionado_cop": 82598380,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": null,
           "fecha_documento": "2021-12-31",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=205453666",
@@ -6923,7 +6887,7 @@
         },
         {
           "doc_idx": 38,
-          "tipo": null,
+          "tipo": "Compromiso (soporte)",
           "subtipos": [],
           "numero": null,
           "valor_adicionado_cop": null,
@@ -6932,12 +6896,12 @@
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=208307417",
           "pdf_name": "FEAB - COMPROMISO - MOD 1 CN 0107-2021.pdf",
           "is_cardinal": false,
-          "is_soporte": false,
-          "needs_human_review": true,
+          "is_soporte": true,
+          "needs_human_review": false,
           "warnings": [
             "no se encontro fecha larga (DD de mes de YYYY)"
           ],
-          "confidence": 0.3
+          "confidence": 0.95
         },
         {
           "doc_idx": 46,
@@ -7042,7 +7006,7 @@
         },
         {
           "doc_idx": 41,
-          "tipo": "Aclaratorio",
+          "tipo": "Poliza (soporte)",
           "subtipos": [],
           "numero": null,
           "valor_adicionado_cop": null,
@@ -7054,7 +7018,7 @@
           "is_soporte": true,
           "needs_human_review": false,
           "warnings": [],
-          "confidence": 0.9
+          "confidence": 0.95
         },
         {
           "doc_idx": 47,
@@ -7100,7 +7064,7 @@
     },
     "CO1.NTC.2455108": {
       "process_id": "CO1.NTC.2455108",
-      "modificatorios_count": 3,
+      "modificatorios_count": 2,
       "valor_adicionado_total_cop": 35646240,
       "dias_prorrogados_total": null,
       "docs": [
@@ -7127,7 +7091,7 @@
         },
         {
           "doc_idx": 35,
-          "tipo": "Adicion",
+          "tipo": "Compromiso (soporte)",
           "subtipos": [],
           "numero": null,
           "valor_adicionado_cop": null,
@@ -7135,13 +7099,13 @@
           "fecha_documento": null,
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=206860245",
           "pdf_name": "FEAB - COMPROMISO - MODIFICATORIO No.1 CONTRATO FEAB-0112-2021.pdf",
-          "is_cardinal": true,
-          "is_soporte": false,
+          "is_cardinal": false,
+          "is_soporte": true,
           "needs_human_review": false,
           "warnings": [
             "no se encontro fecha larga (DD de mes de YYYY)"
           ],
-          "confidence": 0.9
+          "confidence": 0.95
         },
         {
           "doc_idx": 43,
@@ -7187,7 +7151,7 @@
     },
     "CO1.NTC.2470223": {
       "process_id": "CO1.NTC.2470223",
-      "modificatorios_count": 3,
+      "modificatorios_count": 2,
       "valor_adicionado_total_cop": 10420300,
       "dias_prorrogados_total": null,
       "docs": [
@@ -7214,7 +7178,7 @@
         },
         {
           "doc_idx": 37,
-          "tipo": "Prorroga",
+          "tipo": "Poliza (soporte)",
           "subtipos": [],
           "numero": null,
           "valor_adicionado_cop": null,
@@ -7222,11 +7186,11 @@
           "fecha_documento": "2022-07-05",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=205871421",
           "pdf_name": "APROBACION POLIZA CTO-104-2021 + LEGALIZACION MOD 1 CN 104-2021.pdf",
-          "is_cardinal": true,
-          "is_soporte": false,
+          "is_cardinal": false,
+          "is_soporte": true,
           "needs_human_review": false,
           "warnings": [],
-          "confidence": 0.9
+          "confidence": 0.95
         },
         {
           "doc_idx": 43,
@@ -7361,18 +7325,17 @@
     "CO1.NTC.2476101": {
       "process_id": "CO1.NTC.2476101",
       "modificatorios_count": 2,
-      "valor_adicionado_total_cop": 73212908,
+      "valor_adicionado_total_cop": null,
       "dias_prorrogados_total": null,
       "docs": [
         {
           "doc_idx": 33,
           "tipo": "Modificatorio",
           "subtipos": [
-            "Prorroga",
-            "Adicion"
+            "Prorroga"
           ],
           "numero": null,
-          "valor_adicionado_cop": 73212908,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": null,
           "fecha_documento": "2022-11-30",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=207075489",
@@ -7405,7 +7368,7 @@
     },
     "CO1.NTC.2476102": {
       "process_id": "CO1.NTC.2476102",
-      "modificatorios_count": 3,
+      "modificatorios_count": 2,
       "valor_adicionado_total_cop": 113016524,
       "dias_prorrogados_total": null,
       "docs": [
@@ -7432,21 +7395,21 @@
         },
         {
           "doc_idx": 39,
-          "tipo": "Prorroga",
+          "tipo": "Poliza (soporte)",
           "subtipos": [],
-          "numero": "570",
+          "numero": null,
           "valor_adicionado_cop": null,
           "dias_prorrogados": null,
           "fecha_documento": null,
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=208287787",
           "pdf_name": "20220728 Clarita Poliza FEAB Adicion.pdf",
-          "is_cardinal": true,
-          "is_soporte": false,
+          "is_cardinal": false,
+          "is_soporte": true,
           "needs_human_review": false,
           "warnings": [
             "no se encontro fecha larga (DD de mes de YYYY)"
           ],
-          "confidence": 0.9
+          "confidence": 0.95
         },
         {
           "doc_idx": 46,
@@ -7495,7 +7458,7 @@
         },
         {
           "doc_idx": 39,
-          "tipo": null,
+          "tipo": "Poliza (soporte)",
           "subtipos": [],
           "numero": null,
           "valor_adicionado_cop": null,
@@ -7504,10 +7467,10 @@
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=204751459",
           "pdf_name": "poliza adición contrato 101 fiscalia patio 2 junio 2022192.pdf",
           "is_cardinal": false,
-          "is_soporte": false,
-          "needs_human_review": true,
+          "is_soporte": true,
+          "needs_human_review": false,
           "warnings": [],
-          "confidence": 0.3
+          "confidence": 0.95
         },
         {
           "doc_idx": 45,
@@ -7604,7 +7567,7 @@
     "CO1.NTC.2476106": {
       "process_id": "CO1.NTC.2476106",
       "modificatorios_count": 2,
-      "valor_adicionado_total_cop": 35646240,
+      "valor_adicionado_total_cop": null,
       "dias_prorrogados_total": null,
       "docs": [
         {
@@ -7615,7 +7578,7 @@
             "Adicion"
           ],
           "numero": "01",
-          "valor_adicionado_cop": 35646240,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": null,
           "fecha_documento": "2022-11-30",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=207305650",
@@ -7624,6 +7587,7 @@
           "is_soporte": false,
           "needs_human_review": false,
           "warnings": [
+            "valor cerca de 'canon mensual' · NO es valor adicionado total · ver clausulas del PDF para cifra correcta",
             "subtipo Prorroga detectado pero no se pudo extraer plazo numerico"
           ],
           "confidence": 0.96
@@ -7649,7 +7613,7 @@
     "CO1.NTC.2476107": {
       "process_id": "CO1.NTC.2476107",
       "modificatorios_count": 2,
-      "valor_adicionado_total_cop": 55059776,
+      "valor_adicionado_total_cop": 55859776,
       "dias_prorrogados_total": null,
       "docs": [
         {
@@ -7660,7 +7624,7 @@
             "Adicion"
           ],
           "numero": "7",
-          "valor_adicionado_cop": 55059776,
+          "valor_adicionado_cop": 55859776,
           "dias_prorrogados": null,
           "fecha_documento": "2022-11-30",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=208294384",
@@ -7675,7 +7639,7 @@
         },
         {
           "doc_idx": 35,
-          "tipo": null,
+          "tipo": "Compromiso (soporte)",
           "subtipos": [],
           "numero": null,
           "valor_adicionado_cop": null,
@@ -7684,12 +7648,12 @@
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=208295700",
           "pdf_name": "CN 0109 DE 2021 COMPROMISO 96922 MOD 01 FEAB.pdf",
           "is_cardinal": false,
-          "is_soporte": false,
-          "needs_human_review": true,
+          "is_soporte": true,
+          "needs_human_review": false,
           "warnings": [
             "no se encontro fecha larga (DD de mes de YYYY)"
           ],
-          "confidence": 0.3
+          "confidence": 0.95
         },
         {
           "doc_idx": 43,
@@ -7711,7 +7675,7 @@
     },
     "CO1.NTC.2476108": {
       "process_id": "CO1.NTC.2476108",
-      "modificatorios_count": 3,
+      "modificatorios_count": 2,
       "valor_adicionado_total_cop": 46514860,
       "dias_prorrogados_total": null,
       "docs": [
@@ -7738,7 +7702,7 @@
         },
         {
           "doc_idx": 37,
-          "tipo": "Adicion",
+          "tipo": "Compromiso (soporte)",
           "subtipos": [],
           "numero": null,
           "valor_adicionado_cop": null,
@@ -7746,13 +7710,13 @@
           "fecha_documento": null,
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=206303306",
           "pdf_name": "REP_EPG003_ComprobanteCompromiso 94722 Adicion y Prorroga CN 0102 de 2021 feab.pdf",
-          "is_cardinal": true,
-          "is_soporte": false,
+          "is_cardinal": false,
+          "is_soporte": true,
           "needs_human_review": false,
           "warnings": [
             "no se encontro fecha larga (DD de mes de YYYY)"
           ],
-          "confidence": 0.9
+          "confidence": 0.95
         },
         {
           "doc_idx": 45,
@@ -7774,7 +7738,7 @@
     },
     "CO1.NTC.2476109": {
       "process_id": "CO1.NTC.2476109",
-      "modificatorios_count": 4,
+      "modificatorios_count": 2,
       "valor_adicionado_total_cop": 70138220,
       "dias_prorrogados_total": null,
       "docs": [
@@ -7801,7 +7765,7 @@
         },
         {
           "doc_idx": 34,
-          "tipo": "Modificatorio",
+          "tipo": "Compromiso (soporte)",
           "subtipos": [],
           "numero": null,
           "valor_adicionado_cop": null,
@@ -7809,31 +7773,31 @@
           "fecha_documento": null,
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=207744571",
           "pdf_name": "REP_EPG003_ComprobanteCompromiso 95222 Modificatorio CN 0102 de 2021 Arrendamiento Patio unico Samaca-Boyacá FEAB.pdf",
-          "is_cardinal": true,
-          "is_soporte": false,
+          "is_cardinal": false,
+          "is_soporte": true,
           "needs_human_review": false,
           "warnings": [
             "no se encontro fecha larga (DD de mes de YYYY)"
           ],
-          "confidence": 0.9
+          "confidence": 0.95
         },
         {
           "doc_idx": 35,
-          "tipo": "Adicion",
+          "tipo": "Poliza (soporte)",
           "subtipos": [],
-          "numero": "570",
+          "numero": null,
           "valor_adicionado_cop": null,
           "dias_prorrogados": null,
           "fecha_documento": null,
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=207794843",
           "pdf_name": "POLIZA MODIFICATORIO Nº 01 FIRMADA.pdf",
-          "is_cardinal": true,
-          "is_soporte": false,
+          "is_cardinal": false,
+          "is_soporte": true,
           "needs_human_review": false,
           "warnings": [
             "no se encontro fecha larga (DD de mes de YYYY)"
           ],
-          "confidence": 0.9
+          "confidence": 0.95
         },
         {
           "doc_idx": 41,
@@ -7897,8 +7861,8 @@
     },
     "CO1.NTC.2478268": {
       "process_id": "CO1.NTC.2478268",
-      "modificatorios_count": 4,
-      "valor_adicionado_total_cop": 56155428,
+      "modificatorios_count": 3,
+      "valor_adicionado_total_cop": null,
       "dias_prorrogados_total": null,
       "docs": [
         {
@@ -7925,7 +7889,7 @@
             "Adicion"
           ],
           "numero": null,
-          "valor_adicionado_cop": 56155428,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": null,
           "fecha_documento": "2021-12-31",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=211079173",
@@ -7934,13 +7898,14 @@
           "is_soporte": false,
           "needs_human_review": false,
           "warnings": [
+            "valor cerca de 'canon mensual' · NO es valor adicionado total · ver clausulas del PDF para cifra correcta",
             "subtipo Prorroga detectado pero no se pudo extraer plazo numerico"
           ],
           "confidence": 0.96
         },
         {
           "doc_idx": 38,
-          "tipo": "Adicion",
+          "tipo": "Compromiso (soporte)",
           "subtipos": [],
           "numero": null,
           "valor_adicionado_cop": null,
@@ -7948,13 +7913,13 @@
           "fecha_documento": null,
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=211079348",
           "pdf_name": "REP_EPG003_ComprobanteCompromiso 90222 Modificatorio 1 del FEAB-NC-CN-0119 de 2021 Arrendamiento lote Acacias Meta 2022 FEAB.pdf",
-          "is_cardinal": true,
-          "is_soporte": false,
+          "is_cardinal": false,
+          "is_soporte": true,
           "needs_human_review": false,
           "warnings": [
             "no se encontro fecha larga (DD de mes de YYYY)"
           ],
-          "confidence": 0.9
+          "confidence": 0.95
         },
         {
           "doc_idx": 47,
@@ -7978,7 +7943,7 @@
     },
     "CO1.NTC.2478630": {
       "process_id": "CO1.NTC.2478630",
-      "modificatorios_count": 2,
+      "modificatorios_count": 1,
       "valor_adicionado_total_cop": 31390340,
       "dias_prorrogados_total": null,
       "docs": [
@@ -8005,32 +7970,28 @@
         },
         {
           "doc_idx": 34,
-          "tipo": "Adicion",
+          "tipo": "Compromiso (soporte)",
           "subtipos": [],
-          "numero": "9",
+          "numero": null,
           "valor_adicionado_cop": null,
           "dias_prorrogados": null,
           "fecha_documento": null,
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=208354884",
           "pdf_name": "REP_EPG003_ComprobanteCompromiso 95322 Modificatorio CN 0126 de 2021 Arrendamiento Patio unico EL BORDO-CAUCA FEAB.pdf",
-          "is_cardinal": true,
-          "is_soporte": false,
+          "is_cardinal": false,
+          "is_soporte": true,
           "needs_human_review": false,
           "warnings": [
             "no se encontro fecha larga (DD de mes de YYYY)"
           ],
-          "confidence": 0.9
+          "confidence": 0.95
         },
         {
           "doc_idx": 39,
           "tipo": null,
-          "subtipos": [
-            "Prorroga",
-            "Adicion",
-            "Reanudacion"
-          ],
+          "subtipos": [],
           "numero": null,
-          "valor_adicionado_cop": 31390340,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": null,
           "fecha_documento": "2022-11-30",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=255208171",
@@ -8039,6 +8000,7 @@
           "is_soporte": false,
           "needs_human_review": true,
           "warnings": [
+            "valor extraido cerca de 'canon mensual' o 'incremento' · puede ser valor periodico no total adicionado",
             "subtipo Prorroga detectado pero no se pudo extraer plazo numerico"
           ],
           "confidence": 0.3
@@ -8209,7 +8171,7 @@
         },
         {
           "doc_idx": 43,
-          "tipo": null,
+          "tipo": "Compromiso (soporte)",
           "subtipos": [],
           "numero": null,
           "valor_adicionado_cop": null,
@@ -8218,12 +8180,12 @@
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=208352123",
           "pdf_name": "CN 0138 DE 2021 COMPROMISO 96622 MOD 01.pdf",
           "is_cardinal": false,
-          "is_soporte": false,
-          "needs_human_review": true,
+          "is_soporte": true,
+          "needs_human_review": false,
           "warnings": [
             "no se encontro fecha larga (DD de mes de YYYY)"
           ],
-          "confidence": 0.3
+          "confidence": 0.95
         },
         {
           "doc_idx": 50,
@@ -8272,7 +8234,7 @@
         },
         {
           "doc_idx": 35,
-          "tipo": null,
+          "tipo": "Compromiso (soporte)",
           "subtipos": [],
           "numero": null,
           "valor_adicionado_cop": null,
@@ -8281,12 +8243,12 @@
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=208367486",
           "pdf_name": "CN 0122 DE 2021 COMPROMISO 96122 MOD 01.pdf",
           "is_cardinal": false,
-          "is_soporte": false,
-          "needs_human_review": true,
+          "is_soporte": true,
+          "needs_human_review": false,
           "warnings": [
             "no se encontro fecha larga (DD de mes de YYYY)"
           ],
-          "confidence": 0.3
+          "confidence": 0.95
         },
         {
           "doc_idx": 43,
@@ -8438,7 +8400,7 @@
       "docs": [
         {
           "doc_idx": 6,
-          "tipo": null,
+          "tipo": "Compromiso (soporte)",
           "subtipos": [],
           "numero": null,
           "valor_adicionado_cop": null,
@@ -8447,12 +8409,12 @@
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=216914227",
           "pdf_name": "6. CDP 7822 FEAB ADICION.pdf",
           "is_cardinal": false,
-          "is_soporte": false,
-          "needs_human_review": true,
+          "is_soporte": true,
+          "needs_human_review": false,
           "warnings": [
             "no se encontro fecha larga (DD de mes de YYYY)"
           ],
-          "confidence": 0.3
+          "confidence": 0.95
         }
       ]
     },
@@ -9133,7 +9095,7 @@
     "CO1.NTC.3601718": {
       "process_id": "CO1.NTC.3601718",
       "modificatorios_count": 3,
-      "valor_adicionado_total_cop": 92086298,
+      "valor_adicionado_total_cop": 5755394,
       "dias_prorrogados_total": null,
       "docs": [
         {
@@ -9144,7 +9106,7 @@
             "Adicion"
           ],
           "numero": null,
-          "valor_adicionado_cop": 89208601,
+          "valor_adicionado_cop": 2877697,
           "dias_prorrogados": null,
           "fecha_documento": "2023-12-01",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=381416603",
@@ -9159,7 +9121,7 @@
         },
         {
           "doc_idx": 42,
-          "tipo": null,
+          "tipo": "Compromiso (soporte)",
           "subtipos": [],
           "numero": null,
           "valor_adicionado_cop": null,
@@ -9168,12 +9130,12 @@
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=381416604",
           "pdf_name": "REP_EPG003_ComprobanteCompromiso (7) mod adi y pro.pdf",
           "is_cardinal": false,
-          "is_soporte": false,
-          "needs_human_review": true,
+          "is_soporte": true,
+          "needs_human_review": false,
           "warnings": [
             "no se encontro fecha larga (DD de mes de YYYY)"
           ],
-          "confidence": 0.3
+          "confidence": 0.95
         },
         {
           "doc_idx": 43,
@@ -9481,18 +9443,17 @@
     "CO1.NTC.4522733": {
       "process_id": "CO1.NTC.4522733",
       "modificatorios_count": 2,
-      "valor_adicionado_total_cop": 1639200,
+      "valor_adicionado_total_cop": null,
       "dias_prorrogados_total": 730,
       "docs": [
         {
           "doc_idx": 30,
           "tipo": "Modificatorio",
           "subtipos": [
-            "Prorroga",
-            "Adicion"
+            "Prorroga"
           ],
           "numero": null,
-          "valor_adicionado_cop": 1639200,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": 365,
           "fecha_documento": "2025-06-27",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=480713373",
@@ -9507,8 +9468,7 @@
           "doc_idx": 36,
           "tipo": "Modificatorio",
           "subtipos": [
-            "Prorroga",
-            "Adicion"
+            "Prorroga"
           ],
           "numero": null,
           "valor_adicionado_cop": null,
@@ -9519,28 +9479,25 @@
           "is_cardinal": true,
           "is_soporte": false,
           "needs_human_review": false,
-          "warnings": [
-            "subtipo Adicion detectado pero no se pudo extraer valor numerico"
-          ],
+          "warnings": [],
           "confidence": 0.96
         }
       ]
     },
     "CO1.NTC.4659073": {
       "process_id": "CO1.NTC.4659073",
-      "modificatorios_count": 2,
-      "valor_adicionado_total_cop": 1639200,
+      "modificatorios_count": 1,
+      "valor_adicionado_total_cop": null,
       "dias_prorrogados_total": 365,
       "docs": [
         {
           "doc_idx": 27,
           "tipo": "Modificatorio",
           "subtipos": [
-            "Prorroga",
-            "Adicion"
+            "Prorroga"
           ],
           "numero": null,
-          "valor_adicionado_cop": 1639200,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": 365,
           "fecha_documento": "2025-06-28",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=480773579",
@@ -9553,7 +9510,7 @@
         },
         {
           "doc_idx": 31,
-          "tipo": "Prorroga",
+          "tipo": "Poliza (soporte)",
           "subtipos": [],
           "numero": null,
           "valor_adicionado_cop": null,
@@ -9561,11 +9518,11 @@
           "fecha_documento": "2024-07-10",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=491258616",
           "pdf_name": "ACTA APROBACION POLIZAS MOD NO 1 CN 0018-2023.pdf",
-          "is_cardinal": true,
-          "is_soporte": false,
+          "is_cardinal": false,
+          "is_soporte": true,
           "needs_human_review": false,
           "warnings": [],
-          "confidence": 0.9
+          "confidence": 0.95
         }
       ]
     },
@@ -9598,7 +9555,7 @@
     "CO1.NTC.4756559": {
       "process_id": "CO1.NTC.4756559",
       "modificatorios_count": 6,
-      "valor_adicionado_total_cop": 228181139,
+      "valor_adicionado_total_cop": null,
       "dias_prorrogados_total": 1095,
       "docs": [
         {
@@ -9653,11 +9610,10 @@
           "doc_idx": 49,
           "tipo": "Modificatorio",
           "subtipos": [
-            "Prorroga",
-            "Adicion"
+            "Prorroga"
           ],
           "numero": null,
-          "valor_adicionado_cop": 9179520,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": 365,
           "fecha_documento": "2025-08-23",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=489466030",
@@ -9688,11 +9644,10 @@
           "doc_idx": 65,
           "tipo": "Modificatorio",
           "subtipos": [
-            "Prorroga",
-            "Adicion"
+            "Prorroga"
           ],
           "numero": null,
-          "valor_adicionado_cop": 8047379,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": 365,
           "fecha_documento": "2025-08-23",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=650030447",
@@ -9708,11 +9663,10 @@
           "tipo": "Modificatorio",
           "subtipos": [
             "Prorroga",
-            "Adicion",
             "Liquidacion"
           ],
           "numero": null,
-          "valor_adicionado_cop": 210954240,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": 365,
           "fecha_documento": "2026-03-04",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=760746206",
@@ -9798,7 +9752,7 @@
     "CO1.NTC.4756695": {
       "process_id": "CO1.NTC.4756695",
       "modificatorios_count": 3,
-      "valor_adicionado_total_cop": 1639200,
+      "valor_adicionado_total_cop": null,
       "dias_prorrogados_total": 365,
       "docs": [
         {
@@ -9806,11 +9760,10 @@
           "tipo": "Modificatorio",
           "subtipos": [
             "Prorroga",
-            "Adicion",
             "Cesion"
           ],
           "numero": null,
-          "valor_adicionado_cop": 1639200,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": 365,
           "fecha_documento": "2025-07-19",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=488932424",
@@ -10012,7 +9965,7 @@
     "CO1.NTC.4974671": {
       "process_id": "CO1.NTC.4974671",
       "modificatorios_count": 4,
-      "valor_adicionado_total_cop": 6278792,
+      "valor_adicionado_total_cop": null,
       "dias_prorrogados_total": 1095,
       "docs": [
         {
@@ -10035,11 +9988,10 @@
           "doc_idx": 27,
           "tipo": "Modificatorio",
           "subtipos": [
-            "Prorroga",
-            "Adicion"
+            "Prorroga"
           ],
           "numero": null,
-          "valor_adicionado_cop": 3059840,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": 365,
           "fecha_documento": "2025-09-18",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=512780376",
@@ -10054,11 +10006,10 @@
           "doc_idx": 40,
           "tipo": "Modificatorio",
           "subtipos": [
-            "Prorroga",
-            "Adicion"
+            "Prorroga"
           ],
           "numero": null,
-          "valor_adicionado_cop": 3218952,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": 365,
           "fecha_documento": "2025-09-18",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=665287937",
@@ -10218,17 +10169,15 @@
     "CO1.NTC.5194540": {
       "process_id": "CO1.NTC.5194540",
       "modificatorios_count": 2,
-      "valor_adicionado_total_cop": 60970255,
+      "valor_adicionado_total_cop": 33872364,
       "dias_prorrogados_total": null,
       "docs": [
         {
           "doc_idx": 42,
           "tipo": "Modificatorio",
-          "subtipos": [
-            "Adicion"
-          ],
+          "subtipos": [],
           "numero": null,
-          "valor_adicionado_cop": 27097891,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": null,
           "fecha_documento": "2024-01-01",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=463018280",
@@ -10263,10 +10212,7 @@
         {
           "doc_idx": 53,
           "tipo": null,
-          "subtipos": [
-            "Suspension",
-            "Liquidacion"
-          ],
+          "subtipos": [],
           "numero": null,
           "valor_adicionado_cop": null,
           "dias_prorrogados": null,
@@ -10292,10 +10238,7 @@
         {
           "doc_idx": 37,
           "tipo": null,
-          "subtipos": [
-            "Reanudacion",
-            "Liquidacion"
-          ],
+          "subtipos": [],
           "numero": null,
           "valor_adicionado_cop": null,
           "dias_prorrogados": null,
@@ -10847,7 +10790,7 @@
     "CO1.NTC.5405232": {
       "process_id": "CO1.NTC.5405232",
       "modificatorios_count": 2,
-      "valor_adicionado_total_cop": 1658478,
+      "valor_adicionado_total_cop": null,
       "dias_prorrogados_total": 730,
       "docs": [
         {
@@ -10872,11 +10815,10 @@
           "doc_idx": 42,
           "tipo": "Modificatorio",
           "subtipos": [
-            "Prorroga",
-            "Adicion"
+            "Prorroga"
           ],
           "numero": "1",
-          "valor_adicionado_cop": 1658478,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": 365,
           "fecha_documento": "2027-01-16",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=736352632",
@@ -10892,17 +10834,15 @@
     "CO1.NTC.5419109": {
       "process_id": "CO1.NTC.5419109",
       "modificatorios_count": 6,
-      "valor_adicionado_total_cop": 112039200,
+      "valor_adicionado_total_cop": null,
       "dias_prorrogados_total": 1095,
       "docs": [
         {
           "doc_idx": 27,
           "tipo": "Modificatorio",
-          "subtipos": [
-            "Adicion"
-          ],
+          "subtipos": [],
           "numero": null,
-          "valor_adicionado_cop": 4200000,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": null,
           "fecha_documento": "2024-07-31",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=496865913",
@@ -10910,20 +10850,17 @@
           "is_cardinal": true,
           "is_soporte": false,
           "needs_human_review": false,
-          "warnings": [
-            "valor extraido cerca de 'canon mensual' o 'incremento' · puede ser valor periodico no total adicionado"
-          ],
+          "warnings": [],
           "confidence": 0.96
         },
         {
           "doc_idx": 33,
           "tipo": "Modificatorio",
           "subtipos": [
-            "Prorroga",
-            "Adicion"
+            "Prorroga"
           ],
           "numero": null,
-          "valor_adicionado_cop": 4418400,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": 365,
           "fecha_documento": "2026-02-21",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=576411186",
@@ -10938,11 +10875,10 @@
           "doc_idx": 41,
           "tipo": "Modificatorio",
           "subtipos": [
-            "Prorroga",
-            "Adicion"
+            "Prorroga"
           ],
           "numero": null,
-          "valor_adicionado_cop": 103420800,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": 365,
           "fecha_documento": "2025-05-07",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=622035096",
@@ -11009,18 +10945,17 @@
     "CO1.NTC.5578040": {
       "process_id": "CO1.NTC.5578040",
       "modificatorios_count": 3,
-      "valor_adicionado_total_cop": 165000400,
+      "valor_adicionado_total_cop": null,
       "dias_prorrogados_total": 730,
       "docs": [
         {
           "doc_idx": 44,
           "tipo": "Modificatorio",
           "subtipos": [
-            "Prorroga",
-            "Adicion"
+            "Prorroga"
           ],
           "numero": null,
-          "valor_adicionado_cop": 5630800,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": 365,
           "fecha_documento": "2025-03-03",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=586635648",
@@ -11053,11 +10988,10 @@
           "doc_idx": 66,
           "tipo": "Modificatorio",
           "subtipos": [
-            "Prorroga",
-            "Adicion"
+            "Prorroga"
           ],
           "numero": null,
-          "valor_adicionado_cop": 159369600,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": 365,
           "fecha_documento": "2027-03-06",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=762164934",
@@ -11130,19 +11064,18 @@
     },
     "CO1.NTC.5578214": {
       "process_id": "CO1.NTC.5578214",
-      "modificatorios_count": 3,
-      "valor_adicionado_total_cop": 3883774,
+      "modificatorios_count": 2,
+      "valor_adicionado_total_cop": null,
       "dias_prorrogados_total": 730,
       "docs": [
         {
           "doc_idx": 27,
           "tipo": "Modificatorio",
           "subtipos": [
-            "Prorroga",
-            "Adicion"
+            "Prorroga"
           ],
           "numero": null,
-          "valor_adicionado_cop": 1893600,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": 365,
           "fecha_documento": "2026-02-13",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=578009510",
@@ -11155,31 +11088,30 @@
         },
         {
           "doc_idx": 34,
-          "tipo": "Prorroga",
+          "tipo": "Poliza (soporte)",
           "subtipos": [],
-          "numero": "570",
+          "numero": null,
           "valor_adicionado_cop": null,
           "dias_prorrogados": null,
           "fecha_documento": null,
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=604782912",
           "pdf_name": "BODEGAS SALVAMENTOS ANEXO PRORROGA.pdf",
-          "is_cardinal": true,
-          "is_soporte": false,
+          "is_cardinal": false,
+          "is_soporte": true,
           "needs_human_review": false,
           "warnings": [
             "no se encontro fecha larga (DD de mes de YYYY)"
           ],
-          "confidence": 0.9
+          "confidence": 0.95
         },
         {
           "doc_idx": 45,
           "tipo": "Modificatorio",
           "subtipos": [
-            "Prorroga",
-            "Adicion"
+            "Prorroga"
           ],
           "numero": null,
-          "valor_adicionado_cop": 1990174,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": 365,
           "fecha_documento": "2026-02-11",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=751069664",
@@ -11219,18 +11151,17 @@
     "CO1.NTC.5708318": {
       "process_id": "CO1.NTC.5708318",
       "modificatorios_count": 4,
-      "valor_adicionado_total_cop": 1367600,
+      "valor_adicionado_total_cop": null,
       "dias_prorrogados_total": 365,
       "docs": [
         {
           "doc_idx": 27,
           "tipo": "Modificatorio",
           "subtipos": [
-            "Prorroga",
-            "Adicion"
+            "Prorroga"
           ],
           "numero": null,
-          "valor_adicionado_cop": 1367600,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": 365,
           "fecha_documento": "2026-03-13",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=589547468",
@@ -11296,7 +11227,7 @@
     "CO1.NTC.5723507": {
       "process_id": "CO1.NTC.5723507",
       "modificatorios_count": 1,
-      "valor_adicionado_total_cop": 12263712,
+      "valor_adicionado_total_cop": null,
       "dias_prorrogados_total": 365,
       "docs": [
         {
@@ -11321,11 +11252,10 @@
           "doc_idx": 19,
           "tipo": "Modificatorio",
           "subtipos": [
-            "Prorroga",
-            "Adicion"
+            "Prorroga"
           ],
           "numero": null,
-          "valor_adicionado_cop": 12263712,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": 365,
           "fecha_documento": "2026-02-12",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=752065842",
@@ -11340,25 +11270,25 @@
     },
     "CO1.NTC.5792792": {
       "process_id": "CO1.NTC.5792792",
-      "modificatorios_count": 2,
+      "modificatorios_count": 1,
       "valor_adicionado_total_cop": null,
       "dias_prorrogados_total": null,
       "docs": [
         {
           "doc_idx": 29,
-          "tipo": "Modificatorio",
+          "tipo": "Poliza (soporte)",
           "subtipos": [],
-          "numero": "205",
+          "numero": null,
           "valor_adicionado_cop": null,
           "dias_prorrogados": null,
           "fecha_documento": "2024-04-30",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=443711014",
           "pdf_name": "ACTA DE APROBACIÓN MODIFICATORIO NO. 1.pdf",
-          "is_cardinal": true,
-          "is_soporte": false,
+          "is_cardinal": false,
+          "is_soporte": true,
           "needs_human_review": false,
           "warnings": [],
-          "confidence": 0.9
+          "confidence": 0.95
         },
         {
           "doc_idx": 31,
@@ -11405,7 +11335,7 @@
     "CO1.NTC.5865622": {
       "process_id": "CO1.NTC.5865622",
       "modificatorios_count": 3,
-      "valor_adicionado_total_cop": 2100000,
+      "valor_adicionado_total_cop": null,
       "dias_prorrogados_total": 365,
       "docs": [
         {
@@ -11427,11 +11357,9 @@
         {
           "doc_idx": 49,
           "tipo": "Modificatorio",
-          "subtipos": [
-            "Adicion"
-          ],
+          "subtipos": [],
           "numero": null,
-          "valor_adicionado_cop": 2100000,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": null,
           "fecha_documento": "2025-08-06",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=665598973",
@@ -11439,9 +11367,7 @@
           "is_cardinal": true,
           "is_soporte": false,
           "needs_human_review": false,
-          "warnings": [
-            "valor extraido cerca de 'canon mensual' o 'incremento' · puede ser valor periodico no total adicionado"
-          ],
+          "warnings": [],
           "confidence": 0.96
         },
         {
@@ -11549,18 +11475,17 @@
     "CO1.NTC.5921229": {
       "process_id": "CO1.NTC.5921229",
       "modificatorios_count": 3,
-      "valor_adicionado_total_cop": 30811200,
+      "valor_adicionado_total_cop": null,
       "dias_prorrogados_total": 730,
       "docs": [
         {
           "doc_idx": 27,
           "tipo": "Modificatorio",
           "subtipos": [
-            "Prorroga",
-            "Adicion"
+            "Prorroga"
           ],
           "numero": "901",
-          "valor_adicionado_cop": 1262400,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": 365,
           "fecha_documento": "2026-04-08",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=596095956",
@@ -11574,12 +11499,10 @@
         {
           "doc_idx": 50,
           "tipo": null,
-          "subtipos": [
-            "Prorroga"
-          ],
+          "subtipos": [],
           "numero": null,
           "valor_adicionado_cop": null,
-          "dias_prorrogados": 365,
+          "dias_prorrogados": null,
           "fecha_documento": "2026-04-06",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=774738252",
           "pdf_name": "OFICI MODIFICATORIO 26.pdf",
@@ -11609,11 +11532,10 @@
           "doc_idx": 52,
           "tipo": "Modificatorio",
           "subtipos": [
-            "Prorroga",
-            "Adicion"
+            "Prorroga"
           ],
           "numero": null,
-          "valor_adicionado_cop": 29548800,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": 365,
           "fecha_documento": "2026-04-08",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=774738254",
@@ -11629,18 +11551,17 @@
     "CO1.NTC.5921611": {
       "process_id": "CO1.NTC.5921611",
       "modificatorios_count": 4,
-      "valor_adicionado_total_cop": 495546800,
+      "valor_adicionado_total_cop": null,
       "dias_prorrogados_total": 730,
       "docs": [
         {
           "doc_idx": 28,
           "tipo": "Modificatorio",
           "subtipos": [
-            "Prorroga",
-            "Adicion"
+            "Prorroga"
           ],
           "numero": null,
-          "valor_adicionado_cop": 20303600,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": 365,
           "fecha_documento": "2026-02-28",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=597551550",
@@ -11655,11 +11576,10 @@
           "doc_idx": 45,
           "tipo": "Modificatorio",
           "subtipos": [
-            "Prorroga",
-            "Adicion"
+            "Prorroga"
           ],
           "numero": "1",
-          "valor_adicionado_cop": 475243200,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": 365,
           "fecha_documento": "2026-02-27",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=759882918",
@@ -12060,19 +11980,18 @@
     },
     "CO1.NTC.6536210": {
       "process_id": "CO1.NTC.6536210",
-      "modificatorios_count": 3,
-      "valor_adicionado_total_cop": 15479128,
+      "modificatorios_count": 2,
+      "valor_adicionado_total_cop": null,
       "dias_prorrogados_total": 730,
       "docs": [
         {
           "doc_idx": 24,
           "tipo": "Modificatorio",
           "subtipos": [
-            "Prorroga",
-            "Adicion"
+            "Prorroga"
           ],
           "numero": null,
-          "valor_adicionado_cop": 7739564,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": 365,
           "fecha_documento": "2026-08-09",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=649338604",
@@ -12087,11 +12006,10 @@
           "doc_idx": 26,
           "tipo": "Modificatorio",
           "subtipos": [
-            "Prorroga",
-            "Adicion"
+            "Prorroga"
           ],
           "numero": "73",
-          "valor_adicionado_cop": 7739564,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": 365,
           "fecha_documento": "2025-08-01",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=760739345",
@@ -12104,39 +12022,38 @@
         },
         {
           "doc_idx": 31,
-          "tipo": "Prorroga",
+          "tipo": "Poliza (soporte)",
           "subtipos": [],
-          "numero": "570",
+          "numero": null,
           "valor_adicionado_cop": null,
           "dias_prorrogados": null,
           "fecha_documento": null,
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=760739350",
           "pdf_name": "VARTEC S.A.S. ANEXO PRORROGA AGOST14.pdf",
-          "is_cardinal": true,
-          "is_soporte": false,
+          "is_cardinal": false,
+          "is_soporte": true,
           "needs_human_review": false,
           "warnings": [
             "no se encontro fecha larga (DD de mes de YYYY)"
           ],
-          "confidence": 0.9
+          "confidence": 0.95
         }
       ]
     },
     "CO1.NTC.6539031": {
       "process_id": "CO1.NTC.6539031",
-      "modificatorios_count": 4,
-      "valor_adicionado_total_cop": 6312000,
+      "modificatorios_count": 3,
+      "valor_adicionado_total_cop": null,
       "dias_prorrogados_total": 730,
       "docs": [
         {
           "doc_idx": 21,
           "tipo": "Modificatorio",
           "subtipos": [
-            "Prorroga",
-            "Adicion"
+            "Prorroga"
           ],
           "numero": "1",
-          "valor_adicionado_cop": 3156000,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": 365,
           "fecha_documento": "2026-08-12",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=649080166",
@@ -12149,31 +12066,30 @@
         },
         {
           "doc_idx": 25,
-          "tipo": "Prorroga",
+          "tipo": "Poliza (soporte)",
           "subtipos": [],
-          "numero": "570",
+          "numero": null,
           "valor_adicionado_cop": null,
           "dias_prorrogados": null,
           "fecha_documento": null,
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=760732370",
           "pdf_name": "KUANG LI, ANDRES PRORROGA POLIZA.pdf",
-          "is_cardinal": true,
-          "is_soporte": false,
+          "is_cardinal": false,
+          "is_soporte": true,
           "needs_human_review": false,
           "warnings": [
             "no se encontro fecha larga (DD de mes de YYYY)"
           ],
-          "confidence": 0.9
+          "confidence": 0.95
         },
         {
           "doc_idx": 26,
           "tipo": "Modificatorio",
           "subtipos": [
-            "Prorroga",
-            "Adicion"
+            "Prorroga"
           ],
           "numero": "73",
-          "valor_adicionado_cop": 3156000,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": 365,
           "fecha_documento": "2025-08-01",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=760732371",
@@ -12247,18 +12163,17 @@
     "CO1.NTC.6762140": {
       "process_id": "CO1.NTC.6762140",
       "modificatorios_count": 1,
-      "valor_adicionado_total_cop": 18582528,
+      "valor_adicionado_total_cop": null,
       "dias_prorrogados_total": 365,
       "docs": [
         {
           "doc_idx": 31,
           "tipo": "Modificatorio",
           "subtipos": [
-            "Prorroga",
-            "Adicion"
+            "Prorroga"
           ],
           "numero": null,
-          "valor_adicionado_cop": 18582528,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": 365,
           "fecha_documento": "2026-09-20",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=665292386",
@@ -12300,18 +12215,17 @@
     "CO1.NTC.7055183": {
       "process_id": "CO1.NTC.7055183",
       "modificatorios_count": 1,
-      "valor_adicionado_total_cop": 1944096,
+      "valor_adicionado_total_cop": null,
       "dias_prorrogados_total": 365,
       "docs": [
         {
           "doc_idx": 23,
           "tipo": "Modificatorio",
           "subtipos": [
-            "Prorroga",
-            "Adicion"
+            "Prorroga"
           ],
           "numero": null,
-          "valor_adicionado_cop": 1944096,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": 365,
           "fecha_documento": "2026-11-14",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=698378579",
@@ -12496,9 +12410,9 @@
       "docs": [
         {
           "doc_idx": 21,
-          "tipo": "Aclaratorio",
+          "tipo": "Poliza (soporte)",
           "subtipos": [],
-          "numero": "570",
+          "numero": null,
           "valor_adicionado_cop": null,
           "dias_prorrogados": null,
           "fecha_documento": null,
@@ -12510,7 +12424,7 @@
           "warnings": [
             "no se encontro fecha larga (DD de mes de YYYY)"
           ],
-          "confidence": 0.9
+          "confidence": 0.95
         }
       ]
     },
@@ -12589,18 +12503,17 @@
     "CO1.NTC.7906712": {
       "process_id": "CO1.NTC.7906712",
       "modificatorios_count": 1,
-      "valor_adicionado_total_cop": 420400,
+      "valor_adicionado_total_cop": null,
       "dias_prorrogados_total": 365,
       "docs": [
         {
           "doc_idx": 28,
           "tipo": "Modificatorio",
           "subtipos": [
-            "Prorroga",
-            "Adicion"
+            "Prorroga"
           ],
           "numero": null,
-          "valor_adicionado_cop": 420400,
+          "valor_adicionado_cop": null,
           "dias_prorrogados": 365,
           "fecha_documento": "2026-03-18",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=766660245",
@@ -12614,12 +12527,10 @@
         {
           "doc_idx": 29,
           "tipo": null,
-          "subtipos": [
-            "Prorroga"
-          ],
+          "subtipos": [],
           "numero": null,
           "valor_adicionado_cop": null,
-          "dias_prorrogados": 365,
+          "dias_prorrogados": null,
           "fecha_documento": "2026-02-17",
           "pdf_url": "https://community.secop.gov.co/Public/Tendering/OpportunityDetail/DownloadFile?documentFileId=766669894",
           "pdf_name": "SOLICITUD PRORROGA.pdf",

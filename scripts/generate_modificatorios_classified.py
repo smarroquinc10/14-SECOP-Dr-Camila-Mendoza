@@ -45,7 +45,14 @@ TIPOS_CARDINALES = {
 }
 
 # Tipos que son "soporte" · se preservan en el listado pero no suman al total
-TIPOS_SOPORTE = {"Aclaratorio", "Legalizacion (soporte)"}
+# CARDINAL (Sergio 2026-04-30): los CDPs y Polizas tambien son soportes
+# administrativos/financieros del modificatorio · no son actos contractuales.
+TIPOS_SOPORTE = {
+    "Aclaratorio",
+    "Legalizacion (soporte)",
+    "Compromiso (soporte)",
+    "Poliza (soporte)",
+}
 
 
 def _git_short_sha() -> str:

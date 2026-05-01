@@ -242,6 +242,49 @@ def classify_with_spacy(cleaned_text: str) -> dict[str, Any]:
         text_lower[:500],
     )
 
+    # CARDINAL ANTI-FP (Sergio 2026-04-30): detectar SOPORTES PRESUPUESTALES
+    # (CDPs / Compromiso Presupuestal) y POLIZAS de garantia. Estos son
+    # documentos asociados al modificatorio · NO son actos contractuales.
+    # 8/8 docs tipo=Adicion eran FP por matchear "ADICIÓN" en titulos de
+    # CDPs/polizas que mencionan "adicion y prorroga" como referencia.
+    is_cdp = re.search(
+        r"compromiso\s+presupuestal\s+de\s+gasto|"
+        r"reporte\s+compromiso\s+presupuestal|"
+        r"certificado\s+de\s+disponibilidad\s+presupuestal|"
+        r"\bcdp\s+(?:n[oº°]|numero)",
+        text_lower[:600],
+    )
+    if is_cdp:
+        num_m = re.search(r"n[°ºo]\s*(\d{1,5})", text_lower[:500])
+        return {
+            "tipo": "Compromiso (soporte)",
+            "numero": num_m.group(1) if num_m else None,
+            "confidence": 0.95,
+            "reason": "doc es CDP/Compromiso Presupuestal · soporte presupuestal del modificatorio",
+            "title_used": text_lower[:200],
+        }
+
+    # Polizas y seguros · pueden tener encabezado OCR ruidoso ("re eeec...")
+    # antes de las palabras cardinales · permitir hasta 800 chars de busqueda
+    # y match en cualquier posicion (no anchored al inicio).
+    is_poliza = re.search(
+        r"\b(?:seguro\s+de\s+cumplimiento|aprobaci[oó]n\s+p[oó]liza|"
+        r"compa[ñn][ií]a\s+(?:mundial\s+)?de\s+seguros|"
+        r"aseguradora\s+\w+|"
+        r"p[oó]liza\s+de\s+(?:cumplimiento|seriedad|garant[ií]a|responsabilidad))",
+        text_lower[:800],
+        re.IGNORECASE,
+    )
+    if is_poliza:
+        num_m = re.search(r"n[°ºo]\s*(\d{1,5})", text_lower[:500])
+        return {
+            "tipo": "Poliza (soporte)",
+            "numero": num_m.group(1) if num_m else None,
+            "confidence": 0.95,
+            "reason": "doc es Poliza/Seguro · soporte de garantia del modificatorio",
+            "title_used": text_lower[:200],
+        }
+
     # Reglas tempranas anti-FP
     if has_legalizacion and (has_asunto or is_oficio):
         num_m = re.search(r"n[°ºo]\s*(\d{1,3})", text_lower[:500])
@@ -453,6 +496,14 @@ def main() -> int:
 
     for uid in targets:
         proc = index["processes"][uid]
+        # CARDINAL idempotente (Sergio 2026-04-30): si NO hay --force y el
+        # uid ya está procesado en results, skip. Permite reanudar runs
+        # cortados sin re-procesar lo ya hecho. Con --force re-procesa todo.
+        if not args.force and uid in results.get("processes", {}):
+            existing_docs = results["processes"][uid].get("docs", [])
+            if existing_docs:
+                log.info("=== %s · SKIP (ya procesado · %d docs)", uid, len(existing_docs))
+                continue
         log.info("=== %s · %d docs", uid, len(proc.get("docs", [])))
         out_proc = results["processes"].setdefault(uid, {"docs": []})
         out_proc["docs"] = []  # limpiar y re-procesar
